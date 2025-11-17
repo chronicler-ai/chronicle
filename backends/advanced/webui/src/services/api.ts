@@ -258,14 +258,14 @@ export const chatApi = {
 export const speakerApi = {
   // Get current user's speaker configuration
   getSpeakerConfiguration: () => api.get('/api/speaker-configuration'),
-  
+
   // Update current user's speaker configuration
-  updateSpeakerConfiguration: (primarySpeakers: Array<{speaker_id: string, name: string, user_id: number}>) => 
+  updateSpeakerConfiguration: (primarySpeakers: Array<{speaker_id: string, name: string, user_id: number}>) =>
     api.post('/api/speaker-configuration', primarySpeakers),
-    
-  // Get enrolled speakers from speaker recognition service  
+
+  // Get enrolled speakers from speaker recognition service
   getEnrolledSpeakers: () => api.get('/api/enrolled-speakers'),
-  
+
   // Check speaker service status (admin only)
   getSpeakerServiceStatus: () => api.get('/api/speaker-service-status'),
 }
