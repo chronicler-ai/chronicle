@@ -15,10 +15,11 @@ export default function Layout() {
     { path: '/memories', label: 'Memories', icon: Brain },
     { path: '/timeline', label: 'Timeline', icon: Calendar },
     { path: '/users', label: 'User Management', icon: Users },
+    { path: '/settings', label: 'Settings', icon: Settings },
     ...(isAdmin ? [
       { path: '/upload', label: 'Upload Audio', icon: Upload },
       { path: '/queue', label: 'Queue Management', icon: Layers },
-      { path: '/system', label: 'System State', icon: Settings },
+      { path: '/system', label: 'System State', icon: Shield },
     ] : []),
   ]
 
