@@ -2,11 +2,12 @@ import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, SafeAreaView, ScrollView, Platform, FlatList, ActivityIndicator, Alert, Switch, Button, TouchableOpacity, KeyboardAvoidingView } from 'react-native';
 import { OmiConnection } from 'friend-lite-react-native'; // OmiDevice also comes from here
 import { State as BluetoothState } from 'react-native-ble-plx'; // Import State from ble-plx
+import { Link } from 'expo-router';
 
 // Hooks
-import { useBluetoothManager } from './hooks/useBluetoothManager';
-import { useDeviceScanning } from './hooks/useDeviceScanning';
-import { useDeviceConnection } from './hooks/useDeviceConnection';
+import { useBluetoothManager } from '../src/hooks/useBluetoothManager';
+import { useDeviceScanning } from '../src/hooks/useDeviceScanning';
+import { useDeviceConnection } from '../src/hooks/useDeviceConnection';
 import {
   saveLastConnectedDeviceId,
   getLastConnectedDeviceId,
@@ -16,23 +17,25 @@ import {
   getUserId,
   getAuthEmail,
   getJwtToken,
-} from './utils/storage';
-import { useAudioListener } from './hooks/useAudioListener';
-import { useAudioStreamer } from './hooks/useAudioStreamer';
-import { usePhoneAudioRecorder } from './hooks/usePhoneAudioRecorder';
+} from '../src/utils/storage';
+import { useAudioListener } from '../src/hooks/useAudioListener';
+import { useAudioStreamer } from '../src/hooks/useAudioStreamer';
+import { usePhoneAudioRecorder } from '../src/hooks/usePhoneAudioRecorder';
 
 // Components
-import BluetoothStatusBanner from './components/BluetoothStatusBanner';
-import ScanControls from './components/ScanControls';
-import DeviceListItem from './components/DeviceListItem';
-import DeviceDetails from './components/DeviceDetails';
-import AuthSection from './components/AuthSection';
-import BackendStatus from './components/BackendStatus';
-import PhoneAudioButton from './components/PhoneAudioButton';
+import BluetoothStatusBanner from '../src/components/BluetoothStatusBanner';
+import ScanControls from '../src/components/ScanControls';
+import DeviceListItem from '../src/components/DeviceListItem';
+import DeviceDetails from '../src/components/DeviceDetails';
+import AuthSection from '../src/components/AuthSection';
+import BackendStatus from '../src/components/BackendStatus';
+import PhoneAudioButton from '../src/components/PhoneAudioButton';
 
 export default function App() {
   // Initialize OmiConnection
   const omiConnection = useRef(new OmiConnection()).current;
+
+  // Removed router navigation - using Link component instead
 
   // Filter state
   const [showOnlyOmi, setShowOnlyOmi] = useState(false);
@@ -517,11 +520,18 @@ export default function App() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>Friend Lite</Text>
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>Friend Lite</Text>
+            <Link href="/stats" asChild>
+              <TouchableOpacity style={styles.statsButton}>
+                <Text style={styles.statsIcon}>⚙️</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
 
           {/* Backend Connection - moved to top */}
           <BackendStatus
@@ -713,12 +723,25 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'android' ? 30 : 10,
     paddingBottom: 50,
   },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    position: 'relative',
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
     color: '#333',
-    textAlign: 'center',
+  },
+  statsButton: {
+    position: 'absolute',
+    right: 0,
+    padding: 8,
+  },
+  statsIcon: {
+    fontSize: 24,
   },
   section: {
     marginBottom: 25,
