@@ -1,3 +1,11 @@
-// App.tsx
-import App from './app/index'; // your actual entry file
-export default App;
+// App.tsx - Expo Router Entry Point
+import { registerRootComponent } from 'expo';
+import { ExpoRoot } from 'expo-router';
+
+// Must be exported or Fast Refresh won't update the context
+export function App() {
+  const ctx = require.context('./app');
+  return <ExpoRoot context={ctx} />;
+}
+
+registerRootComponent(App);
