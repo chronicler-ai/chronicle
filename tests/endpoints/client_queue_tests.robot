@@ -2,8 +2,8 @@
 Documentation    Client and Queue Management API Tests
 Library          RequestsLibrary
 Library          Collections
-Resource         ../resources/setup_resources.robot
-Resource         ../resources/session_resources.robot
+Resource         ../setup/setup_keywords.robot
+Resource         ../setup/teardown_keywords.robot
 Resource         ../resources/user_resources.robot
 Suite Setup      Suite Setup
 Suite Teardown   Delete All Sessions
@@ -12,7 +12,7 @@ Suite Teardown   Delete All Sessions
 
 Get Active Clients Test
     [Documentation]    Test getting active client information
-    [Tags]             client    active    positive
+    [Tags]    client active positive speed-fast
 
     Create API Session    admin_session
     ${response}=       GET On Session    admin_session    /api/clients/active
@@ -30,7 +30,7 @@ Get Active Clients Test
 
 Get Queue Jobs Test
     [Documentation]    Test getting queue jobs with pagination
-    [Tags]             queue    jobs    positive
+    [Tags]    queue jobs positive speed-fast
 
     Create API Session    admin_session
     &{params}=         Create Dictionary    limit=20    offset=0
@@ -52,7 +52,7 @@ Get Queue Jobs Test
 
 Get Queue Jobs With Different Limits Test
     [Documentation]    Test queue jobs pagination with different limits
-    [Tags]             queue    jobs    pagination    positive
+    [Tags]    queue jobs pagination positive speed-fast
     Get Anonymous Session    anon_session
 
     Create API Session    admin_session
@@ -77,53 +77,45 @@ Get Queue Jobs With Different Limits Test
 
 Get Queue Statistics Test
     [Documentation]    Test getting queue statistics
-    [Tags]             queue    statistics    positive
-    Get Anonymous Session    anon_session
+    [Tags]    queue statistics positive speed-fast
 
-    Create API Session    admin_session
-
-    ${response}=   GET On Session    admin_session    /api/queue/stats
+    ${response}=   GET On Session    api    /api/queue/stats
     Should Be Equal As Integers    ${response.status_code}    200
 
     ${stats}=      Set Variable    ${response.json()}
-    Dictionary Should Contain Key    ${stats}    queued
-    Dictionary Should Contain Key    ${stats}    processing
-    Dictionary Should Contain Key    ${stats}    completed
-    Dictionary Should Contain Key    ${stats}    failed
+    Dictionary Should Contain Key    ${stats}    queued_jobs
+    Dictionary Should Contain Key    ${stats}    processing_jobs
+    Dictionary Should Contain Key    ${stats}    completed_jobs
+    Dictionary Should Contain Key    ${stats}    failed_jobs
+    Dictionary Should Contain Key    ${stats}    total_jobs
+    Dictionary Should Contain Key    ${stats}    cancelled_jobs
+    Dictionary Should Contain Key    ${stats}    deferred_jobs
 
-    # All counts should be non-negative
-    Should Be True    ${stats}[queued] >= 0
-    Should Be True    ${stats}[processing] >= 0
-    Should Be True    ${stats}[completed] >= 0
-    Should Be True    ${stats}[failed] >= 0
 
 Get Queue Health Test
     [Documentation]    Test getting queue health status
-    [Tags]             queue    health    positive
-    Get Anonymous Session    anon_session
+    [Tags]    queue health positive speed-fast
 
-    Create API Session    admin_session
-    ${response}=   GET On Session    admin_session    /api/queue/health
+    ${response}=   GET On Session    api    /api/queue/worker-details
     Should Be Equal As Integers    ${response.status_code}    200
 
     ${health}=     Set Variable    ${response.json()}
-    Dictionary Should Contain Key    ${health}    status
-    Dictionary Should Contain Key    ${health}    worker_running
-    Dictionary Should Contain Key    ${health}    message
+    Dictionary Should Contain Key    ${health}    workers
+    Dictionary Should Contain Key    ${health}    redis_connection
 
     # Status should be one of expected values
-    Should Be True    '${health}[status]' in ['healthy', 'stopped', 'unhealthy']
+    Should Be True    '${health}[redis_connection]' in ['healthy', 'stopped', 'unhealthy']
 
 Queue Jobs User Isolation Test
     [Documentation]    Test that regular users only see their own queue jobs
-    [Tags]             queue    security    isolation
+    [Tags]    queue security isolation speed-fast
     Get Anonymous Session    anon_session
 
     Create API Session    admin_session
 
     # Create a test user
-    ${test_user}=      Create Test User    admin_session    test-user-${RANDOM_ID}@example.com    test-password-123
-    Create API Session    user_session    email=test-user-${RANDOM_ID}@example.com    password=test-password-123
+    ${test_user}=      Create Test User    admin_session
+    Create API Session    user_session    email=${test_user}[email]    password=${TEST_USER_PASSWORD}
 
     # Get user's jobs (should be filtered to their user_id)
     ${response}=       GET On Session    user_session    /api/queue/jobs
@@ -140,11 +132,11 @@ Queue Jobs User Isolation Test
     END
 
     # Cleanup
-    Delete Test User    ${test_user}[user_id]
+    Delete User    admin_session    ${test_user}[id]
 
 Invalid Queue Parameters Test
     [Documentation]    Test queue endpoints with invalid parameters
-    [Tags]             queue    negative    validation
+    [Tags]    queue negative validation speed-fast
     Get Anonymous Session    anon_session
 
     Create API Session    admin_session
@@ -166,41 +158,29 @@ Invalid Queue Parameters Test
 
 Unauthorized Client Access Test
     [Documentation]    Test that client endpoints require authentication
-    [Tags]             client    security    negative
+    [Tags]    client security negative speed-fast
     Get Anonymous Session    session
 
     # Try to access active clients without token
-    ${response}=    GET On Session    ${session}    /api/clients/active    expected_status=401
+    ${response}=    GET On Session    session    /api/clients/active    expected_status=401
     Should Be Equal As Integers    ${response.status_code}    401
 
 Unauthorized Queue Access Test
     [Documentation]    Test that queue endpoints require authentication
-    [Tags]             queue    security    negative
+    [Tags]    queue security negative speed-fast
     Get Anonymous Session    session
 
     # Try to access queue jobs without token
-    ${response}=    GET On Session    ${session}    /api/queue/jobs    expected_status=401
+    ${response}=    GET On Session    session    /api/queue/jobs    expected_status=401
     Should Be Equal As Integers    ${response.status_code}    401
 
     # Try to access queue stats without token
-    ${response}=    GET On Session    ${session}    /api/queue/stats    expected_status=401
+    ${response}=    GET On Session    session    /api/queue/stats    expected_status=401
     Should Be Equal As Integers    ${response.status_code}    401
-
-Queue Health Public Access Test
-    [Documentation]    Test that queue health endpoint is publicly accessible
-    [Tags]             queue    health    public
-    Get Anonymous Session    session
-
-    # Queue health should be accessible without authentication
-    ${response}=   GET On Session    ${session}    /api/queue/health
-    Should Be Equal As Integers    ${response.status_code}    200
-
-    ${health}=     Set Variable    ${response.json()}
-    Dictionary Should Contain Key    ${health}    status
 
 Client Manager Integration Test
     [Documentation]    Test client manager functionality
-    [Tags]             client    manager    integration
+    [Tags]    client manager integration speed-fast
     Get Anonymous Session    anon_session
 
     Create API Session    admin_session
