@@ -7,6 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "easy-audio-interfaces>=0.7.1", # we need to add local-audio for scripts/local-audio.py | If we don't need that, we can remove this, and then remove portaudio19-dev from Dockerfile
     "fastapi>=0.115.12",
+    "fastmcp>=0.5.0", # MCP server for conversation access
     "mem0ai", # Using main branch with PR #3250 AsyncMemory fix
     "langchain_neo4j",
     "motor>=3.7.1",
@@ -24,6 +25,7 @@ dependencies = [
     "redis>=5.0.0",
     "rq>=1.16.0",
     "soundfile>=0.12.1",
+    "websockets>=12.0",
 ]
 
 [project.optional-dependencies]
