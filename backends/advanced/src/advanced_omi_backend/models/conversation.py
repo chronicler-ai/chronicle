@@ -7,7 +7,7 @@ transcript versions, and memory versions.
 
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Union
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, computed_field
 from enum import Enum
 import uuid
 
@@ -146,6 +146,7 @@ class Conversation(Document):
 
         return data
 
+    @computed_field
     @property
     def active_transcript(self) -> Optional["Conversation.TranscriptVersion"]:
         """Get the currently active transcript version."""
@@ -157,6 +158,7 @@ class Conversation(Document):
                 return version
         return None
 
+    @computed_field
     @property
     def active_memory(self) -> Optional["Conversation.MemoryVersion"]:
         """Get the currently active memory version."""
@@ -169,15 +171,47 @@ class Conversation(Document):
         return None
 
     # Convenience properties that return data from active transcript version
+    @computed_field
     @property
     def transcript(self) -> Optional[str]:
         """Get transcript text from active transcript version."""
         return self.active_transcript.transcript if self.active_transcript else None
 
+    @computed_field
     @property
     def segments(self) -> List["Conversation.SpeakerSegment"]:
         """Get segments from active transcript version."""
         return self.active_transcript.segments if self.active_transcript else []
+
+    @computed_field
+    @property
+    def segment_count(self) -> int:
+        """Get segment count from active transcript version."""
+        return len(self.segments) if self.segments else 0
+
+    @computed_field
+    @property
+    def memory_count(self) -> int:
+        """Get memory count from active memory version."""
+        return self.active_memory.memory_count if self.active_memory else 0
+
+    @computed_field
+    @property
+    def has_memory(self) -> bool:
+        """Check if conversation has any memory versions."""
+        return len(self.memory_versions) > 0
+
+    @computed_field
+    @property
+    def transcript_version_count(self) -> int:
+        """Get count of transcript versions."""
+        return len(self.transcript_versions)
+
+    @computed_field
+    @property
+    def memory_version_count(self) -> int:
+        """Get count of memory versions."""
+        return len(self.memory_versions)
 
     def add_transcript_version(
         self,
