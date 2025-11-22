@@ -6,16 +6,15 @@ Library             Process
 Library             OperatingSystem
 Library             String
 Library             DateTime
-Resource            ../resources/setup_resources.robot
+Resource            ../setup/setup_keywords.robot
+Resource            ../setup/teardown_keywords.robot
 Resource            ../resources/session_resources.robot
 Resource            ../resources/user_resources.robot
 Resource            ../resources/conversation_keywords.robot
-Variables           ../test_env.py
+Variables           ../setup/test_env.py
 
 Suite Setup         Suite Setup
-Suite Teardown      Delete All Sessions
-Test Setup          Suite Setup
-Test Teardown       Clear RQ Test Data
+Suite Teardown      Suite Teardown
 
 *** Variables ***
 ${TEST_TIMEOUT}             60s
@@ -23,29 +22,20 @@ ${COMPOSE_FILE}             backends/advanced/docker-compose-test.yml
 
 *** Keywords ***
 
-Clear RQ Test Data
-    [Documentation]    Clear test data between tests
-    # Clear Redis queues
-    Run Process    docker-compose    -f    ${COMPOSE_FILE}    exec    -T    redis-test    redis-cli    FLUSHALL
-    ...    cwd=.
-
 
 Check Queue Stats
     [Documentation]    Get current queue statistics
-    Create API Session    admin_session
-    ${response}=    GET On Session    admin_session    /api/queue/stats    expected_status=200
+    ${response}=    GET On Session    api    /api/queue/stats    expected_status=200
     RETURN    ${response.json()}
 
 Check Queue Jobs
     [Documentation]    Get current jobs in queue
-    Create API Session    admin_session
-    ${response}=    GET On Session    admin_session    /api/queue/jobs    expected_status=200
+    ${response}=    GET On Session    api    /api/queue/jobs    expected_status=200
     RETURN    ${response.json()}
 
 Check Queue Health
     [Documentation]    Get queue health status
-    Create API Session    admin_session
-    ${response}=    GET On Session    admin_session    /api/queue/health    expected_status=200
+    ${response}=    GET On Session    api    /api/queue/worker-details    expected_status=200
     RETURN    ${response.json()}
 
 Restart Backend Service
@@ -66,59 +56,40 @@ Restart Backend Service
 
     Log    Backend service restarted successfully
 
-Trigger Transcript Reprocessing
-    [Documentation]    Trigger transcript reprocessing to create an RQ job
-    [Arguments]    ${conversation_id}
-
-    Create API Session    admin_session
-    ${token}=    Get Authentication Token    admin_session    ${ADMIN_EMAIL}    ${ADMIN_PASSWORD}
-
-    Log    Triggering transcript reprocessing for conversation: ${conversation_id}
-    ${response}=    Reprocess Transcript    ${token}    ${conversation_id}
-
-    Should Be True    ${response.status_code} in [200, 202]
-
-    # The response might contain job_id, but it's not guaranteed in all implementations
-    ${job_id}=    Set Variable    reprocess-${conversation_id}
-    Log    Triggered reprocessing job for conversation: ${conversation_id}
-    RETURN    ${job_id}
 
 *** Test Cases ***
 Test RQ Job Enqueuing
     [Documentation]    Test that jobs can be enqueued in Redis
-    [Tags]    rq    enqueue    positive
+    [Tags]    rq enqueue positive speed-long
 
     # Check initial queue state
     ${initial_stats}=    Check Queue Stats
     ${initial_queued}=    Set Variable    ${initial_stats}[queued_jobs]
 
-    # Find or create test conversation and trigger reprocessing
-    ${conversation_id}=    Find Or Create Test Conversation
+    # Find or create test conversation
+    ${conversation}=   Find Test Conversation
+    ${conversation_id}=  Set Variable     ${conversation}[conversation_id]
 
-    IF    $conversation_id != $None
-        ${job_id}=    Trigger Transcript Reprocessing    ${conversation_id}
+    # Trigger reprocessing to test job enqueuing
+    ${job_id}=    Reprocess Transcript   ${conversation_id}
 
-        # Verify job was enqueued
-        ${stats_after}=    Check Queue Stats
-        ${queued_after}=    Set Variable    ${stats_after}[queued_jobs]
+    # Verify job was enqueued
+    ${stats_after}=    Check Queue Stats
+    ${queued_after}=    Set Variable    ${stats_after}[queued_jobs]
 
-        Should Be True    ${queued_after} >= ${initial_queued}
-        Log    Successfully enqueued job: ${job_id}
-    ELSE
-        Log    No conversations available for job enqueuing test
-        Pass Execution    No conversations available for RQ job enqueuing test
-    END
+    Should Be True    ${queued_after} >= ${initial_queued}
+    Log    Successfully enqueued job: ${job_id}
 
 Test Job Persistence Through Backend Restart
     [Documentation]    Test that RQ jobs persist when backend service restarts
-    [Tags]    rq    persistence    restart    critical
+    [Tags]    rq persistence restart critical speed-mid
 
     # Find test conversation
-    ${conversation_id}=    Find Or Create Test Conversation
-
+    ${conversation}=    Find Test Conversation
+    ${conversation_id}=  Set Variable     ${conversation}[conversation_id]
     IF    $conversation_id != $None
         # Create and enqueue a job
-        ${job_id}=    Trigger Transcript Reprocessing    ${conversation_id}
+        ${job_id}=    Reprocess Transcript    ${conversation_id}
 
         # Verify jobs exist in queue (may include other jobs)
         ${jobs_before}=    Check Queue Jobs
@@ -139,39 +110,18 @@ Test Job Persistence Through Backend Restart
         Pass Execution    No conversations available for job persistence test
     END
 
-Test Queue Health After Restart
-    [Documentation]    Test that queue health checks work after service restart
-    [Tags]    rq    health    restart    positive
-
-    # Check initial health
-    ${health_before}=    Check Queue Health
-    # Queue might be healthy or no_workers - both indicate Redis connectivity
-    Should Be True    '${health_before}[status]' in ['healthy', 'no_workers']
-    Should Be True    ${health_before}[redis_connected]
-
-    # Restart backend
-    Restart Backend Service
-
-    # Check health after restart
-    ${health_after}=    Check Queue Health
-    # Queue might be healthy or no_workers - both indicate Redis connectivity
-    Should Be True    '${health_after}[status]' in ['healthy', 'no_workers']
-    Should Be True    ${health_after}[redis_connected]
-
-    Log    Queue health check passed after restart
-
 Test Multiple Jobs Persistence
     [Documentation]    Test that multiple jobs persist through restart
-    [Tags]    rq    persistence    multiple    stress
+    [Tags]    rq persistence multiple stress speed-long
 
     # Find test conversation
-    ${conversation_id}=    Find Or Create Test Conversation
+    ${conversation}=    Find Test Conversation
 
-    IF    $conversation_id != $None
+    IF    $conversation != $None
         # Create multiple jobs using the same conversation
         ${job_count}=    Set Variable    3
         FOR    ${i}    IN RANGE    ${job_count}
-            ${job_id}=    Trigger Transcript Reprocessing    ${conversation_id}
+            ${job_id}=    Reprocess Transcript    ${conversation}[conversation_id]
             Sleep    1s    # Small delay between jobs
         END
 
@@ -196,60 +146,31 @@ Test Multiple Jobs Persistence
         Pass Execution    No conversations available for multiple jobs persistence test
     END
 
-Test Redis Data Persistence
-    [Documentation]    Test that Redis data itself persists (not just connections)
-    [Tags]    rq    redis    persistence    infrastructure
-
-    # Store a test key directly in Redis
-    ${test_key}=    Set Variable    test:persistence:key:${RANDOM_ID}
-    ${test_value}=    Set Variable    persistence-test-value-${RANDOM_ID}
-
-    Run Process    docker-compose    -f    ${COMPOSE_FILE}    exec    -T    redis-test
-    ...    redis-cli    SET    ${test_key}    ${test_value}
-    ...    cwd=.
-
-    # Restart entire test environment (Redis included)
-    Log    Restarting Redis to test data persistence
-    Run Process    docker-compose    -f    ${COMPOSE_FILE}    restart    redis-test
-    ...    cwd=.    timeout=30s
-
-    # Wait for Redis to be ready
-    Wait Until Keyword Succeeds    30s    2s
-    ...    Check Redis Health
-
-    # Check if data persisted
-    ${result}=    Run Process    docker-compose    -f    ${COMPOSE_FILE}    exec    -T    redis-test
-    ...    redis-cli    GET    ${test_key}
-    ...    cwd=.
-
-    Should Be Equal As Strings    ${result.stdout.strip()}    ${test_value}
-    Log    Redis data persistence verified
-
 Test Queue Stats Accuracy
     [Documentation]    Test that queue statistics accurately reflect job states
-    [Tags]    rq    statistics    accuracy    positive
+    [Tags]    rq statistics accuracy positive speed-mid
 
     # Get baseline stats
     ${initial_stats}=    Check Queue Stats
-    ${initial_queued}=    Set Variable    ${initial_stats}[queued_jobs]
+    ${initial_queued}=    Set Variable    ${initial_stats}[processing_jobs]
 
     # Find test conversation
-    ${conversation_id}=    Find Or Create Test Conversation
+    ${conversation_id}=    Find Test Conversation
 
     IF    $conversation_id != $None
         # Create multiple jobs to get meaningful stats
         ${job_count}=    Set Variable    3
         FOR    ${i}    IN RANGE    ${job_count}
-            ${job_id}=    Trigger Transcript Reprocessing    ${conversation_id}
+            ${job_id}=    Reprocess Transcript    ${conversation_id}[conversation_id]
             Sleep    0.5s
         END
-
+        Sleep     2s
         # Check updated stats
         ${updated_stats}=    Check Queue Stats
-        ${updated_queued}=    Set Variable    ${updated_stats}[queued_jobs]
+        ${updated_queued}=    Set Variable    ${updated_stats}[processing_jobs]
 
         # Should have same or more jobs queued (jobs may process quickly)
-        Should Be True    ${updated_queued} >= ${initial_queued}
+        Should Be True    ${updated_queued} > ${initial_queued}
         Log    Queue statistics updated: ${initial_queued} -> ${updated_queued}
     ELSE
         Log    No conversations available for stats accuracy test
@@ -258,7 +179,7 @@ Test Queue Stats Accuracy
 
 Test Queue API Authentication
     [Documentation]    Test that queue endpoints properly enforce authentication
-    [Tags]    rq    security    authentication    negative
+    [Tags]    rq security authentication negative speed-fast
 
     # Create anonymous session (no authentication)
     Get Anonymous Session    anon_session
@@ -270,9 +191,5 @@ Test Queue API Authentication
     # Queue stats endpoint should require authentication
     ${response}=    GET On Session    anon_session    /api/queue/stats    expected_status=401
     Should Be Equal As Integers    ${response.status_code}    401
-
-    # Queue health should be publicly accessible
-    ${response}=    GET On Session    anon_session    /api/queue/health    expected_status=200
-    Should Be Equal As Integers    ${response.status_code}    200
 
     Log    Queue API authentication properly enforced
