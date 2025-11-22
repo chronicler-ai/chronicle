@@ -17,7 +17,7 @@ Documentation    API session creation and authentication management keywords
 ...              - Docker service management (belong in setup_resources.robot)
 Library          RequestsLibrary
 Library          Collections
-Variables        ../test_env.py
+Variables        ../setup/test_env.py
 
 *** Keywords ***
 
@@ -58,9 +58,95 @@ Get Authentication Token
     RETURN    ${token}
 
 
-Get Current User From Session
-    [Documentation]    Get current user information from authenticated session
-    [Arguments]    ${session_alias}
+# Override RequestsLibrary Keywords with Enhanced Error Messages
+POST On Session
+    [Documentation]    Override POST On Session to show response body on errors
+    [Arguments]    ${alias}    ${uri}    &{kwargs}
 
-    ${response}=    GET On Session    ${session_alias}    /users/me    expected_status=any
+    # Extract expected_status if provided, default to 200
+    ${expected_status}=    Get From Dictionary    ${kwargs}    expected_status    200
+
+    # Remove expected_status from kwargs and set to 'anything'
+    Remove From Dictionary    ${kwargs}    expected_status
+
+    # Call original keyword with expected_status=anything
+    ${response}=    RequestsLibrary.POST On Session    ${alias}    ${uri}    expected_status=anything    &{kwargs}
+
+    # Validate status and provide detailed error if mismatch
+    IF    '${expected_status}' != 'anything' and '${expected_status}' != 'any'
+        ${status_matches}=    Evaluate    ${response.status_code} == ${expected_status}
+        IF    not ${status_matches}
+            Fail    POST ${uri} returned ${response.status_code} (expected ${expected_status}).\nResponse: ${response.text}
+        END
+    END
+
+    RETURN    ${response}
+
+GET On Session
+    [Documentation]    Override GET On Session to show response body on errors
+    [Arguments]    ${alias}    ${uri}    &{kwargs}
+
+    # Extract expected_status if provided, default to 200
+    ${expected_status}=    Get From Dictionary    ${kwargs}    expected_status    200
+
+    # Remove expected_status from kwargs and set to 'anything'
+    Remove From Dictionary    ${kwargs}    expected_status
+
+    # Call original keyword with expected_status=anything
+    ${response}=    RequestsLibrary.GET On Session    ${alias}    ${uri}    expected_status=anything    &{kwargs}
+
+    # Validate status and provide detailed error if mismatch
+    IF    '${expected_status}' != 'anything' and '${expected_status}' != 'any'
+        ${status_matches}=    Evaluate    ${response.status_code} == ${expected_status}
+        IF    not ${status_matches}
+            Fail    GET ${uri} returned ${response.status_code} (expected ${expected_status}).\nResponse: ${response.text}
+        END
+    END
+
+    RETURN    ${response}
+
+PUT On Session
+    [Documentation]    Override PUT On Session to show response body on errors
+    [Arguments]    ${alias}    ${uri}    &{kwargs}
+
+    # Extract expected_status if provided, default to 200
+    ${expected_status}=    Get From Dictionary    ${kwargs}    expected_status    200
+
+    # Remove expected_status from kwargs and set to 'anything'
+    Remove From Dictionary    ${kwargs}    expected_status
+
+    # Call original keyword with expected_status=anything
+    ${response}=    RequestsLibrary.PUT On Session    ${alias}    ${uri}    expected_status=anything    &{kwargs}
+
+    # Validate status and provide detailed error if mismatch
+    IF    '${expected_status}' != 'anything' and '${expected_status}' != 'any'
+        ${status_matches}=    Evaluate    ${response.status_code} == ${expected_status}
+        IF    not ${status_matches}
+            Fail    PUT ${uri} returned ${response.status_code} (expected ${expected_status}).\nResponse: ${response.text}
+        END
+    END
+
+    RETURN    ${response}
+
+DELETE On Session
+    [Documentation]    Override DELETE On Session to show response body on errors
+    [Arguments]    ${alias}    ${uri}    &{kwargs}
+
+    # Extract expected_status if provided, default to 200
+    ${expected_status}=    Get From Dictionary    ${kwargs}    expected_status    200
+
+    # Remove expected_status from kwargs and set to 'anything'
+    Remove From Dictionary    ${kwargs}    expected_status
+
+    # Call original keyword with expected_status=anything
+    ${response}=    RequestsLibrary.DELETE On Session    ${alias}    ${uri}    expected_status=anything    &{kwargs}
+
+    # Validate status and provide detailed error if mismatch
+    IF    '${expected_status}' != 'anything' and '${expected_status}' != 'any'
+        ${status_matches}=    Evaluate    ${response.status_code} == ${expected_status}
+        IF    not ${status_matches}
+            Fail    DELETE ${uri} returned ${response.status_code} (expected ${expected_status}).\nResponse: ${response.text}
+        END
+    END
+
     RETURN    ${response}

@@ -2,17 +2,14 @@
 Documentation    Chat Service Keywords
 Library          RequestsLibrary
 Library          Collections
-Variables        ../test_env.py
+Variables        ../setup/test_env.py
 Resource         session_resources.robot
 
 *** Keywords ***
 
 Create Chat Session
-    [Documentation]    Create a new chat session (uses admin session)
+    [Documentation]    Create a new chat session (uses api session)
     [Arguments]    ${title}=${None}    ${expected_status}=200
-
-    # Get admin session
-    Create API Session    session
 
     &{data}=       Create Dictionary
 
@@ -20,29 +17,23 @@ Create Chat Session
         Set To Dictionary    ${data}    title=${title}
     END
 
-    ${response}=    POST On Session    admin_session    /api/chat/sessions    json=${data}    expected_status=${expected_status}
+    ${response}=    POST On Session    api    /api/chat/sessions    json=${data}    expected_status=${expected_status}
     RETURN    ${response}
 
 Get Chat Sessions
-    [Documentation]    Get all chat sessions for user (uses admin session)
+    [Documentation]    Get all chat sessions for user (uses api session)
     [Arguments]    ${limit}=50
 
-    # Get admin session
-    Create API Session    admin_session
-
     &{params}=     Create Dictionary    limit=${limit}
-    ${response}=    GET On Session    admin_session    /api/chat/sessions    params=${params}
+    ${response}=    GET On Session    api    /api/chat/sessions    params=${params}
     RETURN    ${response}
 
 
 Delete Chat Session
-    [Documentation]    Delete a chat session (uses admin session)
+    [Documentation]    Delete a chat session (uses api session)
     [Arguments]    ${session_id}    ${expected_status}=200
 
-    # Get admin session
-    Create API Session    session
-
-    ${response}=    DELETE On Session    session    /api/chat/sessions/${session_id}    expected_status=${expected_status}
+    ${response}=    DELETE On Session    api    /api/chat/sessions/${session_id}    expected_status=${expected_status}
     RETURN    ${response}
 
 
@@ -65,43 +56,40 @@ Cleanup Test Chat Session
     Should Be Equal As Integers    ${response.status_code}    200
 
 Get Chat Session
-    [Documentation]    Get a specific chat session (uses admin session)
+    [Documentation]    Get a specific chat session (uses api session)
     [Arguments]    ${session_id}    ${expected_status}=200
 
-    # Get admin session
-    Create API Session    admin_session
-
-    ${response}=    GET On Session    admin_session    /api/chat/sessions/${session_id}    expected_status=${expected_status}
+    ${response}=    GET On Session    api    /api/chat/sessions/${session_id}    expected_status=${expected_status}
     RETURN    ${response}
 
 Get Session Messages
-    [Documentation]    Get messages from a chat session (uses admin session)
+    [Documentation]    Get messages from a chat session (uses api session)
     [Arguments]    ${session_id}    ${limit}=100    ${expected_status}=200
 
-    # Get admin session
-    Create API Session    admin_session
-
     &{params}=    Create Dictionary    limit=${limit}
-    ${response}=    GET On Session    admin_session    /api/chat/sessions/${session_id}/messages    params=${params}    expected_status=${expected_status}
+    ${response}=    GET On Session    api    /api/chat/sessions/${session_id}/messages    params=${params}    expected_status=${expected_status}
     RETURN    ${response}
 
 Update Chat Session
-    [Documentation]    Update a chat session title (uses admin session)
+    [Documentation]    Update a chat session title (uses api session)
     [Arguments]    ${session_id}    ${new_title}    ${expected_status}=200
 
-    # Get admin session
-    Create API Session    admin_session
-
     &{data}=    Create Dictionary    title=${new_title}
-    ${response}=    PUT On Session    admin_session    /api/chat/sessions/${session_id}    json=${data}    expected_status=${expected_status}
+    ${response}=    PUT On Session    api    /api/chat/sessions/${session_id}    json=${data}    expected_status=${expected_status}
     RETURN    ${response}
 
 Get Chat Statistics
     [Documentation]    Get chat statistics for user (uses admin session)
 
-    # Get admin session
-    Create API Session    admin_session
+    ${response}=    GET On Session    api    /api/chat/statistics
+    RETURN    ${response}
 
-    ${response}=    GET On Session    admin_session    /api/chat/statistics
+Send Chat Message
+    [Documentation]    Send a message to a chat session
+    [Arguments]    ${session_id}    ${message_content}    ${expected_status}=201
+
+    ${message_data}=    Create Dictionary    content=${message_content}
+    ${response}=        POST On Session    api    /api/chat/sessions/${session_id}/messages    json=${message_data}    expected_status=${expected_status}
+
     RETURN    ${response}
 

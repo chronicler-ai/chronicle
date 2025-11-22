@@ -3,6 +3,7 @@ Documentation    Conversation Management Keywords
 Library          RequestsLibrary
 Library          Collections
 Library          Process
+Library          String
 Resource         session_resources.robot
 Resource         audio_keywords.robot
 
@@ -21,18 +22,23 @@ Get Conversation By ID
     ${response}=    GET On Session    api    /api/conversations/${conversation_id} 
     RETURN    ${response.json()}[conversation]
 
-# Get Conversation Versions
-#     [Documentation]    Get version history for a conversation
-#     [Arguments]    ${conversation_id}
-#     ${response}=    GET On Session    api    /api/conversations/${conversation_id}/versions 
-#     RETURN    ${response.json()}[versions]
+Get Conversation Versions
+    [Documentation]    Get version history for a conversation
+    [Arguments]    ${conversation_id}
+    ${response}=    GET On Session    api    /api/conversations/${conversation_id}/versions 
+    RETURN    ${response.json()}[transcript_versions]
+
+Get conversation memory versions
+    [Documentation]    Get memory version history for a conversation
+    [Arguments]    ${conversation_id}
+    ${response}=    GET On Session    api    /api/conversations/${conversation_id}/versions/memory
+    RETURN    ${response.json()}[memory_versions]
 
 Reprocess Transcript
     [Documentation]    Trigger transcript reprocessing for a conversation
     [Arguments]     ${conversation_id}
 
-    ${response}=    POST On Session    api    /api/conversations/${conversation_id}/reprocess-transcript   
-    Should Be Equal As Integers    ${response.status_code}    200
+    ${response}=    POST On Session    api    /api/conversations/${conversation_id}/reprocess-transcript    expected_status=200
 
     ${reprocess_data}=    Set Variable    ${response.json()}
     Dictionary Should Contain Key    ${reprocess_data}    job_id
@@ -51,21 +57,21 @@ Reprocess Memory
     [Arguments]    ${conversation_id}    ${transcript_version_id}=active
     &{params}=     Create Dictionary    transcript_version_id=${transcript_version_id}
 
-    ${response}=    POST On Session    api    /api/conversations/${conversation_id}/reprocess-memory    headers=${headers}    params=${params}
+    ${response}=    POST On Session    api    /api/conversations/${conversation_id}/reprocess-memory        params=${params}
     RETURN    ${response.json()}
 
 Activate Transcript Version
     [Documentation]    Activate a specific transcript version
     [Arguments]    ${conversation_id}    ${version_id}
 
-    ${response}=    POST On Session    api    /api/conversations/${conversation_id}/activate-transcript/${version_id}    headers=${headers}
+    ${response}=    POST On Session    api    /api/conversations/${conversation_id}/activate-transcript/${version_id}  
     RETURN    ${response.json()}
 
 Activate Memory Version
     [Documentation]    Activate a specific memory version
     [Arguments]     ${conversation_id}    ${version_id}
 
-    ${response}=    POST On Session    api    /api/conversations/${conversation_id}/activate-memory/${version_id}    headers=${headers}
+    ${response}=    POST On Session    api    /api/conversations/${conversation_id}/activate-memory/${version_id}  
     RETURN    ${response.json()}
 
 Delete Conversation
@@ -128,14 +134,40 @@ Create Test Conversation
     [Arguments]     ${device_name}=test-device
 
     # Upload test audio file to create a conversation
-    ${test_audio_file}=    Set Variable    test-assets/DIY_Experts_Glass_Blowing_16khz_mono_4min.wav
 
-    ${conversation}=    Upload Audio File     ${test_audio_file}    ${device_name}
+    ${conversation}=    Upload Audio File     ${TEST_AUDIO_FILE}    ${device_name}
 
     RETURN    ${conversation}
 
+Verify Transcript Content
+    [Documentation]    Verify transcript contains expected content and quality
+    [Arguments]    ${conversation}    ${expected_keywords}    ${min_length}=50
+
+    Dictionary Should Contain Key    ${conversation}    transcript
+    ${transcript}=    Set Variable    ${conversation}[transcript]
+    Should Not Be Empty    ${transcript}
+
+    # Check length
+    ${transcript_length}=    Get Length    ${transcript}
+    Should Be True    ${transcript_length} >= ${min_length}    Transcript too short: ${transcript_length}
+
+    # Check for expected keywords
+    ${transcript_lower}=    Convert To Lower Case    ${transcript}
+    FOR    ${keyword}    IN    @{expected_keywords}
+        ${keyword_lower}=    Convert To Lower Case    ${keyword}
+        Should Contain    ${transcript_lower}    ${keyword_lower}    Missing keyword: ${keyword}
+    END
+
+    # Verify segments exist
+    Dictionary Should Contain Key    ${conversation}    segments
+    ${segments}=    Set Variable    ${conversation}[segments]
+    ${segment_count}=    Get Length    ${segments}
+    Should Be True    ${segment_count} > 0    No segments found
+
+    Log    Transcript verification passed: ${transcript_length} chars, ${segment_count} segments    INFO
+
 Find Test Conversation
-    [Documentation]    Find a conversation that exists for testing (uses admin session)
+    [Documentation]    Find an existing conversation or create one if none exist (uses admin session)
     ${conversations_data}=    Get User Conversations
     Log    Retrieved conversations data: ${conversations_data}
 
@@ -147,6 +179,12 @@ Find Test Conversation
         RETURN    ${first_conv}
     END
 
-    # If no conversations exist, return None (let tests handle appropriately)
-    RETURN    ${None}
+    # If no conversations exist, create one by uploading test audio
+    Log    No conversations found, creating one by uploading test audio
+    ${conversation}=    Upload Audio File    ${TEST_AUDIO_FILE}    ${TEST_DEVICE_NAME}
+
+    # Wait for initial processing to complete
+    Sleep    5s
+
+    RETURN    ${conversation}
 

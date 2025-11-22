@@ -3,7 +3,7 @@ Documentation    Audio Keywords
 Library          RequestsLibrary
 Library          Collections
 Library          OperatingSystem
-Variables        ../test_data.py
+Variables        ../setup/test_data.py
 Resource         session_resources.robot
 Resource         conversation_keywords.robot
 Resource         queue_keywords.robot
@@ -46,22 +46,23 @@ Upload Audio File
 
       # Extract important values
       ${audio_uuid}=    Set Variable    ${upload_response['files'][0]['audio_uuid']}
-      ${job_id}=        Set Variable    ${upload_response['files'][0]['job_id']}
+      ${job_id}=        Set Variable    ${upload_response['files'][0]['conversation_id']}
+      ${transcript_job_id}=    Set Variable    ${upload_response['files'][0]['transcript_job_id']}
       Log    Audio UUID: ${audio_uuid}
-      Log    Job ID: ${job_id}
+      Log    Conversation ID: ${job_id}
+      Log    Transcript Job ID: ${transcript_job_id}
 
   
 
       # Wait for conversation to be created and transcribed
       Log    Waiting for transcription to complete...
 
-
-      Wait Until Keyword Succeeds    60s    5s       Check job status   ${job_id}    completed
-      ${job}=    Get Job Details    ${job_id}
+      Wait Until Keyword Succeeds    60s    5s       Check job status   ${transcript_job_id}    completed
+      ${job}=    Get Job Details    ${transcript_job_id}
 
      # Get the completed conversation
       ${conversation}=     Get Conversation By ID    ${job}[result][conversation_id]
-      Should Exist    ${conversation}    Conversation not found after upload and processing
+      Should Not Be Equal    ${conversation}    ${None}    Conversation not found after upload and processing
 
       Log    Found conversation: ${conversation}
       RETURN    ${conversation}
@@ -82,6 +83,13 @@ Conversation Should Be Complete
 
       # Optional: Check if it has memories (if memory processing is expected)
       Log    Conversation ready: ${conversation}[conversation_id]
+
+Wait For Audio Processing
+    [Documentation]    Wait for audio processing to complete
+    [Arguments]    ${processing_delay}=10s
+
+    Log    Waiting ${processing_delay} for audio processing to complete    INFO
+    Sleep    ${processing_delay}
 
 Get Conversations For Device
       [Documentation]    Get conversations filtered by device name (or return latest if device name not in client_id)

@@ -22,15 +22,12 @@ Library          Process
 Library          String
 Library          DateTime
 Library          OperatingSystem
-Variables        ../test_env.py
+Variables        ../setup/test_env.py
 Resource         setup_resources.robot
 Resource         session_resources.robot
 # Library          JSONLibrary  # Optional library, not required
 
 *** Keywords ***
-
-
-
 
 Upload Audio File For Processing
     [Documentation]    Upload audio file and return processing result

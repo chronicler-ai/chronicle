@@ -2,7 +2,7 @@
 Documentation    Memory Management Keywords
 Library          RequestsLibrary
 Library          Collections
-Variables        ../test_env.py
+Variables        ../setup/test_env.py
 
 *** Keywords ***
 
@@ -72,3 +72,22 @@ Count User Memories
     ${memories}=    Set Variable    ${response.json()}
     ${count}=       Get Length    ${memories}
     RETURN    ${count}
+
+Verify Memory Extraction
+    [Documentation]    Verify memories were extracted successfully
+    [Arguments]    ${conversation}    ${memories_data}    ${min_memories}=0
+
+    # Check conversation memory count
+    Dictionary Should Contain Key    ${conversation}    memory_count
+    ${conv_memory_count}=    Set Variable    ${conversation}[memory_count]
+
+    # Check API memories
+    Dictionary Should Contain Key    ${memories_data}    memories
+    ${memories}=    Set Variable    ${memories_data}[memories]
+    ${api_memory_count}=    Get Length    ${memories}
+
+    # Verify reasonable memory extraction
+    Should Be True    ${conv_memory_count} >= ${min_memories}    Insufficient memories: ${conv_memory_count}
+    Should Be True    ${api_memory_count} >= ${min_memories}    Insufficient API memories: ${api_memory_count}
+
+    Log    Memory extraction verified: conversation=${conv_memory_count}, api=${api_memory_count}    INFO

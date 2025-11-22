@@ -2,17 +2,18 @@
 Documentation    Health and Status Endpoint API Tests
 Library          RequestsLibrary
 Library          Collections
-Resource         ../resources/setup_resources.robot
+Resource         ../setup/setup_keywords.robot
+Resource         ../setup/teardown_keywords.robot
 Resource         ../resources/user_resources.robot
 Resource         ../resources/session_resources.robot
 Suite Setup      Suite Setup
-Suite Teardown   Delete All Sessions
+Suite Teardown   Suite Teardown
 
 *** Test Cases ***
 
 Readiness Check Test
     [Documentation]    Test readiness check endpoint for container orchestration
-    [Tags]             readiness    status    positive
+    [Tags]    readiness status positive speed-fast
     Get Anonymous Session    anon_session
 
     ${response}=    GET On Session    anon_session    /readiness
@@ -25,10 +26,9 @@ Readiness Check Test
 
 Health Check Test
     [Documentation]    Test main health check endpoint
-    [Tags]             health    status    positive
-    # Get Anonymous Session
-    Create API Session    health_check_session  
-    ${response}=    GET On Session    health_check_session    /health
+    [Tags]    health status positive speed-fast
+
+    ${response}=    GET On Session    api    /health
     Should Be Equal As Integers    ${response.status_code}    200
 
     ${health}=    Set Variable    ${response.json()}
@@ -78,7 +78,7 @@ Health Check Test
 
 Auth Health Check Test
     [Documentation]    Test authentication service health check
-    [Tags]             auth    health    positive
+    [Tags]    auth health positive speed-fast
     Get Anonymous Session    session
 
     ${response}=    GET On Session    session   /api/auth/health
@@ -90,22 +90,37 @@ Auth Health Check Test
     Dictionary Should Contain Key    ${auth_health}    memory_service
     Dictionary Should Contain Key    ${auth_health}    timestamp
 
-Queue Health Check Test
-    [Documentation]    Test queue system health check
-    [Tags]             queue    health    positive
-    Get Anonymous Session    session
+Queue Worker Details Test
+    [Documentation]    Test queue worker details endpoint (includes queue health and task manager)
+    [Tags]    queue health positive speed-fast
 
-    ${response}=    GET On Session    session    /api/queue/health
+    ${response}=    GET On Session    api    /api/queue/worker-details
     Should Be Equal As Integers    ${response.status_code}    200
 
-    ${queue_health}=    Set Variable    ${response.json()}
-    Dictionary Should Contain Key    ${queue_health}    status
-    Dictionary Should Contain Key    ${queue_health}    worker_running
-    Dictionary Should Contain Key    ${queue_health}    message
+    ${worker_details}=    Set Variable    ${response.json()}
+    Dictionary Should Contain Key    ${worker_details}    architecture
+    Dictionary Should Contain Key    ${worker_details}    timestamp
+    Dictionary Should Contain Key    ${worker_details}    workers
+    Dictionary Should Contain Key    ${worker_details}    queues
+    Dictionary Should Contain Key    ${worker_details}    redis_connection
+
+    # Verify workers structure
+    ${workers}=    Set Variable    ${worker_details}[workers]
+    Dictionary Should Contain Key    ${workers}    total
+    Dictionary Should Contain Key    ${workers}    active
+    Dictionary Should Contain Key    ${workers}    idle
+    Dictionary Should Contain Key    ${workers}    details
+
+    # Verify queues structure
+    ${queues}=    Set Variable    ${worker_details}[queues]
+    Dictionary Should Contain Key    ${queues}    default
+    Dictionary Should Contain Key    ${queues}    transcription
+    Dictionary Should Contain Key    ${queues}    memory
+    Dictionary Should Contain Key    ${queues}    audio
 
 Chat Health Check Test
     [Documentation]    Test chat service health check
-    [Tags]             chat    health    positive
+    [Tags]    chat health positive speed-fast
     Get Anonymous Session    session
 
     ${response}=    GET On Session    session    /api/chat/health
@@ -119,45 +134,34 @@ Chat Health Check Test
 
 System Metrics Test
     [Documentation]    Test system metrics endpoint (admin only)
-    [Tags]             metrics    admin    positive
-    Get Anonymous Session    anon_session
+    [Tags]    metrics admin positive speed-fast
 
-    Create API Session    admin_session
-    ${response}=       GET On Session    admin_session    /api/metrics
+    ${response}=       GET On Session    api    /api/metrics
     Should Be Equal As Integers    ${response.status_code}    200
 
     ${metrics}=        Set Variable    ${response.json()}
     # Metrics structure may vary, just verify it's a valid response
     Should Be True     isinstance($metrics, dict)
 
-Processor Status Test
-    [Documentation]    Test processor status endpoint (admin only)
-    [Tags]             processor    admin    positive
-    Get Anonymous Session    anon_session
+Queue Stats Test
+    [Documentation]    Test queue stats endpoint
+    [Tags]    queue stats positive speed-fast
 
-    Create API Session    admin_session
-    ${response}=       GET On Session    admin_session    /api/processor/status
+    ${response}=       GET On Session    api    /api/queue/stats
     Should Be Equal As Integers    ${response.status_code}    200
 
-    ${status}=         Set Variable    ${response.json()}
-    # Processor status structure may vary
-    Should Be True     isinstance($status, dict)
+    ${stats}=          Set Variable    ${response.json()}
+    Dictionary Should Contain Key    ${stats}    total_jobs
+    Dictionary Should Contain Key    ${stats}    queued_jobs
+    Dictionary Should Contain Key    ${stats}    processing_jobs
+    Dictionary Should Contain Key    ${stats}    completed_jobs
+    Dictionary Should Contain Key    ${stats}    failed_jobs
+    Dictionary Should Contain Key    ${stats}    timestamp
 
-Processing Tasks Test
-    [Documentation]    Test processing tasks endpoint (admin only)
-    [Tags]             processor    tasks    admin    positive
-    Get Anonymous Session    anon_session
-
-    Create API Session    admin_session
-    ${response}=       GET On Session    admin_session    /api/processor/tasks
-    Should Be Equal As Integers    ${response.status_code}    200
-
-    ${tasks}=          Set Variable    ${response.json()}
-    Should Be True     isinstance($tasks, (dict, list))
 
 Health Check Service Details Test
-    [Documentation]    Test detailed service health information
-    [Tags]             health    services    detailed
+    [Documentation]    Test detailed service health information including Redis workers
+    [Tags]    health services detailed speed-fast
     Get Anonymous Session    session
     ${response}=    GET On Session    session    /health
     Should Be Equal As Integers    ${response.status_code}    200
@@ -166,7 +170,7 @@ Health Check Service Details Test
     ${services}=    Set Variable    ${health}[services]
 
     # Check for expected services
-    ${expected_services}=    Create List    mongodb    audioai    memory_service    speech_to_text
+    ${expected_services}=    Create List    mongodb    redis    audioai    memory_service    speech_to_text
 
     FOR    ${service}    IN    @{expected_services}
         IF    '${service}' in $services
@@ -177,41 +181,37 @@ Health Check Service Details Test
         END
     END
 
+    # Verify Redis service includes worker information
+    ${redis_service}=    Set Variable    ${services}[redis]
+    Dictionary Should Contain Key    ${redis_service}    worker_count
+    Dictionary Should Contain Key    ${redis_service}    active_workers
+    Dictionary Should Contain Key    ${redis_service}    idle_workers
+    Dictionary Should Contain Key    ${redis_service}    queues
+    Should Be True    isinstance(${redis_service}[worker_count], int)
+    Should Be True    isinstance(${redis_service}[active_workers], int)
+    Should Be True    isinstance(${redis_service}[idle_workers], int)
+
 Non-Admin Cannot Access Admin Endpoints Test
     [Documentation]    Test that non-admin users cannot access admin health endpoints
-    [Tags]             health    security    negative
-    Get Anonymous Session    session
-
-    Create API Session    admin_session
+    [Tags]    health security negative speed-fast
 
     # Create a non-admin user
-    ${test_user}=      Create Test User    admin_session    test-user-${RANDOM_ID}@example.com    test-password-123
-    Create API Session    user_session    email=test-user-${RANDOM_ID}@example.com    password=test-password-123
+    ${test_user}=      Create Test User    api
+    Create API Session    user_session    email=${test_user}[email]    password=${TEST_USER_PASSWORD}
 
     # Metrics endpoint should be forbidden
     ${response}=       GET On Session    user_session    /api/metrics    expected_status=403
     Should Be Equal As Integers    ${response.status_code}    403
 
-    # Processor status should be forbidden
-    ${response}=       GET On Session    user_session    /api/processor/status    expected_status=403
-    Should Be Equal As Integers    ${response.status_code}    403
-
-    # Processing tasks should be forbidden
-    ${response}=       GET On Session    user_session    /api/processor/tasks    expected_status=403
-    Should Be Equal As Integers    ${response.status_code}    403
-
     # Cleanup
-    Delete Test User    ${test_user}[user_id]
+    [Teardown]    Delete User    api    ${test_user}[id]
 
 Unauthorized Health Access Test
     [Documentation]    Test health endpoints that require authentication
-    [Tags]             health    security    negative
+    [Tags]    health security negative speed-fast
     Get Anonymous Session    session
 
     # Admin-only endpoints should require authentication
     ${response}=    GET On Session    session    /api/metrics    expected_status=401
-    Should Be Equal As Integers    ${response.status_code}    401
-
-    ${response}=    GET On Session    session    /api/processor/status    expected_status=401
     Should Be Equal As Integers    ${response.status_code}    401
 
