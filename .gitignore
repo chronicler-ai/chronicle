@@ -1,5 +1,6 @@
 **/__pycache__
 *.wav
+!tests/test_assets/*.wav
 **/*.env
 !**/.env.template
 **/memory_config.yaml

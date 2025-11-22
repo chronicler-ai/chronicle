@@ -28,7 +28,7 @@ jobs:
     - name: Install Robot Framework and dependencies
       run: |
         pip install --upgrade pip
-        pip install robotframework robotframework-requests python-dotenv
+        pip install robotframework robotframework-requests python-dotenv websockets
 
     - name: Create test environment file
       working-directory: tests/setup
@@ -147,6 +147,12 @@ jobs:
 
     - name: Run Robot Framework tests
       working-directory: tests
+      env:
+        # Required for backend imports in test libraries
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI_BASE_URL: https://api.openai.com/v1
+        OPENAI_MODEL: gpt-4o-mini
+        DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
       run: |
         # Run all tests
         make all OUTPUTDIR=results || true
