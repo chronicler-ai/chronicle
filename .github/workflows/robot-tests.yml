@@ -8,6 +8,11 @@ on:
       - 'backends/advanced/src/**'
       - '.github/workflows/robot-tests.yml'
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   robot-tests:
     runs-on: ubuntu-latest
@@ -240,6 +245,17 @@ jobs:
           tests/results/report.html
           tests/results/log.html
         retention-days: 30
+
+    - name: Publish HTML Report as GitHub Pages artifact
+      if: always()
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: tests/results
+
+    - name: Deploy to GitHub Pages
+      if: always()
+      uses: actions/deploy-pages@v4
+      id: deployment
 
     - name: Upload Robot Framework XML output
       if: always()
