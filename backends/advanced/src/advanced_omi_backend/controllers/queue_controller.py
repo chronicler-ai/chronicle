@@ -93,14 +93,22 @@ def get_job_stats() -> Dict[str, Any]:
     }
 
 
-def get_jobs(limit: int = 20, offset: int = 0, queue_name: str = None) -> Dict[str, Any]:
+def get_jobs(
+    limit: int = 20,
+    offset: int = 0,
+    queue_name: str = None,
+    job_type: str = None,
+    client_id: str = None
+) -> Dict[str, Any]:
     """
-    Get jobs from a specific queue or all queues.
+    Get jobs from a specific queue or all queues with optional filtering.
 
     Args:
         limit: Maximum number of jobs to return
         offset: Number of jobs to skip
         queue_name: Specific queue name or None for all queues
+        job_type: Filter by job type (matches func_name, e.g., "speech_detection")
+        client_id: Filter by client_id in job meta (partial match)
 
     Returns:
         Dict with jobs list and pagination metadata matching frontend expectations
@@ -130,11 +138,21 @@ def get_jobs(limit: int = 20, offset: int = 0, queue_name: str = None) -> Dict[s
                     user_id = job.kwargs.get("user_id", "") if job.kwargs else ""
 
                     # Extract just the function name (e.g., "listen_for_speech_job" from "module.listen_for_speech_job")
-                    job_type = job.func_name.split('.')[-1] if job.func_name else "unknown"
+                    func_name = job.func_name.split('.')[-1] if job.func_name else "unknown"
+
+                    # Apply job_type filter
+                    if job_type and job_type not in func_name:
+                        continue
+
+                    # Apply client_id filter (partial match in meta)
+                    if client_id:
+                        job_client_id = job.meta.get("client_id", "") if job.meta else ""
+                        if client_id not in job_client_id:
+                            continue
 
                     all_jobs.append({
                         "job_id": job.id,
-                        "job_type": job_type,
+                        "job_type": func_name,
                         "user_id": user_id,
                         "status": status,
                         "priority": "normal",  # RQ doesn't track priority in metadata
