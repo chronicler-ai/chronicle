@@ -145,6 +145,38 @@ jobs:
 
         echo "✓ All services ready!"
 
+    - name: Verify workers are registered
+      working-directory: backends/advanced
+      run: |
+        echo "Checking RQ worker registration in Redis..."
+        docker compose -f docker-compose-ci.yml exec -T workers-test uv run python -c "
+        from rq import Worker
+        from redis import Redis
+        import os
+
+        redis_url = os.getenv('REDIS_URL', 'redis://redis-test:6379/0')
+        r = Redis.from_url(redis_url)
+        workers = Worker.all(connection=r)
+
+        print(f'Total registered workers: {len(workers)}')
+        for worker in workers:
+            print(f'  - {worker.name}: queues={worker.queue_names()}, state={worker.get_state()}')
+
+        if len(workers) == 0:
+            print('⚠️ WARNING: No workers registered!')
+            exit(1)
+        "
+
+        echo ""
+        echo "Checking RQ queue status..."
+        docker compose -f docker-compose-ci.yml exec -T redis-test redis-cli -c "
+        ECHO 'Queue lengths:'
+        LLEN rq:queue:transcription
+        LLEN rq:queue:memory
+        LLEN rq:queue:default
+        LLEN rq:queue:audio
+        "
+
     - name: Run Robot Framework tests
       working-directory: tests
       env:
