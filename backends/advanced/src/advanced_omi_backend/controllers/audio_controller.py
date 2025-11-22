@@ -192,6 +192,50 @@ async def upload_and_process_audio_files(
         )
 
 
+async def get_conversation_audio_path(conversation_id: str, user: User, cropped: bool = False) -> Path:
+    """
+    Get the file path for a conversation's audio file.
+
+    Args:
+        conversation_id: The conversation ID
+        user: The authenticated user
+        cropped: If True, return cropped audio path; if False, return original audio path
+
+    Returns:
+        Path object for the audio file
+
+    Raises:
+        ValueError: If conversation not found, access denied, or audio file not available
+    """
+    # Get conversation by conversation_id (UUID field, not _id)
+    conversation = await Conversation.find_one(Conversation.conversation_id == conversation_id)
+
+    if not conversation:
+        raise ValueError("Conversation not found")
+
+    # Check ownership (admins can access all files)
+    if not user.is_superuser and conversation.user_id != str(user.user_id):
+        raise ValueError("Access denied")
+
+    # Get the appropriate audio path
+    audio_path = conversation.cropped_audio_path if cropped else conversation.audio_path
+
+    if not audio_path:
+        audio_type = "cropped" if cropped else "original"
+        raise ValueError(f"No {audio_type} audio file available for this conversation")
+
+    # Build full file path
+    from advanced_omi_backend.app_config import get_audio_chunk_dir
+    audio_dir = get_audio_chunk_dir()
+    file_path = audio_dir / audio_path
+
+    # Check if file exists
+    if not file_path.exists() or not file_path.is_file():
+        raise ValueError("Audio file not found on disk")
+
+    return file_path
+
+
 async def get_cropped_audio_info(audio_uuid: str, user: User):
     """
     Get audio cropping metadata from the conversation.

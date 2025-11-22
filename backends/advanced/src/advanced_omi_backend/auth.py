@@ -119,7 +119,36 @@ fastapi_users = FastAPIUsers[User, PydanticObjectId](
 
 # User dependencies for protecting endpoints
 current_active_user = fastapi_users.current_user(active=True)
+current_active_user_optional = fastapi_users.current_user(active=True, optional=True)
 current_superuser = fastapi_users.current_user(active=True, superuser=True)
+
+
+async def get_user_from_token_param(token: str) -> Optional[User]:
+    """
+    Get user from JWT token string (for query parameter authentication).
+
+    This is useful for endpoints that need to support token-based auth via query params,
+    such as HTML audio elements that can't set custom headers.
+
+    Args:
+        token: JWT token string
+
+    Returns:
+        User object if token is valid and user is active, None otherwise
+    """
+    if not token:
+        return None
+    try:
+        strategy = get_jwt_strategy()
+        user_db_gen = get_user_db()
+        user_db = await user_db_gen.__anext__()
+        user_manager = UserManager(user_db)
+        user = await strategy.read_token(token, user_manager)
+        if user and user.is_active:
+            return user
+    except Exception:
+        pass
+    return None
 
 
 def get_accessible_user_ids(user: User) -> list[str] | None:
