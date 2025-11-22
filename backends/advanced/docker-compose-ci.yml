@@ -26,6 +26,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       # LLM provider configuration (required for memory service)
       - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
       # Authentication (test-specific)
       - AUTH_SECRET_KEY=test-jwt-signing-key-for-integration-tests
@@ -138,6 +139,7 @@ services:
       - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
       - AUTH_SECRET_KEY=test-jwt-signing-key-for-integration-tests
       - ADMIN_PASSWORD=test-admin-password-123
