@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 from advanced_omi_backend.auth import current_active_user
-from advanced_omi_backend.controllers.queue_controller import get_jobs, get_job_stats, get_queue_health, redis_conn, QUEUE_NAMES
+from advanced_omi_backend.controllers.queue_controller import get_jobs, get_job_stats, redis_conn, QUEUE_NAMES
 from advanced_omi_backend.users import User
 from rq.job import Job
 import redis.asyncio as aioredis
@@ -23,11 +23,13 @@ async def list_jobs(
     limit: int = Query(20, ge=1, le=100, description="Number of jobs to return"),
     offset: int = Query(0, ge=0, description="Number of jobs to skip"),
     queue_name: str = Query(None, description="Filter by queue name"),
+    job_type: str = Query(None, description="Filter by job type (matches func_name)"),
+    client_id: str = Query(None, description="Filter by client_id in meta"),
     current_user: User = Depends(current_active_user)
 ):
     """List jobs with pagination and filtering."""
     try:
-        result = get_jobs(limit=limit, offset=offset, queue_name=queue_name)
+        result = get_jobs(limit=limit, offset=offset, queue_name=queue_name, job_type=job_type, client_id=client_id)
 
         # Filter jobs by user if not admin
         if not current_user.is_superuser:
@@ -46,6 +48,44 @@ async def list_jobs(
     except Exception as e:
         logger.error(f"Failed to list jobs: {e}")
         return {"error": "Failed to list jobs", "jobs": [], "pagination": {"total": 0, "limit": limit, "offset": offset, "has_more": False}}
+
+
+@router.get("/jobs/{job_id}/status")
+async def get_job_status(
+    job_id: str,
+    current_user: User = Depends(current_active_user)
+):
+    """Get just the status of a specific job (lightweight endpoint)."""
+    try:
+        job = Job.fetch(job_id, connection=redis_conn)
+
+        # Check user permission (non-admins can only see their own jobs)
+        if not current_user.is_superuser:
+            job_user_id = job.kwargs.get("user_id") if job.kwargs else None
+            if job_user_id != str(current_user.user_id):
+                raise HTTPException(status_code=403, detail="Access forbidden")
+
+        # Determine status from registries
+        status = "unknown"
+        if job.is_queued:
+            status = "queued"
+        elif job.is_started:
+            status = "processing"
+        elif job.is_finished:
+            status = "completed"
+        elif job.is_failed:
+            status = "failed"
+        elif job.is_deferred:
+            status = "deferred"
+
+        return {
+            "job_id": job.id,
+            "status": status
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get job status {job_id}: {e}")
+        raise HTTPException(status_code=404, detail="Job not found")
 
 
 @router.get("/jobs/{job_id}")
@@ -299,19 +339,37 @@ async def get_queue_stats_endpoint(
         return {"total_jobs": 0, "queued_jobs": 0, "processing_jobs": 0, "completed_jobs": 0, "failed_jobs": 0, "cancelled_jobs": 0, "deferred_jobs": 0}
 
 
-@router.get("/health")
-async def get_queue_health_endpoint():
-    """Get queue system health status."""
+@router.get("/worker-details")
+async def get_queue_worker_details(
+    current_user: User = Depends(current_active_user)
+):
+    """Get detailed queue and worker status including task manager health."""
     try:
-        health = get_queue_health()
-        return health
+        from advanced_omi_backend.controllers.queue_controller import get_queue_health
+        from advanced_omi_backend.task_manager import get_task_manager
+        import time
+
+        # Get queue health directly
+        queue_health = get_queue_health()
+
+        status = {
+            "architecture": "rq_workers",
+            "timestamp": int(time.time()),
+            "workers": {
+                "total": queue_health.get("total_workers", 0),
+                "active": queue_health.get("active_workers", 0),
+                "idle": queue_health.get("idle_workers", 0),
+                "details": queue_health.get("workers", [])
+            },
+            "queues": queue_health.get("queues", {}),
+            "redis_connection": queue_health.get("redis_connection", "unknown")
+        }
+
+        return status
 
     except Exception as e:
-        logger.error(f"Failed to get queue health: {e}")
-        return {
-            "status": "unhealthy",
-            "message": f"Health check failed: {str(e)}"
-        }
+        logger.error(f"Failed to get queue worker details: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get worker details: {str(e)}")
 
 
 @router.get("/streams")
