@@ -69,8 +69,8 @@ jobs:
         echo "TRANSCRIPTION_PROVIDER: $TRANSCRIPTION_PROVIDER"
 
         # Start infrastructure services with CI compose file (no src mounts)
-        echo "Starting MongoDB, Redis, Qdrant, and RQ Workers..."
-        DOCKER_BUILDKIT=1 docker compose -f docker-compose-ci.yml up -d --quiet-pull mongo-test redis-test qdrant-test workers-test 2>&1 | grep -v -E '(Preparing|Unpacking|Setting up|Selecting|processing|extracting)' || true
+        echo "Starting MongoDB, Redis, and Qdrant..."
+        DOCKER_BUILDKIT=1 docker compose -f docker-compose-ci.yml up -d --quiet-pull mongo-test redis-test qdrant-test 2>&1 | grep -v -E '(Preparing|Unpacking|Setting up|Selecting|processing|extracting)' || true
 
         # Show running containers
         docker compose -f docker-compose-ci.yml ps
@@ -143,9 +143,31 @@ jobs:
           sleep 3
         done
 
+        echo "✓ Backend is ready!"
+
+        # Start workers AFTER backend is healthy
+        echo "Starting RQ workers (depends on backend being healthy)..."
+        docker compose -f docker-compose-ci.yml up -d workers-test
+
+        # Wait for workers container to start
+        echo "Waiting for workers container to start (up to 30s)..."
+        for i in {1..15}; do
+          if docker compose -f docker-compose-ci.yml ps workers-test | grep -q "Up"; then
+            echo "✓ Workers container is running"
+            break
+          fi
+          if [ $i -eq 15 ]; then
+            echo "✗ Workers container failed to start - showing logs:"
+            docker compose -f docker-compose-ci.yml logs workers-test
+            exit 1
+          fi
+          echo "Attempt $i/15..."
+          sleep 2
+        done
+
         echo "✓ All services ready!"
 
-    - name: Verify workers are running
+    - name: Verify workers are registered
       working-directory: backends/advanced
       env:
         DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
@@ -154,23 +176,10 @@ jobs:
         TRANSCRIPTION_PROVIDER: deepgram
         MEMORY_PROVIDER: friend_lite
       run: |
-        echo "Checking if workers-test container is running..."
-        docker compose -f docker-compose-ci.yml ps workers-test
-
-        # Check if workers container is actually running
-        if ! docker compose -f docker-compose-ci.yml ps workers-test | grep -q "Up"; then
-          echo "✗ Workers container is not running! Showing logs:"
-          docker compose -f docker-compose-ci.yml logs workers-test
-          exit 1
-        fi
-
-        echo "✓ Workers container is running"
-
         # Give workers a moment to register
         echo "Waiting 10 seconds for workers to register with Redis..."
         sleep 10
 
-        echo ""
         echo "Checking RQ worker registration in Redis..."
         docker compose -f docker-compose-ci.yml exec -T workers-test uv run python -c "
         from rq import Worker
@@ -187,11 +196,10 @@ jobs:
 
         if len(workers) == 0:
             print('⚠️ WARNING: No workers registered!')
-        " || echo "Failed to check worker registration"
+            exit(1)
+        "
 
-        echo ""
-        echo "Showing recent worker logs..."
-        docker compose -f docker-compose-ci.yml logs --tail=30 workers-test
+        echo "✓ Workers registered and ready"
 
     - name: Run Robot Framework tests
       working-directory: tests
