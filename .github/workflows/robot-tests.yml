@@ -192,7 +192,7 @@ jobs:
       run: |
         if [ -f tests/results/output.xml ]; then
           echo "Test results generated successfully"
-          echo "----------------------------------------"
+          echo "========================================"
           python3 << 'PYTHON_SCRIPT'
         import xml.etree.ElementTree as ET
         tree = ET.parse('tests/results/output.xml')
@@ -205,8 +205,18 @@ jobs:
             print(f'❌ Failed: {failed}')
             print(f'📊 Total: {int(passed) + int(failed)}')
         PYTHON_SCRIPT
-          echo "----------------------------------------"
-          echo "📄 Download full HTML report from artifacts above"
+          echo "========================================"
+          echo ""
+          echo "📊 FULL TEST REPORTS AVAILABLE:"
+          echo "  1. Go to the 'Summary' tab at the top of this page"
+          echo "  2. Scroll down to 'Artifacts' section"
+          echo "  3. Download 'robot-test-reports-html'"
+          echo "  4. Extract and open report.html or log.html in your browser"
+          echo ""
+          echo "The HTML reports provide:"
+          echo "  - report.html: Executive summary with statistics"
+          echo "  - log.html: Detailed step-by-step execution log"
+          echo ""
         fi
 
     - name: Cleanup

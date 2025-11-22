@@ -1,7 +1,7 @@
 """
 Test data for Robot Framework tests
 """
-
+import os
 
 # Test Data
 SAMPLE_CONVERSATIONS = [
@@ -28,7 +28,9 @@ SAMPLE_MEMORIES = [
     }
 ]
 
-TEST_AUDIO_FILE = "tests/test_assets/DIY_Experts_Glass_Blowing_16khz_mono_1min.wav"
+# Construct path relative to the tests directory (works from any working directory)
+_tests_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TEST_AUDIO_FILE = os.path.join(_tests_dir, "test_assets", "DIY_Experts_Glass_Blowing_16khz_mono_1min.wav")
 TEST_DEVICE_NAME = "Robot-test-device"
 
 # Expected content for transcript quality verification
