@@ -157,6 +157,16 @@ jobs:
         # Run all tests
         make all OUTPUTDIR=results || true
 
+    - name: Show service logs
+      if: always()
+      working-directory: backends/advanced
+      run: |
+        echo "=== Backend Logs (last 50 lines) ==="
+        docker compose -f docker-compose-ci.yml logs --tail=50 friend-backend-test
+        echo ""
+        echo "=== Worker Logs (last 50 lines) ==="
+        docker compose -f docker-compose-ci.yml logs --tail=50 workers-test
+
     - name: Publish Robot Framework test results
       if: always()
       uses: joonvena/robotframework-reporter-action@v2.5
