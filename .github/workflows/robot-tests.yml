@@ -1,12 +1,6 @@
 name: Robot Framework Tests
 
 on:
-  push:
-    paths:
-      - 'tests/**/*.robot'
-      - 'tests/**/*.py'
-      - 'backends/advanced/src/**'
-      - '.github/workflows/robot-tests.yml'
   pull_request:
     paths:
       - 'tests/**/*.robot'
@@ -60,51 +54,96 @@ jobs:
 
     - name: Start test environment
       working-directory: backends/advanced
+      env:
+        DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        LLM_PROVIDER: openai
+        TRANSCRIPTION_PROVIDER: deepgram
+        MEMORY_PROVIDER: friend_lite
       run: |
-        # Create test environment configuration
-        cat > .env << EOF
-        # Authentication
-        AUTH_SECRET_KEY=test-jwt-signing-key-for-integration-tests
-        ADMIN_EMAIL=test-admin@example.com
-        ADMIN_PASSWORD=test-admin-password-123
+        # Debug: Check if secrets are available
+        echo "Checking environment variables..."
+        echo "DEEPGRAM_API_KEY is set: $([ -n "$DEEPGRAM_API_KEY" ] && echo 'YES' || echo 'NO')"
+        echo "OPENAI_API_KEY is set: $([ -n "$OPENAI_API_KEY" ] && echo 'YES' || echo 'NO')"
+        echo "LLM_PROVIDER: $LLM_PROVIDER"
+        echo "TRANSCRIPTION_PROVIDER: $TRANSCRIPTION_PROVIDER"
 
-        # API Keys
-        OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-        DEEPGRAM_API_KEY=${{ secrets.DEEPGRAM_API_KEY }}
+        # Start infrastructure services with CI compose file (no src mounts)
+        echo "Starting MongoDB, Redis, and Qdrant..."
+        DOCKER_BUILDKIT=1 docker compose -f docker-compose-ci.yml up -d --quiet-pull mongo-test redis-test qdrant-test 2>&1 | grep -v -E '(Preparing|Unpacking|Setting up|Selecting|processing|extracting)' || true
 
-        # Service Configuration
-        BACKEND_PUBLIC_PORT=8001
-        MONGODB_URI=mongodb://mongo:27017
-        QDRANT_BASE_URL=http://qdrant:6333
+        # Show running containers
+        docker compose -f docker-compose-ci.yml ps
 
-        # Provider Configuration
-        LLM_PROVIDER=openai
-        TRANSCRIPTION_PROVIDER=deepgram
-        MEMORY_PROVIDER=friend_lite
+        # Wait for MongoDB with better error handling
+        echo "Waiting for MongoDB (up to 60s)..."
+        for i in {1..30}; do
+          if docker compose -f docker-compose-ci.yml exec -T mongo-test mongosh --eval "db.adminCommand({ping: 1})" > /dev/null 2>&1; then
+            echo "✓ MongoDB is ready"
+            break
+          fi
+          if [ $i -eq 30 ]; then
+            echo "✗ MongoDB failed to start"
+            docker compose -f docker-compose-ci.yml logs mongo-test
+            exit 1
+          fi
+          echo "Attempt $i/30..."
+          sleep 2
+        done
 
-        # Feature Flags
-        DISABLE_SPEAKER_RECOGNITION=true
-        EOF
+        # Wait for Qdrant with better error handling (uses port 6337 in test env)
+        echo "Waiting for Qdrant (up to 60s)..."
+        for i in {1..30}; do
+          if curl -s http://localhost:6337/healthz > /dev/null 2>&1; then
+            echo "✓ Qdrant is ready"
+            break
+          fi
+          if [ $i -eq 30 ]; then
+            echo "✗ Qdrant failed to start"
+            docker compose -f docker-compose-ci.yml logs qdrant-test
+            exit 1
+          fi
+          echo "Attempt $i/30..."
+          sleep 2
+        done
 
-        # Start services
-        docker compose up -d mongo qdrant
+        # Create memory_config.yaml from template (file is gitignored)
+        echo "Creating memory_config.yaml from template..."
+        cp memory_config.yaml.template memory_config.yaml
+        ls -la memory_config.yaml
 
-        # Wait for MongoDB
-        echo "Waiting for MongoDB..."
-        timeout 60 bash -c 'until docker compose exec mongo mongosh --eval "db.adminCommand({ping: 1})" > /dev/null 2>&1; do sleep 2; done' || exit 1
+        # Start backend (depends on infrastructure)
+        echo "Starting backend (forcing rebuild to include latest code)..."
+        DOCKER_BUILDKIT=1 docker compose -f docker-compose-ci.yml build friend-backend-test 2>&1 | grep -v -E '(Preparing|Unpacking|Setting up|Selecting|processing|extracting)' || true
 
-        # Wait for Qdrant
-        echo "Waiting for Qdrant..."
-        timeout 60 bash -c 'until curl -s http://localhost:6333/healthz > /dev/null; do sleep 2; done' || exit 1
+        # Debug: Check if file made it into the image
+        echo "Checking if memory_config.yaml is in the built image..."
+        docker compose -f docker-compose-ci.yml run --rm --no-deps friend-backend-test ls -la /app/memory_config.yaml || echo "File NOT in image!"
 
-        # Start backend
-        docker compose up -d backend
+        docker compose -f docker-compose-ci.yml up -d friend-backend-test
 
         # Wait for backend to be ready
-        echo "Waiting for backend..."
-        timeout 120 bash -c 'until curl -s http://localhost:8001/health > /dev/null; do sleep 3; done' || exit 1
+        echo "Waiting for backend (up to 120s)..."
+        for i in {1..40}; do
+          if curl -s http://localhost:8001/health > /dev/null 2>&1; then
+            echo "✓ Backend is ready"
+            break
+          fi
+          # Show logs every 10 attempts to help debug
+          if [ $((i % 10)) -eq 0 ]; then
+            echo "Still waiting... showing recent logs:"
+            docker compose -f docker-compose-ci.yml logs --tail=20 friend-backend-test
+          fi
+          if [ $i -eq 40 ]; then
+            echo "✗ Backend failed to start - showing full logs:"
+            docker compose -f docker-compose-ci.yml logs friend-backend-test
+            exit 1
+          fi
+          echo "Attempt $i/40..."
+          sleep 3
+        done
 
-        echo "All services ready!"
+        echo "✓ All services ready!"
 
     - name: Run Robot Framework tests
       working-directory: tests
@@ -174,4 +213,4 @@ jobs:
       if: always()
       working-directory: backends/advanced
       run: |
-        docker compose down -v
+        docker compose -f docker-compose-ci.yml down -v
