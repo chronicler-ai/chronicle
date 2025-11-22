@@ -96,28 +96,32 @@ async def get_conversation(conversation_id: str, user: User):
         if not user.is_superuser and conversation.user_id != str(user.user_id):
             return JSONResponse(status_code=403, content={"error": "Access forbidden"})
 
-        # Format conversation for API response - clean, no duplication
-        formatted_conversation = conversation.model_dump(
-            mode='json',
-            exclude={'id'}  # Exclude MongoDB internal _id
-        )
+        # Build response with explicit curated fields
+        response = {
+            "conversation_id": conversation.conversation_id,
+            "audio_uuid": conversation.audio_uuid,
+            "user_id": conversation.user_id,
+            "client_id": conversation.client_id,
+            "audio_path": conversation.audio_path,
+            "cropped_audio_path": conversation.cropped_audio_path,
+            "created_at": conversation.created_at.isoformat() if conversation.created_at else None,
+            "deleted": conversation.deleted,
+            "deletion_reason": conversation.deletion_reason,
+            "deleted_at": conversation.deleted_at.isoformat() if conversation.deleted_at else None,
+            "title": conversation.title,
+            "summary": conversation.summary,
+            "detailed_summary": conversation.detailed_summary,
+            # Computed fields
+            "transcript": conversation.transcript,
+            "segments": [s.model_dump() for s in conversation.segments],
+            "segment_count": conversation.segment_count,
+            "memory_count": conversation.memory_count,
+            "has_memory": conversation.has_memory,
+            "transcript_version_count": conversation.transcript_version_count,
+            "memory_version_count": conversation.memory_version_count,
+        }
 
-        # Clean up transcript versions - remove heavy metadata.words
-        if 'transcript_versions' in formatted_conversation:
-            for version in formatted_conversation['transcript_versions']:
-                if 'metadata' in version and version['metadata']:
-                    # Remove words array - not needed by frontend
-                    version['metadata'].pop('words', None)
-                    # Remove redundant speaker_recognition counts (derivable from segments)
-                    if 'speaker_recognition' in version['metadata']:
-                        sr = version['metadata']['speaker_recognition']
-                        sr.pop('total_segments', None)  # Derivable from len(segments)
-                        sr.pop('speaker_count', None)  # Derivable from identified_speakers
-
-        # Add minimal computed fields
-        formatted_conversation['has_memory'] = len(conversation.memory_versions) > 0
-
-        return {"conversation": formatted_conversation}
+        return {"conversation": response}
 
     except Exception as e:
         logger.error(f"Error fetching conversation {conversation_id}: {e}")
@@ -137,29 +141,32 @@ async def get_conversations(user: User):
             # Admins see all conversations
             user_conversations = await Conversation.find_all().sort(-Conversation.created_at).to_list()
 
-        # Convert conversations to API format - minimal for list view
+        # Build response with explicit curated fields - minimal for list view
         conversations = []
         for conv in user_conversations:
-            # Format conversation for list - exclude heavy version data
-            conv_dict = conv.model_dump(
-                mode='json',
-                exclude={'id', 'transcript_versions', 'memory_versions'}  # Exclude large version arrays
-            )
-
-            # Add computed fields
-            # segment_count - count from active transcript version
-            segment_count = 0
-            if conv.active_transcript:
-                segment_count = len(conv.active_transcript.segments) if conv.active_transcript.segments else 0
-
-            conv_dict.update({
-                "segment_count": segment_count,
-                "has_memory": len(conv.memory_versions) > 0,
-                "transcript_version_count": len(conv.transcript_versions),
-                "memory_version_count": len(conv.memory_versions)
+            conversations.append({
+                "conversation_id": conv.conversation_id,
+                "audio_uuid": conv.audio_uuid,
+                "user_id": conv.user_id,
+                "client_id": conv.client_id,
+                "audio_path": conv.audio_path,
+                "cropped_audio_path": conv.cropped_audio_path,
+                "created_at": conv.created_at.isoformat() if conv.created_at else None,
+                "deleted": conv.deleted,
+                "deletion_reason": conv.deletion_reason,
+                "deleted_at": conv.deleted_at.isoformat() if conv.deleted_at else None,
+                "title": conv.title,
+                "summary": conv.summary,
+                "detailed_summary": conv.detailed_summary,
+                "active_transcript_version": conv.active_transcript_version,
+                "active_memory_version": conv.active_memory_version,
+                # Computed fields (counts only, no heavy data)
+                "segment_count": conv.segment_count,
+                "has_memory": conv.has_memory,
+                "memory_count": conv.memory_count,
+                "transcript_version_count": conv.transcript_version_count,
+                "memory_version_count": conv.memory_version_count,
             })
-
-            conversations.append(conv_dict)
 
         return {"conversations": conversations}
 
@@ -324,7 +331,6 @@ async def reprocess_transcript(conversation_id: str, user: User):
             audio_uuid,
             str(full_audio_path),
             version_id,
-            str(user.user_id),
             "reprocess",
             job_timeout=600,
             result_ttl=JOB_RESULT_TTL,

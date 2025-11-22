@@ -69,11 +69,19 @@ api.interceptors.response.use(
 
 // API endpoints
 export const authApi = {
-  login: (email: string, password: string) => {
+  login: async (email: string, password: string) => {
     const formData = new FormData()
     formData.append('username', email)
     formData.append('password', password)
-    return api.post('/auth/jwt/login', formData)
+    // Login with JWT for API calls
+    const jwtResponse = await api.post('/auth/jwt/login', formData)
+    // Also try to set cookie for audio file access (may fail cross-origin, that's ok)
+    try {
+      await api.post('/auth/cookie/login', formData)
+    } catch {
+      // Cookie auth may fail cross-origin, audio playback will use token fallback
+    }
+    return jwtResponse
   },
   getMe: () => api.get('/users/me'),
 }
