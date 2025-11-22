@@ -37,16 +37,25 @@ jobs:
         pip install robotframework robotframework-requests python-dotenv
 
     - name: Create test environment file
-      working-directory: tests
+      working-directory: tests/setup
       run: |
         cat > .env.test << EOF
+        # API URLs
         API_URL=http://localhost:8001
         BACKEND_URL=http://localhost:8001
         FRONTEND_URL=http://localhost:3001
+
+        # Test Admin Credentials
         ADMIN_EMAIL=test-admin@example.com
         ADMIN_PASSWORD=test-admin-password-123
+
+        # API Keys (from GitHub secrets)
         OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
         DEEPGRAM_API_KEY=${{ secrets.DEEPGRAM_API_KEY }}
+
+        # Test Configuration
+        TEST_TIMEOUT=120
+        TEST_DEVICE_NAME=robot-test
         EOF
 
     - name: Start test environment
