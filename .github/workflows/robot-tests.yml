@@ -147,6 +147,12 @@ jobs:
 
     - name: Verify workers are running
       working-directory: backends/advanced
+      env:
+        DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        LLM_PROVIDER: openai
+        TRANSCRIPTION_PROVIDER: deepgram
+        MEMORY_PROVIDER: friend_lite
       run: |
         echo "Checking if workers-test container is running..."
         docker compose -f docker-compose-ci.yml ps workers-test
