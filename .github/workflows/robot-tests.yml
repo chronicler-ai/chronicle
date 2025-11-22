@@ -1,0 +1,161 @@
+name: Robot Framework Tests
+
+on:
+  push:
+    paths:
+      - 'tests/**/*.robot'
+      - 'tests/**/*.py'
+      - 'backends/advanced/src/**'
+      - '.github/workflows/robot-tests.yml'
+  pull_request:
+    paths:
+      - 'tests/**/*.robot'
+      - 'tests/**/*.py'
+      - 'backends/advanced/src/**'
+      - '.github/workflows/robot-tests.yml'
+
+jobs:
+  robot-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install Robot Framework and dependencies
+      run: |
+        pip install --upgrade pip
+        pip install robotframework robotframework-requests python-dotenv
+
+    - name: Create test environment file
+      working-directory: tests/setup
+      run: |
+        cat > .env.test << EOF
+        API_URL=http://localhost:8001
+        BACKEND_URL=http://localhost:8001
+        FRONTEND_URL=http://localhost:3001
+        ADMIN_EMAIL=test-admin@example.com
+        ADMIN_PASSWORD=test-admin-password-123
+        OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+        DEEPGRAM_API_KEY=${{ secrets.DEEPGRAM_API_KEY }}
+        EOF
+
+    - name: Start test environment
+      working-directory: backends/advanced
+      run: |
+        # Copy environment template
+        cp .env.template .env
+
+        # Configure test environment
+        cat >> .env << EOF
+        AUTH_SECRET_KEY=test-jwt-signing-key-for-integration-tests
+        ADMIN_EMAIL=test-admin@example.com
+        ADMIN_PASSWORD=test-admin-password-123
+        OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+        DEEPGRAM_API_KEY=${{ secrets.DEEPGRAM_API_KEY }}
+        BACKEND_PUBLIC_PORT=8001
+        MONGODB_URI=mongodb://mongo:27017
+        QDRANT_BASE_URL=http://qdrant:6333
+        LLM_PROVIDER=openai
+        MEMORY_PROVIDER=friend_lite
+        DISABLE_SPEAKER_RECOGNITION=true
+        EOF
+
+        # Start services
+        docker compose up -d mongo qdrant
+
+        # Wait for MongoDB
+        echo "Waiting for MongoDB..."
+        timeout 60 bash -c 'until docker compose exec mongo mongosh --eval "db.adminCommand({ping: 1})" > /dev/null 2>&1; do sleep 2; done' || exit 1
+
+        # Wait for Qdrant
+        echo "Waiting for Qdrant..."
+        timeout 60 bash -c 'until curl -s http://localhost:6333/healthz > /dev/null; do sleep 2; done' || exit 1
+
+        # Start backend
+        docker compose up -d backend
+
+        # Wait for backend to be ready
+        echo "Waiting for backend..."
+        timeout 120 bash -c 'until curl -s http://localhost:8001/health > /dev/null; do sleep 3; done' || exit 1
+
+        echo "All services ready!"
+
+    - name: Run Robot Framework tests
+      working-directory: tests
+      run: |
+        # Run all tests
+        make all OUTPUTDIR=results || true
+
+    - name: Publish Robot Framework test results
+      if: always()
+      uses: joonvena/robotframework-reporter-action@v2.5
+      with:
+        report_path: tests/results
+        gh_access_token: ${{ secrets.GITHUB_TOKEN }}
+        show_passed_tests: false
+
+    - name: Upload Robot Framework HTML reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: robot-test-reports-html
+        path: |
+          tests/results/report.html
+          tests/results/log.html
+        retention-days: 30
+
+    - name: Upload Robot Framework XML output
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: robot-test-results-xml
+        path: tests/results/output.xml
+        retention-days: 30
+
+    - name: Upload logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: robot-test-logs
+        path: |
+          backends/advanced/.env
+          tests/setup/.env.test
+        retention-days: 7
+
+    - name: Display test results summary
+      if: always()
+      run: |
+        if [ -f tests/results/output.xml ]; then
+          echo "Test results generated successfully"
+          echo "----------------------------------------"
+          python3 << 'PYTHON_SCRIPT'
+        import xml.etree.ElementTree as ET
+        tree = ET.parse('tests/results/output.xml')
+        root = tree.getroot()
+        stats = root.find('.//total/stat')
+        if stats is not None:
+            passed = stats.get("pass", "0")
+            failed = stats.get("fail", "0")
+            print(f'✅ Passed: {passed}')
+            print(f'❌ Failed: {failed}')
+            print(f'📊 Total: {int(passed) + int(failed)}')
+        PYTHON_SCRIPT
+          echo "----------------------------------------"
+          echo "📄 Download full HTML report from artifacts above"
+        fi
+
+    - name: Cleanup
+      if: always()
+      working-directory: backends/advanced
+      run: |
+        docker compose down -v
