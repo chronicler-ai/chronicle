@@ -37,7 +37,7 @@ jobs:
         pip install robotframework robotframework-requests python-dotenv
 
     - name: Create test environment file
-      working-directory: tests/setup
+      working-directory: tests
       run: |
         cat > .env.test << EOF
         API_URL=http://localhost:8001
@@ -52,21 +52,28 @@ jobs:
     - name: Start test environment
       working-directory: backends/advanced
       run: |
-        # Copy environment template
-        cp .env.template .env
-
-        # Configure test environment
-        cat >> .env << EOF
+        # Create test environment configuration
+        cat > .env << EOF
+        # Authentication
         AUTH_SECRET_KEY=test-jwt-signing-key-for-integration-tests
         ADMIN_EMAIL=test-admin@example.com
         ADMIN_PASSWORD=test-admin-password-123
+
+        # API Keys
         OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
         DEEPGRAM_API_KEY=${{ secrets.DEEPGRAM_API_KEY }}
+
+        # Service Configuration
         BACKEND_PUBLIC_PORT=8001
         MONGODB_URI=mongodb://mongo:27017
         QDRANT_BASE_URL=http://qdrant:6333
+
+        # Provider Configuration
         LLM_PROVIDER=openai
+        TRANSCRIPTION_PROVIDER=deepgram
         MEMORY_PROVIDER=friend_lite
+
+        # Feature Flags
         DISABLE_SPEAKER_RECOGNITION=true
         EOF
 
