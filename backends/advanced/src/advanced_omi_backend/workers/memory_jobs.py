@@ -6,6 +6,7 @@ This module contains jobs related to memory extraction and processing.
 
 import logging
 import time
+import uuid
 from datetime import UTC, datetime
 from typing import Dict, Any
 
@@ -130,17 +131,40 @@ async def process_memory_job(
         success, created_memory_ids = memory_result
 
         if success and created_memory_ids:
-            # Add memory references to conversation
+            # Add memory version to conversation
             conversation_model = await Conversation.find_one(Conversation.conversation_id == conversation_id)
             if conversation_model:
-                memory_refs = [
-                    {"memory_id": mid, "created_at": datetime.now(UTC).isoformat(), "status": "created"}
-                    for mid in created_memory_ids
-                ]
-                conversation_model.memories.extend(memory_refs)
+                processing_time = time.time() - start_time
+
+                # Get active transcript version for reference
+                transcript_version_id = conversation_model.active_transcript_version or "unknown"
+
+                # Determine memory provider from memory service
+                memory_provider = conversation_model.MemoryProvider.FRIEND_LITE  # Default
+                try:
+                    from advanced_omi_backend.memory import get_memory_service
+                    memory_service_obj = get_memory_service()
+                    provider_name = memory_service_obj.__class__.__name__
+                    if "OpenMemory" in provider_name:
+                        memory_provider = conversation_model.MemoryProvider.OPENMEMORY_MCP
+                except Exception:
+                    pass
+
+                # Create version ID for this memory extraction
+                version_id = str(uuid.uuid4())
+
+                # Add memory version with metadata
+                conversation_model.add_memory_version(
+                    version_id=version_id,
+                    memory_count=len(created_memory_ids),
+                    transcript_version_id=transcript_version_id,
+                    provider=memory_provider,
+                    processing_time_seconds=processing_time,
+                    metadata={"memory_ids": created_memory_ids},
+                    set_as_active=True
+                )
                 await conversation_model.save()
 
-            processing_time = time.time() - start_time
             logger.info(f"✅ Completed memory processing for conversation {conversation_id} - created {len(created_memory_ids)} memories in {processing_time:.2f}s")
 
             # Update job metadata with memory information
