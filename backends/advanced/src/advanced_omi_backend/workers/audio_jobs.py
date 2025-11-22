@@ -130,9 +130,16 @@ async def process_cropping_job(
 
         # Update conversation with cropped audio path and adjusted segments
         conversation.cropped_audio_path = cropped_filename
+
         # Update the active transcript version segments
-        if conversation.active_transcript:
-            conversation.active_transcript.segments = updated_segments
+        # Find and update the version directly in the list to ensure Beanie detects the change
+        if conversation.active_transcript_version:
+            for i, version in enumerate(conversation.transcript_versions):
+                if version.version_id == conversation.active_transcript_version:
+                    conversation.transcript_versions[i].segments = updated_segments
+                    logger.info(f"📝 Updated segments in transcript version {version.version_id[:12]}")
+                    break
+
         await conversation.save()
         logger.info(f"💾 Updated conversation {conversation_id[:12]} with cropped_audio_path and adjusted {len(updated_segments)} segment timestamps")
 
