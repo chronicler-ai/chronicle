@@ -247,9 +247,15 @@ async def open_conversation_job(
     last_inactivity_log_time = time.time()  # Track when we last logged inactivity
     last_word_count = 0  # Track word count to detect actual new speech
 
+    # Test mode: wait for audio queue to drain before timing out
+    # In real usage, ambient noise keeps connection alive. In tests, chunks arrive in bursts.
+    wait_for_queue_drain = os.getenv("WAIT_FOR_AUDIO_QUEUE_DRAIN", "false").lower() == "true"
+
     logger.info(
         f"📊 Conversation timeout configured: {inactivity_timeout_minutes} minutes ({inactivity_timeout_seconds}s)"
     )
+    if wait_for_queue_drain:
+        logger.info("🧪 Test mode: Waiting for audio queue to drain before timeout")
 
     while True:
         # Check if session is finalizing (set by producer when recording stops)
@@ -315,6 +321,20 @@ async def open_conversation_job(
             last_inactivity_log_time = current_time
 
         if inactivity_duration > inactivity_timeout_seconds:
+            # In test mode, check if there are pending chunks before timing out
+            if wait_for_queue_drain:
+                # Check audio persistence queue length
+                persist_queue_key = f"audio:queue:{session_id}"
+                queue_length = await redis_client.llen(persist_queue_key)
+
+                if queue_length > 0:
+                    logger.info(
+                        f"🧪 Test mode: Inactivity timeout reached but {queue_length} chunks still in queue, "
+                        f"waiting for processing..."
+                    )
+                    await asyncio.sleep(1)
+                    continue
+
             logger.info(
                 f"🕐 Conversation {conversation_id} inactive for "
                 f"{inactivity_duration/60:.1f} minutes (threshold: {inactivity_timeout_minutes} min), "
