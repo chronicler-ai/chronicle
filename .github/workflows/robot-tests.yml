@@ -69,8 +69,8 @@ jobs:
         echo "TRANSCRIPTION_PROVIDER: $TRANSCRIPTION_PROVIDER"
 
         # Start infrastructure services with CI compose file (no src mounts)
-        echo "Starting MongoDB, Redis, and Qdrant..."
-        DOCKER_BUILDKIT=1 docker compose -f docker-compose-ci.yml up -d --quiet-pull mongo-test redis-test qdrant-test 2>&1 | grep -v -E '(Preparing|Unpacking|Setting up|Selecting|processing|extracting)' || true
+        echo "Starting MongoDB, Redis, Qdrant, and RQ Workers..."
+        DOCKER_BUILDKIT=1 docker compose -f docker-compose-ci.yml up -d --quiet-pull mongo-test redis-test qdrant-test workers-test 2>&1 | grep -v -E '(Preparing|Unpacking|Setting up|Selecting|processing|extracting)' || true
 
         # Show running containers
         docker compose -f docker-compose-ci.yml ps

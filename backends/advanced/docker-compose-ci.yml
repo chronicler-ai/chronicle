@@ -124,7 +124,7 @@ services:
       dockerfile: Dockerfile
     command: ./start-workers.sh
     volumes:
-      - ./src:/app/src
+      # No src mount for CI - use built image
       - ./data/test_audio_chunks:/app/audio_chunks
       - ./data/test_debug_dir:/app/debug_dir
       - ./data/test_data:/app/data
