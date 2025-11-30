@@ -74,9 +74,23 @@ async def process_cropping_job(
 
         # Generate output path for cropped audio
         audio_uuid = conversation.audio_uuid
-        original_path = Path(audio_path)
+
+        # Build full path from conversation.audio_path (which may include folder prefix)
+        # conversation.audio_path is like "fixtures/filename.wav" or just "filename.wav"
+        full_audio_path = CHUNK_DIR / conversation.audio_path
+        original_path = Path(full_audio_path)
         cropped_filename = f"cropped_{original_path.name}"
-        output_path = CHUNK_DIR / cropped_filename
+
+        # If the conversation's audio_path contains a folder prefix, use the same folder for cropped audio
+        if conversation.audio_path and "/" in conversation.audio_path:
+            folder = conversation.audio_path.split("/")[0]
+            output_dir = CHUNK_DIR / folder
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_path = output_dir / cropped_filename
+            cropped_path_for_db = f"{folder}/{cropped_filename}"
+        else:
+            output_path = CHUNK_DIR / cropped_filename
+            cropped_path_for_db = cropped_filename
 
         # Process cropping (no repository needed - we update conversation directly)
         success, segment_mapping = await _process_audio_cropping_with_relative_timestamps(
@@ -129,10 +143,17 @@ async def process_cropping_job(
                 )
 
         # Update conversation with cropped audio path and adjusted segments
-        conversation.cropped_audio_path = cropped_filename
+        conversation.cropped_audio_path = cropped_path_for_db
+
         # Update the active transcript version segments
-        if conversation.active_transcript:
-            conversation.active_transcript.segments = updated_segments
+        # Find and update the version directly in the list to ensure Beanie detects the change
+        if conversation.active_transcript_version:
+            for i, version in enumerate(conversation.transcript_versions):
+                if version.version_id == conversation.active_transcript_version:
+                    conversation.transcript_versions[i].segments = updated_segments
+                    logger.info(f"📝 Updated segments in transcript version {version.version_id[:12]}")
+                    break
+
         await conversation.save()
         logger.info(f"💾 Updated conversation {conversation_id[:12]} with cropped_audio_path and adjusted {len(updated_segments)} segment timestamps")
 

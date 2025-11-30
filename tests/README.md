@@ -2,6 +2,64 @@
 
 Comprehensive Robot Framework test suite for the Friend-Lite advanced backend API endpoints.
 
+## Quick Start
+
+### Running Tests Locally
+
+```bash
+# From the tests/ directory
+./run-robot-tests.sh
+```
+
+The script will:
+1. Check for required API keys (DEEPGRAM_API_KEY, OPENAI_API_KEY)
+2. Start test infrastructure (MongoDB, Redis, Qdrant)
+3. Build and start the backend and workers
+4. Run all Robot Framework tests via Makefile
+5. Display results and cleanup
+
+**This mirrors the GitHub CI workflow for local development.**
+
+### Environment Setup
+
+The script will create `tests/setup/.env.test` automatically if it doesn't exist. You can also create it manually:
+
+```bash
+# API URLs
+API_URL=http://localhost:8001
+BACKEND_URL=http://localhost:8001
+FRONTEND_URL=http://localhost:3001
+
+# Test Admin Credentials
+ADMIN_EMAIL=test-admin@example.com
+ADMIN_PASSWORD=test-admin-password-123
+
+# API Keys (required)
+OPENAI_API_KEY=your-key-here
+DEEPGRAM_API_KEY=your-key-here
+
+# Test Configuration
+TEST_TIMEOUT=120
+TEST_DEVICE_NAME=robot-test
+```
+
+### Configuration Options
+
+```bash
+# Skip container cleanup (useful for debugging)
+CLEANUP_CONTAINERS=false ./run-robot-tests.sh
+
+# Custom output directory
+OUTPUTDIR=my-results ./run-robot-tests.sh
+
+# Leave containers running for debugging
+CLEANUP_CONTAINERS=false ./run-robot-tests.sh
+```
+
+## Running Tests via Makefile
+
+If you already have the backend running, you can use the Makefile directly:
+
 ## Test Structure
 
 ### Test Files

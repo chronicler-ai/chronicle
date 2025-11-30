@@ -270,13 +270,46 @@ def show_service_status():
         status = "✅" if exists else "⏸️"
         console.print(f"  {status} {service_config['description']} - {msg}")
 
+def setup_git_hooks():
+    """Setup pre-commit hooks for development"""
+    console.print("\n🔧 [bold]Setting up development environment...[/bold]")
+
+    try:
+        # Install pre-commit if not already installed
+        subprocess.run(['pip', 'install', 'pre-commit'],
+                      stdout=subprocess.DEVNULL,
+                      stderr=subprocess.DEVNULL,
+                      check=False)
+
+        # Install git hooks
+        result = subprocess.run(['pre-commit', 'install', '--hook-type', 'pre-push'],
+                              capture_output=True,
+                              text=True)
+
+        if result.returncode == 0:
+            console.print("✅ [green]Git hooks installed (tests will run before push)[/green]")
+        else:
+            console.print("⚠️  [yellow]Could not install git hooks (optional)[/yellow]")
+
+        # Also install pre-commit hook
+        subprocess.run(['pre-commit', 'install', '--hook-type', 'pre-commit'],
+                      stdout=subprocess.DEVNULL,
+                      stderr=subprocess.DEVNULL,
+                      check=False)
+
+    except Exception as e:
+        console.print(f"⚠️  [yellow]Could not setup git hooks: {e} (optional)[/yellow]")
+
 def main():
     """Main orchestration logic"""
     console.print("🎉 [bold green]Welcome to Friend-Lite![/bold green]\n")
-    
+
+    # Setup git hooks first
+    setup_git_hooks()
+
     # Show what's available
     show_service_status()
-    
+
     # Service Selection
     selected_services = select_services()
     
@@ -343,12 +376,18 @@ def main():
     
     # Next Steps
     console.print("\n📖 [bold]Next Steps:[/bold]")
-    
+
+    # Development Environment Setup
+    console.print("1. Setup development environment (git hooks, testing):")
+    console.print("   [cyan]make setup-dev[/cyan]")
+    console.print("   [dim]This installs pre-commit hooks to run tests before pushing[/dim]")
+    console.print("")
+
     # Service Management Commands
-    console.print("1. Start all configured services:")
+    console.print("2. Start all configured services:")
     console.print("   [cyan]uv run --with-requirements setup-requirements.txt python services.py start --all --build[/cyan]")
     console.print("")
-    console.print("2. Or start individual services:")
+    console.print("3. Or start individual services:")
     
     configured_services = []
     if 'advanced' in selected_services and 'advanced' not in failed_services:

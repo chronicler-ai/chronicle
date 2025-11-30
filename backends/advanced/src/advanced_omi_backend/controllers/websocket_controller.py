@@ -716,7 +716,7 @@ async def _process_batch_audio_complete(
         timestamp = int(time.time() * 1000)
 
         # Write audio file and create AudioFile entry
-        wav_filename, file_path, duration = await write_audio_file(
+        relative_audio_path, file_path, duration = await write_audio_file(
             raw_audio_data=complete_audio,
             audio_uuid=audio_uuid,
             client_id=client_id,
@@ -727,7 +727,7 @@ async def _process_batch_audio_complete(
         )
 
         application_logger.info(
-            f"✅ Batch mode: Wrote audio file {wav_filename} ({duration:.1f}s)"
+            f"✅ Batch mode: Wrote audio file {relative_audio_path} ({duration:.1f}s)"
         )
 
         # Create conversation immediately for batch audio (conversation_id auto-generated)
@@ -740,6 +740,7 @@ async def _process_batch_audio_complete(
             title="Batch Recording",
             summary="Processing batch audio..."
         )
+        conversation.audio_path = relative_audio_path
         await conversation.insert()
         conversation_id = conversation.conversation_id  # Get the auto-generated ID
 
@@ -753,7 +754,8 @@ async def _process_batch_audio_complete(
             audio_uuid=audio_uuid,
             audio_file_path=file_path,
             user_id=None,  # Will be read from conversation in DB by jobs
-            post_transcription=True  # Run batch transcription for uploads
+            post_transcription=True,  # Run batch transcription for uploads
+            client_id=client_id  # Pass client_id for UI tracking
         )
 
         application_logger.info(

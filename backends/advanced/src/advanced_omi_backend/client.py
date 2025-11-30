@@ -169,10 +169,6 @@ class ClientState:
         # Close current conversation
         await self.close_current_conversation()
 
-        # Cancel any tasks for this client
-        task_manager = get_task_manager()
-        await task_manager.cancel_tasks_for_client(self.client_id)
-
         # Clean up state
         self.speech_segments.clear()
         self.current_speech_start.clear()

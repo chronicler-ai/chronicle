@@ -7,7 +7,7 @@ transcript versions, and memory versions.
 
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Union
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, computed_field
 from enum import Enum
 import uuid
 
@@ -36,6 +36,15 @@ class Conversation(Document):
         ACTIVE = "active"  # Has running jobs or open websocket
         COMPLETED = "completed"  # All jobs succeeded
         FAILED = "failed"  # One or more jobs failed
+
+    class EndReason(str, Enum):
+        """Reason for conversation ending."""
+        USER_STOPPED = "user_stopped"  # User manually stopped recording
+        INACTIVITY_TIMEOUT = "inactivity_timeout"  # No speech detected for threshold period
+        WEBSOCKET_DISCONNECT = "websocket_disconnect"  # Connection lost (Bluetooth, network, etc.)
+        MAX_DURATION = "max_duration"  # Hit maximum conversation duration
+        ERROR = "error"  # Processing error forced conversation end
+        UNKNOWN = "unknown"  # Unknown or legacy reason
 
     # Nested Models
     class SpeakerSegment(BaseModel):
@@ -85,6 +94,10 @@ class Conversation(Document):
     deleted: bool = Field(False, description="Whether this conversation was deleted due to processing failure")
     deletion_reason: Optional[str] = Field(None, description="Reason for deletion (no_meaningful_speech, audio_file_not_ready, etc.)")
     deleted_at: Optional[datetime] = Field(None, description="When the conversation was marked as deleted")
+
+    # Conversation completion tracking
+    end_reason: Optional["Conversation.EndReason"] = Field(None, description="Reason why the conversation ended")
+    completed_at: Optional[datetime] = Field(None, description="When the conversation was completed/closed")
 
     # Summary fields (auto-generated from transcript)
     title: Optional[str] = Field(None, description="Auto-generated conversation title")
@@ -146,6 +159,7 @@ class Conversation(Document):
 
         return data
 
+    @computed_field
     @property
     def active_transcript(self) -> Optional["Conversation.TranscriptVersion"]:
         """Get the currently active transcript version."""
@@ -157,6 +171,7 @@ class Conversation(Document):
                 return version
         return None
 
+    @computed_field
     @property
     def active_memory(self) -> Optional["Conversation.MemoryVersion"]:
         """Get the currently active memory version."""
@@ -169,15 +184,47 @@ class Conversation(Document):
         return None
 
     # Convenience properties that return data from active transcript version
+    @computed_field
     @property
     def transcript(self) -> Optional[str]:
         """Get transcript text from active transcript version."""
         return self.active_transcript.transcript if self.active_transcript else None
 
+    @computed_field
     @property
     def segments(self) -> List["Conversation.SpeakerSegment"]:
         """Get segments from active transcript version."""
         return self.active_transcript.segments if self.active_transcript else []
+
+    @computed_field
+    @property
+    def segment_count(self) -> int:
+        """Get segment count from active transcript version."""
+        return len(self.segments) if self.segments else 0
+
+    @computed_field
+    @property
+    def memory_count(self) -> int:
+        """Get memory count from active memory version."""
+        return self.active_memory.memory_count if self.active_memory else 0
+
+    @computed_field
+    @property
+    def has_memory(self) -> bool:
+        """Check if conversation has any memory versions."""
+        return len(self.memory_versions) > 0
+
+    @computed_field
+    @property
+    def transcript_version_count(self) -> int:
+        """Get count of transcript versions."""
+        return len(self.transcript_versions)
+
+    @computed_field
+    @property
+    def memory_version_count(self) -> int:
+        """Get count of memory versions."""
+        return len(self.memory_versions)
 
     def add_transcript_version(
         self,

@@ -6,21 +6,22 @@ Library          Process
 Library          String
 Library          DateTime
 Library          OperatingSystem
-Resource         ../resources/setup_resources.robot
-Resource         ../resources/session_resources.robot
+Resource         ../setup/setup_keywords.robot
+Resource         ../setup/teardown_keywords.robot
+Resource         ../resources/session_keywords.robot
 Resource         ../resources/audio_keywords.robot
 Resource         ../resources/conversation_keywords.robot
-Variables        ../test_env.py
-Variables        ../test_data.py
+Variables        ../setup/test_env.py
+Variables        ../setup/test_data.py
 Suite Setup      Suite Setup
-Suite Teardown   Delete All Sessions
+Suite Teardown   Suite Teardown
 Test Setup       Clear Test Databases
 
 
 *** Test Cases ***
 Full Pipeline Integration Test
     [Documentation]    Complete end-to-end test of audio processing pipeline
-    [Tags]             integration    pipeline    e2e
+    [Tags]    e2e
     [Timeout]          600s
 
     Log    Starting Full Pipeline Integration Test    INFO
@@ -43,6 +44,88 @@ Full Pipeline Integration Test
     Verify Chat Integration    api    ${TEST_CONVERSATION}
 
     Log    Full Pipeline Integration Test Completed Successfully    INFO
+
+Audio Playback And Segment Timing Test
+    [Documentation]    Verify audio files are accessible and segment timestamps are valid
+    [Tags]    e2e	audio-upload
+    [Timeout]          180s
+
+    Log    Starting Audio Playback And Segment Timing Test    INFO
+
+    # Upload audio to create a conversation with segments
+    ${conversation}=    Upload Audio File    ${TEST_AUDIO_FILE}    ${TEST_DEVICE_NAME}
+    ${conversation_id}=    Set Variable    ${conversation}[conversation_id]
+
+    Log    Conversation created: ${conversation_id}    INFO
+
+    # Wait for cropping job to complete (depends on transcription)
+    Sleep    10s    Wait for post-processing jobs to complete
+
+    # Refresh conversation data
+    ${conversation}=    Get Conversation By ID    ${conversation_id}
+
+    # Verify original audio is accessible
+    ${audio_response}=    GET On Session    api    /api/audio/get_audio/${conversation_id}    expected_status=200
+    Should Be Equal As Strings    ${audio_response.headers}[content-type]    audio/wav
+    ${original_audio_size}=    Get Length    ${audio_response.content}
+    Should Be True    ${original_audio_size} > 1000    Original audio file too small: ${original_audio_size} bytes
+    Log    Original audio accessible: ${original_audio_size} bytes    INFO
+
+    # Verify cropped audio is accessible (if available)
+    &{params}=    Create Dictionary    cropped=true
+    ${cropped_response}=    GET On Session    api    /api/audio/get_audio/${conversation_id}    params=${params}    expected_status=any
+    IF    ${cropped_response.status_code} == 200
+        Should Be Equal As Strings    ${cropped_response.headers}[content-type]    audio/wav
+        ${cropped_audio_size}=    Get Length    ${cropped_response.content}
+        Should Be True    ${cropped_audio_size} > 0    Cropped audio file is empty
+        Log    Cropped audio accessible: ${cropped_audio_size} bytes    INFO
+
+        # Cropped audio should be smaller or equal to original (silence removed)
+        Should Be True    ${cropped_audio_size} <= ${original_audio_size}    Cropped audio larger than original
+    ELSE
+        Log    Cropped audio not yet available (cropping job may still be running)    WARN
+    END
+
+    # Verify segments exist and have valid timestamps
+    Dictionary Should Contain Key    ${conversation}    segments
+    ${segments}=    Set Variable    ${conversation}[segments]
+    ${segment_count}=    Get Length    ${segments}
+    Should Be True    ${segment_count} > 0    No segments found in conversation
+
+    Log    Found ${segment_count} segments    INFO
+
+    # Verify segment timestamp integrity
+    ${prev_end}=    Set Variable    ${0}
+    FOR    ${index}    ${segment}    IN ENUMERATE    @{segments}
+        # Each segment should have start and end times
+        Dictionary Should Contain Key    ${segment}    start
+        Dictionary Should Contain Key    ${segment}    end
+
+        ${start}=    Set Variable    ${segment}[start]
+        ${end}=    Set Variable    ${segment}[end]
+
+        # Start should be non-negative
+        Should Be True    ${start} >= 0    Segment ${index} has negative start time: ${start}
+
+        # End should be greater than start
+        Should Be True    ${end} > ${start}    Segment ${index} end (${end}) not greater than start (${start})
+
+        # Segments should be in order (start >= previous end, allowing small gaps)
+        Should Be True    ${start} >= ${prev_end} - 0.1    Segment ${index} overlaps with previous segment
+
+        ${prev_end}=    Set Variable    ${end}
+
+        Log    Segment ${index}: ${start}s - ${end}s    DEBUG
+    END
+
+    # Verify last segment end time is reasonable (not beyond audio duration)
+    # For a 4-minute audio, segments should end before ~250 seconds
+    ${last_segment}=    Set Variable    ${segments}[-1]
+    ${last_end}=    Set Variable    ${last_segment}[end]
+    Should Be True    ${last_end} < 300    Last segment end time (${last_end}s) exceeds expected audio duration
+
+    Log    All ${segment_count} segments have valid timestamps (0s - ${last_end}s)    INFO
+    Log    Audio Playback And Segment Timing Test Completed Successfully    INFO
 
 *** Keywords ***
 

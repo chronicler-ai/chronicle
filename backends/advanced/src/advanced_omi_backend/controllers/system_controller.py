@@ -55,47 +55,6 @@ async def get_auth_config():
     }
 
 
-async def get_processor_status():
-    """Get RQ worker and queue status."""
-    try:
-        # Get RQ queue health (new architecture)
-        from advanced_omi_backend.controllers.queue_controller import get_queue_health
-        queue_health = get_queue_health()
-
-        status = {
-            "architecture": "rq_workers",  # New RQ-based architecture
-            "timestamp": int(time.time()),
-            "workers": {
-                "total": queue_health.get("total_workers", 0),
-                "active": queue_health.get("active_workers", 0),
-                "idle": queue_health.get("idle_workers", 0),
-                "details": queue_health.get("workers", [])
-            },
-            "queues": {
-                "transcription": queue_health.get("queues", {}).get("transcription", {}),
-                "memory": queue_health.get("queues", {}).get("memory", {}),
-                "default": queue_health.get("queues", {}).get("default", {})
-            }
-        }
-
-        # Get task manager status if available
-        try:
-            task_manager = get_task_manager()
-            if task_manager:
-                task_status = task_manager.get_health_status()
-                status["task_manager"] = task_status
-        except Exception as e:
-            status["task_manager"] = {"error": str(e)}
-
-        return status
-
-    except Exception as e:
-        logger.error(f"Error getting processor status: {e}", exc_info=True)
-        return JSONResponse(
-            status_code=500, content={"error": f"Failed to get processor status: {str(e)}"}
-        )
-
-
 # Audio file processing functions moved to audio_controller.py
 
 
