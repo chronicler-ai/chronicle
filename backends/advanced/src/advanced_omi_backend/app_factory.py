@@ -73,10 +73,6 @@ async def lifespan(app: FastAPI):
         application_logger.error(f"Failed to create admin user: {e}")
         # Don't raise here as this is not critical for startup
 
-    # Initialize task manager
-    task_manager = init_task_manager()
-    await task_manager.start()
-    application_logger.info("Task manager started")
 
     # Initialize Redis connection for RQ
     try:
@@ -155,11 +151,6 @@ async def lifespan(app: FastAPI):
                 application_logger.info("Redis client for audio streaming producer closed")
         except Exception as e:
             application_logger.error(f"Error closing Redis audio streaming client: {e}")
-
-        # Shutdown task manager
-        task_manager = get_task_manager()
-        await task_manager.shutdown()
-        application_logger.info("Task manager shut down")
 
         # Stop metrics collection and save final report
         application_logger.info("Metrics collection stopped")

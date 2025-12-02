@@ -132,7 +132,9 @@ const Queue: React.FC = () => {
   const [flushSettings, setFlushSettings] = useState({
     older_than_hours: 24,
     statuses: ['completed', 'failed'],
-    flush_all: false
+    flush_all: false,
+    include_failed: false,  // For flush_all mode
+    include_completed: false  // For flush_all mode
   });
   const [flushing, setFlushing] = useState(false);
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
@@ -541,40 +543,31 @@ const Queue: React.FC = () => {
   const flushJobs = async () => {
     setFlushing(true);
     try {
-      const endpoint = flushSettings.flush_all ? '/api/queue/flush-all' : '/api/queue/flush';
       const body = flushSettings.flush_all
-        ? { confirm: true }
+        ? {
+            confirm: true,
+            include_failed: flushSettings.include_failed,
+            include_completed: flushSettings.include_completed
+          }
         : {
             older_than_hours: flushSettings.older_than_hours,
             statuses: flushSettings.statuses
           };
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        alert(`Successfully flushed ${result.total_removed} jobs!`);
-        setShowFlushModal(false);
-        fetchData(); // Refresh the data
-      } else if (response.status === 403) {
+      const response = await queueApi.flushJobs(flushSettings.flush_all, body);
+      alert(`Successfully flushed ${response.data.total_removed} jobs!`);
+      setShowFlushModal(false);
+      fetchData(); // Refresh the data
+    } catch (error: any) {
+      console.error('Error flushing jobs:', error);
+      if (error.response?.status === 403) {
         alert('Admin access required to flush jobs');
-      } else if (response.status === 401) {
+      } else if (error.response?.status === 401) {
         localStorage.removeItem('token');
         window.location.href = '/login';
       } else {
-        const error = await response.json();
-        alert(`Error: ${error.detail || 'Failed to flush jobs'}`);
+        alert(`Failed to flush jobs: ${error.response?.data?.detail || error.message}`);
       }
-    } catch (error) {
-      console.error('Error flushing jobs:', error);
-      alert('Failed to flush jobs');
     } finally {
       setFlushing(false);
     }
@@ -1152,9 +1145,10 @@ const Queue: React.FC = () => {
                       {Array.from(conversationMap.entries()).map(([conversationId, jobs]) => {
                         const isExpanded = expandedSessions.has(conversationId);
 
-                        // Find the open_conversation_job for metadata
+                        // Find the open_conversation_job for metadata, or fallback to any job with metadata
                         const openConvJob = jobs.find(j => j.job_type === 'open_conversation_job');
-                        const meta = openConvJob?.meta || {};
+                        const fallbackJob = jobs.find(j => j.meta && Object.keys(j.meta).length > 0);
+                        const meta = openConvJob?.meta || fallbackJob?.meta || {};
 
                         // Extract conversation info
                         const clientId = meta.client_id || 'Unknown';
@@ -1647,9 +1641,10 @@ const Queue: React.FC = () => {
                         {paginatedConversations.map(({ conversationId, jobs }) => {
                         const isExpanded = expandedSessions.has(conversationId);
 
-                        // Find the open_conversation_job for metadata
+                        // Find the open_conversation_job for metadata, or fallback to any job with metadata
                         const openConvJob = jobs.find(j => j.job_type === 'open_conversation_job');
-                        const meta = openConvJob?.meta || {};
+                        const fallbackJob = jobs.find(j => j.meta && Object.keys(j.meta).length > 0);
+                        const meta = openConvJob?.meta || fallbackJob?.meta || {};
 
                         // Find transcription job for title/summary
                         const transcriptionJob = jobs.find(j => j.job_type === 'transcribe_full_audio_job');
@@ -2619,11 +2614,35 @@ const Queue: React.FC = () => {
                   </label>
 
                   {flushSettings.flush_all && (
-                    <div className="ml-6 mt-2">
+                    <div className="ml-6 mt-2 space-y-2">
                       <div className="bg-red-50 border border-red-200 rounded p-2">
                         <p className="text-xs text-red-800">
-                          ⚠️ This will remove ALL jobs including queued and processing ones, and reset the job counter!
+                          ⚠️ This will flush queued, started, deferred, scheduled, and canceled jobs.
+                          {!flushSettings.include_failed && !flushSettings.include_completed &&
+                            " Failed and completed jobs preserved for debugging."}
                         </p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={flushSettings.include_failed}
+                            onChange={(e) => setFlushSettings(prev => ({ ...prev, include_failed: e.target.checked }))}
+                            className="text-red-600"
+                          />
+                          <span className="text-xs text-gray-700">Also flush failed jobs</span>
+                        </label>
+
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={flushSettings.include_completed}
+                            onChange={(e) => setFlushSettings(prev => ({ ...prev, include_completed: e.target.checked }))}
+                            className="text-red-600"
+                          />
+                          <span className="text-xs text-gray-700">Also flush completed jobs</span>
+                        </label>
                       </div>
                     </div>
                   )}

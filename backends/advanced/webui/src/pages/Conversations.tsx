@@ -3,31 +3,6 @@ import { MessageSquare, RefreshCw, Calendar, User, Play, Pause, MoreVertical, Ro
 import { conversationsApi, BACKEND_URL } from '../services/api'
 import ConversationVersionHeader from '../components/ConversationVersionHeader'
 
-interface TranscriptVersion {
-  version_id: string
-  transcript: string
-  segments: Array<{
-    text: string
-    speaker: string
-    start: number
-    end: number
-    confidence?: number
-  }>
-  provider: string
-  model?: string
-  created_at: string
-  processing_time_seconds?: number
-  metadata?: {
-    segment_count?: number
-    word_count?: number
-    speaker_recognition?: {
-      enabled: boolean
-      identified_speakers: string[]
-      processing_time_seconds?: number
-    }
-  }
-}
-
 interface Conversation {
   conversation_id?: string
   audio_uuid: string
@@ -37,12 +12,19 @@ interface Conversation {
   created_at?: string
   client_id: string
   segment_count?: number  // From list endpoint
+  memory_count?: number  // From list endpoint
   audio_path?: string
   cropped_audio_path?: string
   duration_seconds?: number
   has_memory?: boolean
-  transcript_versions?: TranscriptVersion[]
-  memory_versions?: any[]
+  transcript?: string  // From detail endpoint
+  segments?: Array<{
+    text: string
+    speaker: string
+    start: number
+    end: number
+    confidence?: number
+  }>  // From detail endpoint (loaded on expand)
   active_transcript_version?: string
   active_memory_version?: string
   transcript_version_count?: number
@@ -74,6 +56,8 @@ export default function Conversations() {
 
   // Transcript expand/collapse state
   const [expandedTranscripts, setExpandedTranscripts] = useState<Set<string>>(new Set())
+  // Detailed summary expand/collapse state
+  const [expandedDetailedSummaries, setExpandedDetailedSummaries] = useState<Set<string>>(new Set())
   // Audio playback state
   const [playingSegment, setPlayingSegment] = useState<string | null>(null) // Format: "audioUuid-segmentIndex"
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({})
@@ -224,6 +208,49 @@ export default function Conversations() {
     }
   }
 
+  const toggleDetailedSummary = async (conversationId: string) => {
+    // If already expanded, just collapse
+    if (expandedDetailedSummaries.has(conversationId)) {
+      setExpandedDetailedSummaries(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(conversationId)
+        return newSet
+      })
+      return
+    }
+
+    // Find the conversation by conversation_id
+    const conversation = conversations.find(c => c.conversation_id === conversationId)
+    if (!conversation || !conversation.conversation_id) {
+      console.error('Cannot expand detailed summary: conversation_id missing')
+      return
+    }
+
+    // Check if detailed_summary is already loaded
+    if (conversation.detailed_summary) {
+      setExpandedDetailedSummaries(prev => new Set(prev).add(conversationId))
+      return
+    }
+
+    // Fetch full conversation details to get detailed_summary
+    try {
+      const response = await conversationsApi.getById(conversation.conversation_id)
+      if (response.status === 200 && response.data.conversation) {
+        // Update the conversation in state with detailed_summary
+        setConversations(prev => prev.map(c =>
+          c.conversation_id === conversationId
+            ? { ...c, detailed_summary: response.data.conversation.detailed_summary }
+            : c
+        ))
+        // Expand the detailed summary
+        setExpandedDetailedSummaries(prev => new Set(prev).add(conversationId))
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch detailed summary:', err)
+      setError(`Failed to load detailed summary: ${err.message || 'Unknown error'}`)
+    }
+  }
+
   const toggleTranscriptExpansion = async (conversationId: string) => {
     // If already expanded, just collapse
     if (expandedTranscripts.has(conversationId)) {
@@ -242,25 +269,20 @@ export default function Conversations() {
       return
     }
 
-    // Get active transcript
-    const activeTranscript = conversation.transcript_versions?.find(
-      v => v.version_id === conversation.active_transcript_version
-    )
-
-    // If segments are already loaded in active transcript, just expand
-    if (activeTranscript && activeTranscript.segments && activeTranscript.segments.length > 0) {
+    // If segments are already loaded, just expand
+    if (conversation.segments && conversation.segments.length > 0) {
       setExpandedTranscripts(prev => new Set(prev).add(conversationId))
       return
     }
 
-    // Fetch full conversation details including transcript versions
+    // Fetch full conversation details including segments
     try {
       const response = await conversationsApi.getById(conversation.conversation_id)
       if (response.status === 200 && response.data.conversation) {
-        // Update the conversation in state with full transcript versions
+        // Update the conversation in state with full data
         setConversations(prev => prev.map(c =>
           c.conversation_id === conversationId
-            ? { ...c, transcript_versions: response.data.conversation.transcript_versions }
+            ? { ...c, ...response.data.conversation }
             : c
         ))
         // Expand the transcript
@@ -272,12 +294,14 @@ export default function Conversations() {
     }
   }
 
-  const handleSegmentPlayPause = (conversationId: string, segmentIndex: number, segment: any, audioPath: string) => {
+  const handleSegmentPlayPause = (conversationId: string, segmentIndex: number, segment: any, useCropped: boolean) => {
     const segmentId = `${conversationId}-${segmentIndex}`;
+    // Include cropped flag in cache key to handle mode switches
+    const audioKey = `${conversationId}-${useCropped ? 'cropped' : 'original'}`;
 
     // If this segment is already playing, pause it
     if (playingSegment === segmentId) {
-      const audio = audioRefs.current[conversationId];
+      const audio = audioRefs.current[audioKey];
       if (audio) {
         audio.pause();
       }
@@ -291,34 +315,46 @@ export default function Conversations() {
 
     // Stop any currently playing segment
     if (playingSegment) {
-      const [currentConversationId] = playingSegment.split('-');
-      const currentAudio = audioRefs.current[currentConversationId];
-      if (currentAudio) {
-        currentAudio.pause();
-      }
+      // Stop all audio elements (could be playing from different mode)
+      Object.values(audioRefs.current).forEach(audio => {
+        audio.pause();
+      });
       if (segmentTimerRef.current) {
         window.clearTimeout(segmentTimerRef.current);
         segmentTimerRef.current = null;
       }
     }
 
-    // Get or create audio element for this conversation
-    let audio = audioRefs.current[conversationId];
-    if (!audio) {
-      audio = new Audio(`${BACKEND_URL}/audio/${audioPath}`);
-      audioRefs.current[conversationId] = audio;
-      
+    // Get or create audio element for this conversation + mode combination
+    let audio = audioRefs.current[audioKey];
+
+    // Check if we need to create a new audio element (none exists or previous had error)
+    if (!audio || audio.error) {
+      const token = localStorage.getItem('token') || '';
+      const audioUrl = `${BACKEND_URL}/api/audio/get_audio/${conversationId}?cropped=${useCropped}&token=${token}`;
+      console.log('Creating audio element with URL:', audioUrl);
+      console.log('Token present:', !!token, 'Token length:', token.length);
+      audio = new Audio(audioUrl);
+      audioRefs.current[audioKey] = audio;
+
+      // Add error listener for debugging
+      audio.addEventListener('error', () => {
+        console.error('Audio element error:', audio.error?.code, audio.error?.message);
+        console.error('Audio src:', audio.src);
+      });
+
       // Add event listener to handle when audio ends naturally
       audio.addEventListener('ended', () => {
         setPlayingSegment(null);
       });
     }
-    
+
     // Set the start time and play
+    console.log('Playing segment:', segment.start, 'to', segment.end);
     audio.currentTime = segment.start;
     audio.play().then(() => {
       setPlayingSegment(segmentId);
-      
+
       // Set a timer to stop at the segment end time
       const duration = (segment.end - segment.start) * 1000; // Convert to milliseconds
       segmentTimerRef.current = window.setTimeout(() => {
@@ -441,12 +477,12 @@ export default function Conversations() {
               )}
 
               {/* Version Selector Header - Only show for conversations with conversation_id */}
-              {conversation.conversation_id && !conversation.deleted && conversation.transcript_versions && (
+              {conversation.conversation_id && !conversation.deleted && (
                 <ConversationVersionHeader
                   conversationId={conversation.conversation_id}
                   versionInfo={{
-                    transcript_count: conversation.transcript_versions?.length || 0,
-                    memory_count: conversation.memory_versions?.length || 0,
+                    transcript_count: conversation.transcript_version_count || 0,
+                    memory_count: conversation.memory_version_count || 0,
                     active_transcript_version: conversation.active_transcript_version,
                     active_memory_version: conversation.active_memory_version
                   }}
@@ -479,20 +515,33 @@ export default function Conversations() {
                     {conversation.title || "Conversation"}
                   </h2>
 
-                  {/* Short Summary */}
+                  {/* Short Summary - Always visible */}
                   {conversation.summary && (
                     <p className="text-sm text-gray-600 dark:text-gray-400 italic">
                       {conversation.summary}
                     </p>
                   )}
 
-                  {/* Detailed Summary */}
-                  {conversation.detailed_summary && (
-                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <h4 className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-2 uppercase tracking-wide">Detailed Summary</h4>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                        {conversation.detailed_summary}
-                      </p>
+                  {/* Detailed Summary Expand Button */}
+                  {conversation.conversation_id && (
+                    <div className="mt-2">
+                      <button
+                        onClick={() => toggleDetailedSummary(conversation.conversation_id!)}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
+                      >
+                        <span>
+                          {expandedDetailedSummaries.has(conversation.conversation_id) ? '▼' : '▶'} Detailed Summary
+                        </span>
+                      </button>
+
+                      {/* Detailed Summary Content */}
+                      {expandedDetailedSummaries.has(conversation.conversation_id) && conversation.detailed_summary && (
+                        <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 animate-in slide-in-from-top-2 duration-200">
+                          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                            {conversation.detailed_summary}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -593,16 +642,12 @@ export default function Conversations() {
                           {debugMode && conversation.cropped_audio_path && ' (Debug Mode)'}
                         </span>
                       </div>
-                      <audio 
-                        controls 
-                        className="w-full h-10" 
+                      <audio
+                        controls
+                        className="w-full h-10"
                         preload="metadata"
                         style={{ minWidth: '300px' }}
-                        src={`${BACKEND_URL}/audio/${
-                          debugMode 
-                            ? conversation.audio_path 
-                            : conversation.cropped_audio_path || conversation.audio_path
-                        }`}
+                        src={`${BACKEND_URL}/api/audio/get_audio/${conversation.conversation_id}?cropped=${!debugMode}&token=${localStorage.getItem('token') || ''}`}
                       >
                         Your browser does not support the audio element.
                       </audio>
@@ -624,11 +669,8 @@ export default function Conversations() {
               {/* Transcript */}
               <div className="space-y-2">
                 {(() => {
-                  // Get active transcript version
-                  const activeTranscript = conversation.transcript_versions?.find(
-                    v => v.version_id === conversation.active_transcript_version
-                  )
-                  const segments = activeTranscript?.segments || []
+                  // Get segments directly from conversation (returned by detail endpoint)
+                  const segments = conversation.segments || []
 
                   return (
                     <>
@@ -681,9 +723,9 @@ export default function Conversations() {
                           const conversationKey = conversation.conversation_id || conversation.audio_uuid
                           const segmentId = `${conversationKey}-${index}`
                           const isPlaying = playingSegment === segmentId
-                          const audioPath = debugMode
-                            ? conversation.audio_path
-                            : conversation.cropped_audio_path || conversation.audio_path
+                          const hasAudio = conversation.cropped_audio_path || conversation.audio_path
+                          // Use cropped audio only if available and not in debug mode
+                          const useCropped = !debugMode && !!conversation.cropped_audio_path
 
                           return (
                             <div
@@ -693,9 +735,9 @@ export default function Conversations() {
                               }`}
                             >
                               {/* Play/Pause Button */}
-                              {audioPath && (
+                              {hasAudio && (
                                 <button
-                                  onClick={() => handleSegmentPlayPause(conversationKey, index, segment, audioPath)}
+                                  onClick={() => handleSegmentPlayPause(conversationKey, index, segment, useCropped)}
                                   className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors mt-0.5 ${
                                     isPlaying
                                       ? 'bg-blue-600 text-white hover:bg-blue-700'
@@ -742,18 +784,17 @@ export default function Conversations() {
                 })()}
               </div>
 
-              {/* Speaker Information - from active transcript metadata */}
+              {/* Speaker Information - derived from segments */}
               {(() => {
-                const activeTranscript = conversation.transcript_versions?.find(
-                  v => v.version_id === conversation.active_transcript_version
-                )
-                const identifiedSpeakers = activeTranscript?.metadata?.speaker_recognition?.identified_speakers || []
+                // Get unique speakers from segments
+                const segments = conversation.segments || []
+                const uniqueSpeakers = [...new Set(segments.map(s => s.speaker).filter(Boolean))]
 
-                return identifiedSpeakers.length > 0 ? (
+                return uniqueSpeakers.length > 0 ? (
                   <div className="mt-4">
                     <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">🎤 Identified Speakers:</h4>
                     <div className="flex flex-wrap gap-2">
-                      {identifiedSpeakers.map((speaker: string, index: number) => (
+                      {uniqueSpeakers.map((speaker: string, index: number) => (
                         <span
                           key={index}
                           className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-md text-sm"
@@ -775,10 +816,10 @@ export default function Conversations() {
                     <div>Audio UUID: {conversation.audio_uuid}</div>
                     <div>Original Audio: {conversation.audio_path || 'N/A'}</div>
                     <div>Cropped Audio: {conversation.cropped_audio_path || 'N/A'}</div>
-                    <div>Active Transcript Version: {conversation.active_transcript_version || 'N/A'}</div>
-                    <div>Transcript Versions: {conversation.transcript_versions?.length || 0}</div>
-                    <div>Active Memory Version: {conversation.active_memory_version || 'N/A'}</div>
-                    <div>Memory Versions: {conversation.memory_versions?.length || 0}</div>
+                    <div>Transcript Version Count: {conversation.transcript_version_count || 0}</div>
+                    <div>Memory Version Count: {conversation.memory_version_count || 0}</div>
+                    <div>Segment Count: {conversation.segment_count || 0}</div>
+                    <div>Memory Count: {conversation.memory_count || 0}</div>
                     <div>Client ID: {conversation.client_id}</div>
                   </div>
                 </div>

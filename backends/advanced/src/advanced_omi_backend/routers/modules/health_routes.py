@@ -149,25 +149,39 @@ async def health_check():
 
     # Check Redis and RQ Workers (critical for queue processing)
     try:
-        from rq import Worker
+        from advanced_omi_backend.controllers.queue_controller import get_queue_health
 
-        # Test Redis connection
-        await asyncio.wait_for(asyncio.to_thread(redis_conn.ping), timeout=5.0)
+        # Get queue health (includes Redis connection test and worker count)
+        queue_health = await asyncio.wait_for(
+            asyncio.to_thread(get_queue_health), timeout=5.0
+        )
 
-        # Count active workers
-        workers = Worker.all(connection=redis_conn)
-        worker_count = len(workers)
-        active_workers = len([w for w in workers if w.state == 'busy'])
-        idle_workers = worker_count - active_workers
+        # Check if Redis is healthy
+        redis_healthy = queue_health.get("redis_connection") == "healthy"
+        worker_count = queue_health.get("total_workers", 0)
+        active_workers = queue_health.get("active_workers", 0)
+        idle_workers = queue_health.get("idle_workers", 0)
 
-        health_status["services"]["redis"] = {
-            "status": "✅ Connected",
-            "healthy": True,
-            "critical": True,
-            "worker_count": worker_count,
-            "active_workers": active_workers,
-            "idle_workers": idle_workers
-        }
+        if redis_healthy:
+            health_status["services"]["redis"] = {
+                "status": "✅ Connected",
+                "healthy": True,
+                "critical": True,
+                "worker_count": worker_count,
+                "active_workers": active_workers,
+                "idle_workers": idle_workers,
+                "queues": queue_health.get("queues", {})
+            }
+        else:
+            health_status["services"]["redis"] = {
+                "status": f"❌ Connection Failed: {queue_health.get('redis_connection')}",
+                "healthy": False,
+                "critical": True,
+                "worker_count": 0
+            }
+            overall_healthy = False
+            critical_services_healthy = False
+
     except asyncio.TimeoutError:
         health_status["services"]["redis"] = {
             "status": "❌ Connection Timeout (5s)",

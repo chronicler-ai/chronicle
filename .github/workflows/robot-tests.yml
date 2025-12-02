@@ -24,6 +24,24 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Verify required secrets
+      env:
+        DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        echo "Verifying required secrets..."
+        if [ -z "$DEEPGRAM_API_KEY" ]; then
+          echo "❌ ERROR: DEEPGRAM_API_KEY secret is not set"
+          exit 1
+        fi
+        if [ -z "$OPENAI_API_KEY" ]; then
+          echo "❌ ERROR: OPENAI_API_KEY secret is not set"
+          exit 1
+        fi
+        echo "✓ DEEPGRAM_API_KEY is set (length: ${#DEEPGRAM_API_KEY})"
+        echo "✓ OPENAI_API_KEY is set (length: ${#OPENAI_API_KEY})"
+        echo "✓ All required secrets verified"
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       with:
@@ -161,6 +179,26 @@ jobs:
 
         echo "✓ All services ready!"
 
+    - name: Verify checked out code
+      working-directory: tests
+      run: |
+        echo "Current git commit:"
+        git log -1 --oneline
+        echo ""
+        echo "Test files in current checkout:"
+        find . -name "*.robot" -type f | head -10
+        echo ""
+        echo "Sample of tags in test files:"
+        grep -h "\[Tags\]" endpoints/*.robot infrastructure/*.robot integration/*.robot 2>/dev/null | head -20 || echo "No tag files found"
+
+    - name: Clean previous test results
+      working-directory: tests
+      run: |
+        echo "Cleaning any previous test results..."
+        rm -rf results
+        mkdir -p results
+        echo "✓ Fresh results directory created"
+
     - name: Run Robot Framework tests
       working-directory: tests
       env:
@@ -170,8 +208,11 @@ jobs:
         OPENAI_MODEL: gpt-4o-mini
         DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
       run: |
-        # Run all tests
-        make all OUTPUTDIR=results || true
+        # Run all tests (don't fail workflow to allow artifact upload)
+        make all OUTPUTDIR=results
+        TEST_EXIT_CODE=$?
+        echo "test_exit_code=$TEST_EXIT_CODE" >> $GITHUB_ENV
+        exit 0  # Don't fail here, we'll fail at the end after uploading artifacts
 
     - name: Show service logs
       if: always()
@@ -343,3 +384,13 @@ jobs:
       working-directory: backends/advanced
       run: |
         docker compose -f docker-compose-test.yml down -v
+
+    - name: Fail workflow if tests failed
+      if: always()
+      run: |
+        if [ "${{ env.test_exit_code }}" != "0" ]; then
+          echo "❌ Tests failed with exit code ${{ env.test_exit_code }}"
+          exit 1
+        else
+          echo "✅ All tests passed"
+        fi

@@ -151,11 +151,49 @@ ${conversations}=    Get User Conversations    ${token}
 
 ## Keywords vs Inline Code
 
+### BEFORE Writing Test Code: Check Existing Keywords
+
+**CRITICAL: Always review existing resource files before writing any test code.**
+
+Before implementing ANY test logic:
+1. **Open and scan ALL relevant resource files** for existing keywords
+2. **Read keyword documentation** to understand what they do
+3. **Look for similar patterns** - if your test needs to do something common (like "create conversation", "wait for job", "send audio"), a keyword likely exists
+4. **Check the keyword's dependencies** - keywords often call other helper keywords you should also use
+
+**Why this matters:**
+- Prevents code duplication and maintenance burden
+- Ensures consistent test patterns across the suite
+- Leverages battle-tested, optimized implementations
+- Reduces test complexity and improves readability
+
+**How to do this:**
+```robot
+# Bad - Writing inline code without checking
+${jobs}=    Get Jobs By Type And Client    open_conversation    ${device}
+${count}=    Get Length    ${jobs}
+# ... manual logic to wait for new job ...
+
+# Good - Using existing keyword
+${jobs}=    Wait Until Keyword Succeeds    30s    2s
+...    Wait For New Job To Appear    open_conversation    ${device}    ${baseline_count}
+```
+
+**Resource Files to Check (based on your test domain):**
+- `websocket_keywords.robot` - WebSocket streaming, audio chunks, conversation creation
+- `conversation_keywords.robot` - Conversation CRUD, transcript operations
+- `queue_keywords.robot` - Job tracking, waiting for job states, queue monitoring
+- `memory_keywords.robot` - Memory operations, search, retrieval
+- `audio_keywords.robot` - Audio file handling, processing
+- `session_resources.robot` - Authentication, API sessions
+- `integration_keywords.robot` - Complex multi-step workflows
+
 ### When to Create Keywords
 - Reusable operations that are used across multiple tests or suites
 - Complex multi-step setup or teardown operations
 - Operations that encapsulate business logic or domain concepts
 - Operations that interact with external systems (APIs, databases, files)
+- **ONLY after confirming no existing keyword does what you need**
 
 ### When to Keep Code Inline
 - Verification steps (assertions) - these should almost always be inline in tests

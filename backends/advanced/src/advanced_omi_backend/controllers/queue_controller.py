@@ -93,14 +93,22 @@ def get_job_stats() -> Dict[str, Any]:
     }
 
 
-def get_jobs(limit: int = 20, offset: int = 0, queue_name: str = None) -> Dict[str, Any]:
+def get_jobs(
+    limit: int = 20,
+    offset: int = 0,
+    queue_name: str = None,
+    job_type: str = None,
+    client_id: str = None
+) -> Dict[str, Any]:
     """
-    Get jobs from a specific queue or all queues.
+    Get jobs from a specific queue or all queues with optional filtering.
 
     Args:
         limit: Maximum number of jobs to return
         offset: Number of jobs to skip
         queue_name: Specific queue name or None for all queues
+        job_type: Filter by job type (matches func_name, e.g., "speech_detection")
+        client_id: Filter by client_id in job meta (partial match)
 
     Returns:
         Dict with jobs list and pagination metadata matching frontend expectations
@@ -130,11 +138,21 @@ def get_jobs(limit: int = 20, offset: int = 0, queue_name: str = None) -> Dict[s
                     user_id = job.kwargs.get("user_id", "") if job.kwargs else ""
 
                     # Extract just the function name (e.g., "listen_for_speech_job" from "module.listen_for_speech_job")
-                    job_type = job.func_name.split('.')[-1] if job.func_name else "unknown"
+                    func_name = job.func_name.split('.')[-1] if job.func_name else "unknown"
+
+                    # Apply job_type filter
+                    if job_type and job_type not in func_name:
+                        continue
+
+                    # Apply client_id filter (partial match in meta)
+                    if client_id:
+                        job_client_id = job.meta.get("client_id", "") if job.meta else ""
+                        if client_id not in job_client_id:
+                            continue
 
                     all_jobs.append({
                         "job_id": job.id,
-                        "job_type": job_type,
+                        "job_type": func_name,
                         "user_id": user_id,
                         "status": status,
                         "priority": "normal",  # RQ doesn't track priority in metadata
@@ -315,7 +333,8 @@ def start_post_conversation_jobs(
     user_id: str,
     post_transcription: bool = True,
     transcript_version_id: Optional[str] = None,
-    depends_on_job = None
+    depends_on_job = None,
+    client_id: Optional[str] = None
 ) -> Dict[str, str]:
     """
     Start post-conversation processing jobs after conversation is created.
@@ -348,6 +367,11 @@ def start_post_conversation_jobs(
 
     version_id = transcript_version_id or str(uuid.uuid4())
 
+    # Build job metadata (include client_id if provided for UI tracking)
+    job_meta = {'audio_uuid': audio_uuid, 'conversation_id': conversation_id}
+    if client_id:
+        job_meta['client_id'] = client_id
+
     # Step 1: Batch transcription job (ALWAYS run to get correct conversation-relative timestamps)
     # Even for streaming, we need batch transcription before cropping to fix cumulative timestamps
     transcribe_job_id = f"transcribe_{conversation_id[:12]}"
@@ -365,7 +389,7 @@ def start_post_conversation_jobs(
         depends_on=depends_on_job,
         job_id=transcribe_job_id,
         description=f"Transcribe conversation {conversation_id[:8]}",
-        meta={'audio_uuid': audio_uuid, 'conversation_id': conversation_id}
+        meta=job_meta
     )
     logger.info(f"📥 RQ: Enqueued transcription job {transcription_job.id}, meta={transcription_job.meta}")
     crop_depends_on = transcription_job
@@ -383,7 +407,7 @@ def start_post_conversation_jobs(
         depends_on=crop_depends_on,
         job_id=crop_job_id,
         description=f"Crop audio for conversation {conversation_id[:8]}",
-        meta={'audio_uuid': audio_uuid, 'conversation_id': conversation_id}
+        meta=job_meta
     )
     logger.info(f"📥 RQ: Enqueued cropping job {cropping_job.id}, meta={cropping_job.meta}")
 
@@ -406,7 +430,7 @@ def start_post_conversation_jobs(
         depends_on=speaker_depends_on,
         job_id=speaker_job_id,
         description=f"Speaker recognition for conversation {conversation_id[:8]}",
-        meta={'audio_uuid': audio_uuid, 'conversation_id': conversation_id}
+        meta=job_meta
     )
     logger.info(f"📥 RQ: Enqueued speaker recognition job {speaker_job.id}, meta={speaker_job.meta} (depends on {speaker_depends_on.id})")
 
@@ -422,7 +446,7 @@ def start_post_conversation_jobs(
         depends_on=speaker_job,
         job_id=memory_job_id,
         description=f"Memory extraction for conversation {conversation_id[:8]}",
-        meta={'audio_uuid': audio_uuid, 'conversation_id': conversation_id}
+        meta=job_meta
     )
     logger.info(f"📥 RQ: Enqueued memory extraction job {memory_job.id}, meta={memory_job.meta} (depends on {speaker_job.id})")
 
@@ -439,7 +463,7 @@ def start_post_conversation_jobs(
         depends_on=speaker_job,  # Depends on speaker job, NOT memory job
         job_id=title_job_id,
         description=f"Generate title and summary for conversation {conversation_id[:8]}",
-        meta={'audio_uuid': audio_uuid, 'conversation_id': conversation_id}
+        meta=job_meta
     )
     logger.info(f"📥 RQ: Enqueued title/summary job {title_summary_job.id}, meta={title_summary_job.meta} (depends on {speaker_job.id})")
 

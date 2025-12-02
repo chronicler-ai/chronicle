@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation    Browser Authentication Tests
 Library          Browser
-Resource         ../resources/setup_resources.robot
+Resource            ../setup/setup_keywords.robot
 Suite Setup      Suite Setup
 
 

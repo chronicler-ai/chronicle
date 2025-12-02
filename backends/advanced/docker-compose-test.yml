@@ -42,6 +42,10 @@ services:
       - DISABLE_SPEAKER_RECOGNITION=false
       - SPEAKER_SERVICE_URL=https://localhost:8085
       - CORS_ORIGINS=http://localhost:3001,http://localhost:8001,https://localhost:3001,https://localhost:8001
+      # Set low inactivity timeout for tests (2 seconds instead of 60)
+      - SPEECH_INACTIVITY_THRESHOLD_SECONDS=2
+      # Wait for audio queue to drain before timing out (test mode)
+      - WAIT_FOR_AUDIO_QUEUE_DRAIN=true
     depends_on:
       qdrant-test:
         condition: service_started
@@ -144,6 +148,10 @@ services:
       - OPENMEMORY_USER_ID=${OPENMEMORY_USER_ID:-openmemory}
       - DISABLE_SPEAKER_RECOGNITION=false
       - SPEAKER_SERVICE_URL=https://localhost:8085
+      # Set low inactivity timeout for tests (2 seconds instead of 60)
+      - SPEECH_INACTIVITY_THRESHOLD_SECONDS=2
+      # Wait for audio queue to drain before timing out (test mode)
+      - WAIT_FOR_AUDIO_QUEUE_DRAIN=true
     depends_on:
       friend-backend-test:
         condition: service_healthy

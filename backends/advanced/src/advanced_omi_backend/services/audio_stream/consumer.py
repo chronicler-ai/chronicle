@@ -327,7 +327,7 @@ class BaseAudioStreamConsumer(ABC):
                             logger.warning(f"➡️ [{self.consumer_name}] Stream {stream_name} was deleted, removing from active streams")
 
                             # Release the lock
-                            lock_key = f"stream:lock:{stream_name}"
+                            lock_key = f"consumer:lock:{stream_name}"
                             try:
                                 await self.redis_client.delete(lock_key)
                                 logger.info(f"🔓 Released lock for deleted stream: {stream_name}")
@@ -418,6 +418,9 @@ class BaseAudioStreamConsumer(ABC):
 
                     # Clean up session buffer
                     del self.session_buffers[session_id]
+
+                # Release the consumer lock for this stream
+                await self.release_stream(stream_name)
 
                 # ACK the END message
                 await self.redis_client.xack(stream_name, self.group_name, message_id)

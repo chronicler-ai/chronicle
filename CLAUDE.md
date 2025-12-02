@@ -38,9 +38,6 @@ uv run pytest tests/test_memory_service.py  # Single test file
 # Environment setup
 cp .env.template .env  # Configure environment variables
 
-# Setup test environment (optional, for running integration tests)
-uv run --with-requirements setup-requirements.txt python setup_test_env.py  # Creates .env.test
-
 # Reset data (development)
 sudo rm -rf backends/advanced/data/
 ```
@@ -70,10 +67,6 @@ cd backends/advanced
 
 # Requires .env file with DEEPGRAM_API_KEY and OPENAI_API_KEY
 cp .env.template .env  # Configure API keys
-
-# Optional: Setup test environment with test-specific credentials
-# (wizard.py prompts for this, or run manually)
-uv run --with-requirements setup-requirements.txt python setup_test_env.py
 
 # Run full integration test suite
 ./run-test.sh
@@ -407,6 +400,31 @@ For detailed technical documentation, see:
 - **[@docs/api-reference.md](docs/api-reference.md)**: Complete endpoint documentation with examples
 - **[@docs/speaker-recognition.md](docs/speaker-recognition.md)**: Advanced analysis and live inference features
 - **[@docs/distributed-deployment.md](docs/distributed-deployment.md)**: Multi-machine deployment with Tailscale
+
+## Robot Framework Testing
+
+**IMPORTANT: When writing or modifying Robot Framework tests, you MUST follow the testing guidelines.**
+
+Before writing any Robot Framework test:
+1. **Read [@tests/TESTING_GUIDELINES.md](tests/TESTING_GUIDELINES.md)** for comprehensive testing patterns and standards
+2. **Check [@tests/tags.md](tests/tags.md)** for approved tags - ONLY 11 tags are permitted
+3. **SCAN existing resource files** for keywords - NEVER write code that duplicates existing keywords
+4. **Follow the Arrange-Act-Assert pattern** with inline verifications (not abstracted to keywords)
+
+Key Testing Rules:
+- **Check Existing Keywords FIRST**: Before writing ANY test code, scan relevant resource files (`websocket_keywords.robot`, `queue_keywords.robot`, `conversation_keywords.robot`, etc.) for existing keywords
+- **Tags**: ONLY use the 11 approved tags from tags.md, tab-separated (e.g., `[Tags]    infra	audio-streaming`)
+- **Verifications**: Write assertions directly in tests, not in resource keywords
+- **Keywords**: Only create keywords for reusable setup/action operations AFTER confirming no existing keyword exists
+- **Resources**: Always check existing resource files before creating new keywords or duplicating logic
+- **Naming**: Use descriptive names that explain business purpose, not technical implementation
+
+**DO NOT:**
+- Write inline code without checking if a keyword already exists for that operation
+- Create custom tags (use only the 11 approved tags)
+- Abstract verifications into keywords (keep them inline in tests)
+- Use space-separated tags (must be tab-separated)
+- Skip reading the guidelines before writing tests
 
 ## Notes for Claude
 Check if the src/ is volume mounted. If not, do compose build so that code changes are reflected. Do not simply run `docker compose restart` as it will not rebuild the image.

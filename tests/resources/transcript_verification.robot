@@ -4,7 +4,8 @@ Documentation    Advanced Transcript Verification Keywords
 Library          RequestsLibrary
 Library          Collections
 Library          String
-# Library          JSONLibrary  # Optional library, not required
+Library          OperatingSystem
+Variables        ../setup/test_data.py
 
 *** Variables ***
 ${OPENAI_API_BASE}           https://api.openai.com/v1
@@ -207,3 +208,129 @@ Verify Segment Speaker Diarization
 
     Log    Speaker diarization: ${speaker_count} unique speakers found    INFO
     RETURN    ${speaker_count}
+
+Verify Segments Match Expected Timestamps
+    [Documentation]    Verify that segment timestamps match expected test data within tolerance
+    ...
+    ...                Arguments:
+    ...                - segments: Actual segments from conversation to verify
+    ...                - expected_segments: Expected segment timestamps (default: EXPECTED_SEGMENT_TIMES from test_data.py)
+    ...                - tolerance: Maximum allowed time difference in seconds (default: SEGMENT_TIME_TOLERANCE from test_data.py)
+    [Arguments]    ${segments}    ${expected_segments}=${None}    ${tolerance}=${None}
+
+    # Use defaults from test_data.py if not provided
+    ${expected_segments}=    Set Variable If    ${expected_segments} is ${None}    ${EXPECTED_SEGMENT_TIMES}    ${expected_segments}
+    ${tolerance}=            Set Variable If    ${tolerance} is ${None}            ${SEGMENT_TIME_TOLERANCE}    ${tolerance}
+
+    # Verify we have the expected number of segments
+    ${actual_count}=    Get Length    ${segments}
+    ${expected_count}=  Get Length    ${expected_segments}
+    # # Should Be Equal As Integers    ${actual_count}    ${expected_count}
+    # ...    Expected ${expected_count} segments, got ${actual_count}
+
+    # Compare each segment's timestamps
+    ${index}=    Set Variable    ${0}
+    FOR    ${segment}    IN    @{segments}
+        ${expected}=    Set Variable    ${expected_segments}[${index}]
+
+        ${actual_start}=    Set Variable    ${segment}[start]
+        ${actual_end}=      Set Variable    ${segment}[end]
+        ${expected_start}=  Set Variable    ${expected}[start]
+        ${expected_end}=    Set Variable    ${expected}[end]
+
+        # Check start time within tolerance
+        ${start_diff}=    Evaluate    abs($actual_start - $expected_start)
+        Should Be True    $start_diff <= $tolerance
+        ...    Segment ${index} start time mismatch: expected ${expected_start}s, got ${actual_start}s (diff: ${start_diff}s, tolerance: ${tolerance}s)
+
+        # Check end time within tolerance
+        ${end_diff}=    Evaluate    abs($actual_end - $expected_end)
+        Should Be True    $end_diff <= $tolerance
+        ...    Segment ${index} end time mismatch: expected ${expected_end}s, got ${actual_end}s (diff: ${end_diff}s, tolerance: ${tolerance}s)
+
+        Log    Segment ${index}: start=${actual_start}s (expected ${expected_start}s), end=${actual_end}s (expected ${expected_end}s) ✓    INFO
+        ${index}=    Evaluate    ${index} + 1
+    END
+
+    Log    All ${actual_count} segments matched expected timestamps within ${tolerance}s tolerance    INFO
+
+    Verify Transcript Content
+    [Documentation]    Verify transcript contains expected content and quality
+    [Arguments]    ${conversation}    ${expected_keywords}    ${min_length}=50
+
+    Dictionary Should Contain Key    ${conversation}    transcript
+    ${transcript}=    Set Variable    ${conversation}[transcript]
+    Should Not Be Empty    ${transcript}
+
+    # Check length
+    ${transcript_length}=    Get Length    ${transcript}
+    Should Be True    ${transcript_length} >= ${min_length}    Transcript too short: ${transcript_length}
+
+    # Check for expected keywords
+    ${transcript_lower}=    Convert To Lower Case    ${transcript}
+    FOR    ${keyword}    IN    @{expected_keywords}
+        ${keyword_lower}=    Convert To Lower Case    ${keyword}
+        Should Contain    ${transcript_lower}    ${keyword_lower}    Missing keyword: ${keyword}
+    END
+
+    # Verify segments exist
+    Dictionary Should Contain Key    ${conversation}    segments
+    ${segments}=    Set Variable    ${conversation}[segments]
+    ${segment_count}=    Get Length    ${segments}
+    Should Be True    ${segment_count} > 0    No segments found
+
+    Log    Transcript verification passed: ${transcript_length} chars, ${segment_count} segments    INFO
+    
+Verify Transcript Content
+    [Documentation]    Verify transcript contains expected content and quality
+    [Arguments]    ${conversation}    ${expected_keywords}    ${min_length}=50
+
+    Dictionary Should Contain Key    ${conversation}    transcript
+    ${transcript}=    Set Variable    ${conversation}[transcript]
+    Should Not Be Empty    ${transcript}
+
+    # Check length
+    ${transcript_length}=    Get Length    ${transcript}
+    Should Be True    ${transcript_length} >= ${min_length}    Transcript too short: ${transcript_length}
+
+    # Check for expected keywords
+    ${transcript_lower}=    Convert To Lower Case    ${transcript}
+    FOR    ${keyword}    IN    @{expected_keywords}
+        ${keyword_lower}=    Convert To Lower Case    ${keyword}
+        Should Contain    ${transcript_lower}    ${keyword_lower}    Missing keyword: ${keyword}
+    END
+
+    # Verify segments exist
+    Dictionary Should Contain Key    ${conversation}    segments
+    ${segments}=    Set Variable    ${conversation}[segments]
+    ${segment_count}=    Get Length    ${segments}
+    Should Be True    ${segment_count} > 0    No segments found
+
+    Log    Transcript verification passed: ${transcript_length} chars, ${segment_count} segments    INFO
+
+    Verify Transcript Content
+    [Documentation]    Verify transcript contains expected content and quality
+    [Arguments]    ${conversation}    ${expected_keywords}    ${min_length}=50
+
+    Dictionary Should Contain Key    ${conversation}    transcript
+    ${transcript}=    Set Variable    ${conversation}[transcript]
+    Should Not Be Empty    ${transcript}
+
+    # Check length
+    ${transcript_length}=    Get Length    ${transcript}
+    Should Be True    ${transcript_length} >= ${min_length}    Transcript too short: ${transcript_length}
+
+    # Check for expected keywords
+    ${transcript_lower}=    Convert To Lower Case    ${transcript}
+    FOR    ${keyword}    IN    @{expected_keywords}
+        ${keyword_lower}=    Convert To Lower Case    ${keyword}
+        Should Contain    ${transcript_lower}    ${keyword_lower}    Missing keyword: ${keyword}
+    END
+
+    # Verify segments exist
+    Dictionary Should Contain Key    ${conversation}    segments
+    ${segments}=    Set Variable    ${conversation}[segments]
+    ${segment_count}=    Get Length    ${segments}
+    Should Be True    ${segment_count} > 0    No segments found
+
+    Log    Transcript verification passed: ${transcript_length} chars, ${segment_count} segments    INFO

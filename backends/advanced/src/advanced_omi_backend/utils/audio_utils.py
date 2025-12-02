@@ -126,7 +126,10 @@ async def write_audio_file(
         validate: Whether to validate and prepare audio (default: True for uploads, False for WebSocket)
 
     Returns:
-        Tuple of (wav_filename, file_path, duration)
+        Tuple of (relative_audio_path, absolute_file_path, duration)
+        - relative_audio_path: Path for database storage (e.g., "fixtures/123_abc_uuid.wav" or "123_abc_uuid.wav")
+        - absolute_file_path: Full filesystem path for immediate file operations
+        - duration: Audio duration in seconds
 
     Raises:
         AudioValidationError: If validation fails (when validate=True)
@@ -156,6 +159,18 @@ async def write_audio_file(
     # Create filename
     wav_filename = f"{timestamp}_{client_id}_{audio_uuid}.wav"
     file_path = output_dir / wav_filename
+
+    # Calculate relative path for database storage
+    # If output_dir is a subdirectory of CHUNK_DIR, include the folder prefix
+    try:
+        relative_path_parts = output_dir.relative_to(CHUNK_DIR)
+        if str(relative_path_parts) != '.':
+            relative_audio_path = f"{relative_path_parts}/{wav_filename}"
+        else:
+            relative_audio_path = wav_filename
+    except ValueError:
+        # output_dir is not relative to CHUNK_DIR, just use filename
+        relative_audio_path = wav_filename
 
     # Create file sink and write audio
     sink = LocalFileSink(
@@ -194,7 +209,7 @@ async def write_audio_file(
 
     audio_logger.info(f"✅ Created AudioFile entry for {audio_uuid}")
 
-    return wav_filename, str(file_path), duration
+    return relative_audio_path, str(file_path), duration
 
 
 async def process_audio_chunk(

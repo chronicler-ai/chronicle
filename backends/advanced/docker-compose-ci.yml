@@ -1,0 +1,192 @@
+# docker-compose-ci.yml
+# CI/CD environment for GitHub Actions
+# Uses built image without source code mounts to ensure memory_config.yaml is included
+
+services:
+  friend-backend-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"  # Avoid conflict with dev on 8000
+    volumes:
+      # No src mount for CI - use built image with all files included
+      - ./data/test_audio_chunks:/app/audio_chunks
+      - ./data/test_debug_dir:/app/debug_dir
+      - ./data/test_data:/app/data
+    environment:
+      # Override with test-specific settings
+      - MONGODB_URI=mongodb://mongo-test:27017/test_db
+      - QDRANT_BASE_URL=qdrant-test
+      - QDRANT_PORT=6333
+      - REDIS_URL=redis://redis-test:6379/0
+      - DEBUG_DIR=/app/debug_dir
+      # Import API keys from environment
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # LLM provider configuration (required for memory service)
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      # Authentication (test-specific)
+      - AUTH_SECRET_KEY=test-jwt-signing-key-for-integration-tests
+      - ADMIN_PASSWORD=test-admin-password-123
+      - ADMIN_EMAIL=test-admin@example.com
+      # Transcription provider configuration
+      - TRANSCRIPTION_PROVIDER=${TRANSCRIPTION_PROVIDER:-deepgram}
+      # - PARAKEET_ASR_URL=${PARAKEET_ASR_URL}
+      # Memory provider configuration
+      - MEMORY_PROVIDER=${MEMORY_PROVIDER:-friend_lite}
+      - OPENMEMORY_MCP_URL=${OPENMEMORY_MCP_URL:-http://host.docker.internal:8765}
+      - OPENMEMORY_USER_ID=${OPENMEMORY_USER_ID:-openmemory}
+      # Disable speaker recognition in test environment to prevent segment duplication
+      - DISABLE_SPEAKER_RECOGNITION=false
+      - SPEAKER_SERVICE_URL=https://localhost:8085
+      - CORS_ORIGINS=http://localhost:3001,http://localhost:8001,https://localhost:3001,https://localhost:8001
+      # Set low inactivity timeout for tests (2 seconds instead of 60)
+      - SPEECH_INACTIVITY_THRESHOLD_SECONDS=2
+      # Wait for audio queue to drain before timing out (test mode)
+      - WAIT_FOR_AUDIO_QUEUE_DRAIN=true
+    depends_on:
+      qdrant-test:
+        condition: service_started
+      mongo-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  webui-test:
+    build:
+      context: ./webui
+      dockerfile: Dockerfile
+      args:
+        - VITE_BACKEND_URL=http://localhost:8001
+        - BACKEND_URL=http://localhost:8001
+    volumes:
+      - ./webui/src:/app/src  # Mount source code for easier development
+    ports:
+      - "3001:80"  # Avoid conflict with dev on 3000
+    depends_on:
+      friend-backend-test:
+        condition: service_healthy
+      mongo-test:
+        condition: service_healthy
+      qdrant-test:
+        condition: service_started
+      redis-test:
+        condition: service_started
+
+  qdrant-test:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6337:6333"  # gRPC - avoid conflict with dev 6333
+      - "6338:6334"  # HTTP - avoid conflict with dev 6334
+    volumes:
+      - ./data/test_qdrant_data:/qdrant/storage
+
+  mongo-test:
+    image: mongo:8.0.14
+    ports:
+      - "27018:27017"  # Avoid conflict with dev on 27017
+    volumes:
+      - ./data/test_mongo_data:/data/db
+    # Use test database name to ensure isolation
+    command: mongod --dbpath /data/db --bind_ip_all
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok", "--quiet"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"  # Avoid conflict with dev on 6379
+    volumes:
+      - ./data/test_redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  workers-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ./start-workers.sh
+    volumes:
+      # No src mount for CI - use built image
+      - ./data/test_audio_chunks:/app/audio_chunks
+      - ./data/test_debug_dir:/app/debug_dir
+      - ./data/test_data:/app/data
+    environment:
+      # Same environment as backend
+      - MONGODB_URI=mongodb://mongo-test:27017/test_db
+      - QDRANT_BASE_URL=qdrant-test
+      - QDRANT_PORT=6333
+      - REDIS_URL=redis://redis-test:6379/0
+      - DEBUG_DIR=/app/debug_dir
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - AUTH_SECRET_KEY=test-jwt-signing-key-for-integration-tests
+      - ADMIN_PASSWORD=test-admin-password-123
+      - ADMIN_EMAIL=test-admin@example.com
+      - TRANSCRIPTION_PROVIDER=${TRANSCRIPTION_PROVIDER:-deepgram}
+      - MEMORY_PROVIDER=${MEMORY_PROVIDER:-friend_lite}
+      - OPENMEMORY_MCP_URL=${OPENMEMORY_MCP_URL:-http://host.docker.internal:8765}
+      - OPENMEMORY_USER_ID=${OPENMEMORY_USER_ID:-openmemory}
+      - DISABLE_SPEAKER_RECOGNITION=false
+      - SPEAKER_SERVICE_URL=https://localhost:8085
+      # Set low inactivity timeout for tests (2 seconds instead of 60)
+      - SPEECH_INACTIVITY_THRESHOLD_SECONDS=2
+      # Wait for audio queue to drain before timing out (test mode)
+      - WAIT_FOR_AUDIO_QUEUE_DRAIN=true
+    depends_on:
+      friend-backend-test:
+        condition: service_healthy
+      mongo-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_started
+      qdrant-test:
+        condition: service_started
+    restart: unless-stopped
+
+  # caddy:
+  #   image: caddy:2-alpine
+  #   ports:
+  #     - "443:443"
+  #     - "80:80"  # HTTP redirect to HTTPS
+  #   volumes:
+  #     - ./Caddyfile-test:/etc/caddy/Caddyfile:ro
+  #     - ./data/caddy_data:/data
+  #     - ./data/caddy_config:/config
+  #   depends_on:
+  #     webui-test:
+  #       condition: service_started
+  #     friend-backend-test:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+
+# CI Considerations (for future implementation):
+# - GitHub Actions can run these services in isolated containers
+# - Port conflicts won't exist in CI since each job runs in isolation
+# - For CI, we could add:
+#   - --build flag for fresh builds
+#   - --force-recreate for clean state
+#   - Volume cleanup between test runs
+# - Environment variables can be injected via GitHub secrets
+# - Health checks ensure services are ready before tests run

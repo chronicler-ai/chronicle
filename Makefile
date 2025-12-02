@@ -29,6 +29,7 @@ menu: ## Show interactive menu (default)
 	@echo "================================"
 	@echo
 	@echo "📋 Quick Actions:"
+	@echo "  setup-dev          🛠️  Setup development environment (git hooks, pre-commit)"
 	@echo "  setup-k8s          🏗️  Complete Kubernetes setup (registry + infrastructure + RBAC)"
 	@echo "  config             📝 Generate all configuration files"
 	@echo "  deploy             🚀 Deploy using configured mode ($(DEPLOYMENT_MODE))"
@@ -113,6 +114,29 @@ help: ## Show detailed help for all targets
 	@echo
 	@echo "🧹 CLEANUP:"
 	@echo "  clean              Clean up generated configuration files"
+
+# ========================================
+# DEVELOPMENT SETUP
+# ========================================
+
+setup-dev: ## Setup development environment (git hooks, pre-commit)
+	@echo "🛠️  Setting up development environment..."
+	@echo ""
+	@echo "📦 Installing pre-commit..."
+	@pip install pre-commit 2>/dev/null || pip3 install pre-commit
+	@echo ""
+	@echo "🔧 Installing git hooks..."
+	@pre-commit install --hook-type pre-push
+	@pre-commit install --hook-type pre-commit
+	@echo ""
+	@echo "✅ Development environment setup complete!"
+	@echo ""
+	@echo "💡 Hooks installed:"
+	@echo "  • Robot Framework tests run before push"
+	@echo "  • Black/isort format Python code on commit"
+	@echo "  • Code quality checks on commit"
+	@echo ""
+	@echo "⚙️  To skip hooks: git push --no-verify / git commit --no-verify"
 
 # ========================================
 # KUBERNETES SETUP
