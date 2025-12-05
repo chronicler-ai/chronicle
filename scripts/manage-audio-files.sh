@@ -5,7 +5,7 @@
 
 set -e
 
-NAMESPACE="friend-lite"
+NAMESPACE="chronicle"
 POD_NAME=""
 AUDIO_CHUNKS_DIR="/app/data/audio_chunks"
 DATA_DIR="/app/data"

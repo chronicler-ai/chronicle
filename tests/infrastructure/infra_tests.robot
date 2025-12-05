@@ -26,8 +26,8 @@ Suite Setup      Suite Setup
 Suite Teardown   Suite Teardown
 Test Setup       Test Cleanup
 *** Variables ***
-${WORKERS_CONTAINER}    advanced-workers-test-1
-${REDIS_CONTAINER}      advanced-redis-test-1
+# Container names are now loaded from test_env.py via .env.test
+# These local variables can override if needed, but default to env values
 
 *** Keywords ***
 
@@ -262,7 +262,8 @@ WebSocket Disconnect Conversation End Reason Test
     Send Audio Chunks To Stream    ${stream_id}    ${TEST_AUDIO_FILE}    num_chunks=200 
 
     # Wait for conversation job to be created and conversation_id to be populated
-    ${conv_jobs}=    Wait Until Keyword Succeeds    30s    2s
+    # Transcription + speech analysis takes time (30-60s with queue)
+    ${conv_jobs}=    Wait Until Keyword Succeeds    60s    3s
     ...    Job Type Exists For Client    open_conversation    ${device_name}
 
     # Wait for conversation_id in job meta (created asynchronously)
@@ -287,3 +288,4 @@ WebSocket Disconnect Conversation End Reason Test
     Should Not Be Equal    ${conversation}[completed_at]    ${None}
 
     [Teardown]    Run Keyword And Ignore Error    Close Audio Stream    ${stream_id}
+

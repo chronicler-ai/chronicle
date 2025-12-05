@@ -1,8 +1,8 @@
-# Friend-Lite Backend Documentation Guide
+# Chronicle Backend Documentation Guide
 
 ## 📖 **New Developer Reading Order**
 
-Welcome to friend-lite! This guide provides the optimal reading sequence to understand the complete voice → transcript → memories system.
+Welcome to chronicle! This guide provides the optimal reading sequence to understand the complete voice → transcript → memories system.
 
 ---
 

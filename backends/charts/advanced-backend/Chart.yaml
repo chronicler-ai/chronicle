@@ -1,10 +1,10 @@
 apiVersion: v2
 name: advanced-backend
-description: Friend-lite Advanced Backend Service
+description: Chronicle Advanced Backend Service
 version: 0.1.0
 appVersion: "1.0"
 keywords:
-  - friend-lite
+  - chronicle
   - backend
   - ai
 sources:

@@ -161,4 +161,4 @@ You can test the relay using the provided test listener (if needed):
 
 ## License
 
-This project is part of the friend-lite ecosystem.
+This project is part of the chronicle ecosystem.

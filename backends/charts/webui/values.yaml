@@ -38,7 +38,7 @@ ingress:
     - host: external.example.com  # Overridden by Skaffold setValueTemplates
       paths: *commonPaths
   # tls:
-  #   - secretName: friend-lite-tls
+  #   - secretName: chronicle-tls
   #     hosts:
   #       - webui.example.com
 

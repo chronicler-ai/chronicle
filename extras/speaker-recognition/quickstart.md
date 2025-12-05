@@ -47,7 +47,7 @@ docker compose up --build -d
 
 **Important**: Accept the SSL certificate warning when prompted. Self-signed certificates are used for local development.
 
-**Note**: Speaker Recognition runs on port 8444 (HTTPS) and 8081 (HTTP) to avoid conflicts with the main Friend-Lite backend which uses the standard ports 443/80.
+**Note**: Speaker Recognition runs on port 8444 (HTTPS) and 8081 (HTTP) to avoid conflicts with the main Chronicle backend which uses the standard ports 443/80.
 
 **Need to customize other settings?** Copy `.env.template` to `.env` and modify:
 ```bash

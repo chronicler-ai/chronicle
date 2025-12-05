@@ -34,7 +34,7 @@ FRESH_RUN = os.environ.get("FRESH_RUN", "true").lower() == "true"
 CLEANUP_CONTAINERS = os.environ.get("CLEANUP_CONTAINERS", "true").lower() == "true"
 REBUILD = os.environ.get("REBUILD", "false").lower() == "true"
 
-REPO_ROOT = Path(__file__).resolve().parents[3]  # Go up to friend-lite root
+REPO_ROOT = Path(__file__).resolve().parents[3]  # Go up to chronicle root
 SPEAKER_DIR = REPO_ROOT / "extras" / "speaker-recognition"
 TEST_ASSETS_DIR = SPEAKER_DIR / "tests" / "assets"
 

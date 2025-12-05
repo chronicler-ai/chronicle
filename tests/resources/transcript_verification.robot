@@ -254,32 +254,6 @@ Verify Segments Match Expected Timestamps
 
     Log    All ${actual_count} segments matched expected timestamps within ${tolerance}s tolerance    INFO
 
-    Verify Transcript Content
-    [Documentation]    Verify transcript contains expected content and quality
-    [Arguments]    ${conversation}    ${expected_keywords}    ${min_length}=50
-
-    Dictionary Should Contain Key    ${conversation}    transcript
-    ${transcript}=    Set Variable    ${conversation}[transcript]
-    Should Not Be Empty    ${transcript}
-
-    # Check length
-    ${transcript_length}=    Get Length    ${transcript}
-    Should Be True    ${transcript_length} >= ${min_length}    Transcript too short: ${transcript_length}
-
-    # Check for expected keywords
-    ${transcript_lower}=    Convert To Lower Case    ${transcript}
-    FOR    ${keyword}    IN    @{expected_keywords}
-        ${keyword_lower}=    Convert To Lower Case    ${keyword}
-        Should Contain    ${transcript_lower}    ${keyword_lower}    Missing keyword: ${keyword}
-    END
-
-    # Verify segments exist
-    Dictionary Should Contain Key    ${conversation}    segments
-    ${segments}=    Set Variable    ${conversation}[segments]
-    ${segment_count}=    Get Length    ${segments}
-    Should Be True    ${segment_count} > 0    No segments found
-
-    Log    Transcript verification passed: ${transcript_length} chars, ${segment_count} segments    INFO
     
 Verify Transcript Content
     [Documentation]    Verify transcript contains expected content and quality
@@ -308,29 +282,4 @@ Verify Transcript Content
 
     Log    Transcript verification passed: ${transcript_length} chars, ${segment_count} segments    INFO
 
-    Verify Transcript Content
-    [Documentation]    Verify transcript contains expected content and quality
-    [Arguments]    ${conversation}    ${expected_keywords}    ${min_length}=50
-
-    Dictionary Should Contain Key    ${conversation}    transcript
-    ${transcript}=    Set Variable    ${conversation}[transcript]
-    Should Not Be Empty    ${transcript}
-
-    # Check length
-    ${transcript_length}=    Get Length    ${transcript}
-    Should Be True    ${transcript_length} >= ${min_length}    Transcript too short: ${transcript_length}
-
-    # Check for expected keywords
-    ${transcript_lower}=    Convert To Lower Case    ${transcript}
-    FOR    ${keyword}    IN    @{expected_keywords}
-        ${keyword_lower}=    Convert To Lower Case    ${keyword}
-        Should Contain    ${transcript_lower}    ${keyword_lower}    Missing keyword: ${keyword}
-    END
-
-    # Verify segments exist
-    Dictionary Should Contain Key    ${conversation}    segments
-    ${segments}=    Set Variable    ${conversation}[segments]
-    ${segment_count}=    Get Length    ${segments}
-    Should Be True    ${segment_count} > 0    No segments found
-
-    Log    Transcript verification passed: ${transcript_length} chars, ${segment_count} segments    INFO
+    

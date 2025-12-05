@@ -31,7 +31,7 @@ export default function Layout() {
             <div className="flex items-center space-x-4">
               <Music className="h-8 w-8 text-blue-600" />
               <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                Friend-Lite Dashboard
+                Chronicle Dashboard
               </h1>
             </div>
             <div className="flex items-center space-x-4">
@@ -102,7 +102,7 @@ export default function Layout() {
       <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-            🎵 Friend-Lite Dashboard v1.0 | AI-powered personal audio system
+            🎵 Chronicle Dashboard v1.0 | AI-powered personal audio system
           </div>
         </div>
       </footer>

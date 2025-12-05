@@ -1,11 +1,11 @@
-# Friend-Lite Features & Architecture
+# Chronicle Features & Architecture
 
 ## Core Features
 
-Friend-Lite supports AI-powered personal systems through multiple OMI-compatible audio devices:
+Chronicle supports AI-powered personal systems through multiple OMI-compatible audio devices:
 
 **Memory System:**
-- **Advanced memory system** with pluggable providers (Friend-Lite native or OpenMemory MCP)
+- **Advanced memory system** with pluggable providers (Chronicle native or OpenMemory MCP)
 - **Memory extraction** from conversations with individual fact storage
 - **Semantic memory search** with relevance threshold filtering and live results
 - **Memory count display** with total count tracking from native providers
@@ -38,7 +38,7 @@ DevKit2 streams audio via Bluetooth using OPUS codec. The processing pipeline in
 
 **AI Processing:**
 - LLM-based conversation analysis (OpenAI or local Ollama)
-- **Dual memory system**: Friend-Lite native or OpenMemory MCP integration
+- **Dual memory system**: Chronicle native or OpenMemory MCP integration
 - Enhanced memory extraction with individual fact storage
 - **Semantic search** with relevance scoring and threshold filtering
 - Smart deduplication and memory updates (ADD/UPDATE/DELETE)
@@ -87,7 +87,7 @@ Choose one based on your needs:
 
 **Features:**
 - Audio processing pipeline with real-time WebSocket support
-- **Pluggable memory system**: Choose between Friend-Lite native or OpenMemory MCP
+- **Pluggable memory system**: Choose between Chronicle native or OpenMemory MCP
 - Enhanced memory extraction with individual fact storage (no generic fallbacks)
 - **Semantic memory search** with relevance threshold filtering and total count display
 - **Speaker-based memory filtering**: Optional control over processing based on participant presence

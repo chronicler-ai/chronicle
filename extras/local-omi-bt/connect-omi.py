@@ -10,8 +10,8 @@ from bleak import BleakClient, BleakScanner
 from bleak.backends.device import BLEDevice
 from dotenv import load_dotenv, set_key
 from easy_audio_interfaces.filesystem import RollingFileSink
-from friend_lite.bluetooth import listen_to_omi, print_devices
-from friend_lite.decoder import OmiOpusDecoder
+from chronicle.bluetooth import listen_to_omi, print_devices
+from chronicle.decoder import OmiOpusDecoder
 from wyoming.audio import AudioChunk
 
 # Setup logging
@@ -49,7 +49,7 @@ async def as_audio_chunks(it) -> AsyncGenerator[AudioChunk, None]:
     async for data in it:
         yield AudioChunk(audio=data, rate=16000, width=2, channels=1)
 
-# Add this to friend-lite sdk
+# Add this to chronicle sdk
 async def list_devices(prefix: str = "OMI") -> list[BLEDevice]:
     devices = await BleakScanner.discover()
     filtered_devices = []

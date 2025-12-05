@@ -1,5 +1,5 @@
 """
-Configuration management for Friend-Lite backend.
+Configuration management for Chronicle backend.
 
 Currently contains diarization settings because they were used in multiple places 
 causing circular imports. Other configurations can be moved here as needed.

@@ -1,6 +1,6 @@
-# Friend-Lite Web Dashboard
+# Chronicle Web Dashboard
 
-A modern React-based web interface for the Friend-Lite AI-powered personal audio system.
+A modern React-based web interface for the Chronicle AI-powered personal audio system.
 
 ## Features
 

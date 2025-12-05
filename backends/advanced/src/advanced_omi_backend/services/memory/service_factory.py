@@ -1,7 +1,7 @@
 """Memory service factory for creating appropriate memory service instances.
 
 This module provides a factory pattern for instantiating memory services
-based on configuration. It supports both the sophisticated Friend-Lite
+based on configuration. It supports both the sophisticated Chronicle
 implementation and the OpenMemory MCP backend.
 """
 
@@ -36,10 +36,10 @@ def create_memory_service(config: MemoryConfig) -> MemoryServiceBase:
     """
     memory_logger.info(f"🧠  Creating memory service with provider: {config.memory_provider.value}")
     
-    if config.memory_provider == MemoryProvider.FRIEND_LITE:
-        # Use the sophisticated Friend-Lite implementation
-        from .providers.friend_lite import MemoryService as FriendLiteMemoryService
-        return FriendLiteMemoryService(config)
+    if config.memory_provider == MemoryProvider.CHRONICLE:
+        # Use the sophisticated Chronicle implementation
+        from .providers.chronicle import MemoryService as ChronicleMemoryService
+        return ChronicleMemoryService(config)
 
     elif config.memory_provider == MemoryProvider.OPENMEMORY_MCP:
         # Use OpenMemory MCP implementation
@@ -156,7 +156,7 @@ def get_service_info() -> dict:
         # Try to determine provider from service type
         if "OpenMemoryMCP" in info["service_type"]:
             info["memory_provider"] = "openmemory_mcp"
-        elif "FriendLite" in info["service_type"] or "MemoryService" in info["service_type"]:
-            info["memory_provider"] = "friend_lite"
+        elif "Chronicle" in info["service_type"] or "MemoryService" in info["service_type"]:
+            info["memory_provider"] = "chronicle"
     
     return info

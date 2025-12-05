@@ -405,10 +405,15 @@ async def open_conversation_job(
     )
 
     # Determine end reason based on how we exited the loop
-    # Check session completion_reason from Redis
+    # Check session completion_reason from Redis (set by WebSocket controller on disconnect)
     completion_reason = await redis_client.hget(session_key, "completion_reason")
     completion_reason_str = completion_reason.decode() if completion_reason else None
 
+    # Determine end_reason with proper precedence:
+    # 1. websocket_disconnect (explicit disconnect from client)
+    # 2. inactivity_timeout (no speech for SPEECH_INACTIVITY_THRESHOLD_SECONDS)
+    # 3. max_duration (conversation exceeded max runtime)
+    # 4. user_stopped (user manually stopped recording)
     if completion_reason_str == "websocket_disconnect":
         end_reason = "websocket_disconnect"
     elif timeout_triggered:

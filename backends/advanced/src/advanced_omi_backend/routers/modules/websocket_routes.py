@@ -1,5 +1,5 @@
 """
-WebSocket routes for Friend-Lite backend.
+WebSocket routes for Chronicle backend.
 
 This module handles WebSocket connections for audio streaming.
 """

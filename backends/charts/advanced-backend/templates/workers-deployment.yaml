@@ -24,9 +24,9 @@ spec:
           command: ["./start-workers.sh"]
           envFrom:
             - configMapRef:
-                name: friend-lite-config
+                name: chronicle-config
             - secretRef:
-                name: friend-lite-secrets
+                name: chronicle-secrets
           env:
             # Override specific values from Kubernetes/Helm if needed
             {{- range $key, $value := .Values.env }}

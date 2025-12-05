@@ -2,7 +2,7 @@
 
 This module provides a concrete implementation of the MemoryServiceBase interface
 that uses OpenMemory MCP as the backend for all memory operations. It maintains
-compatibility with the existing Friend-Lite memory service API while leveraging
+compatibility with the existing Chronicle memory service API while leveraging
 OpenMemory's standardized memory management capabilities.
 """
 
@@ -20,10 +20,10 @@ memory_logger = logging.getLogger("memory_service")
 
 class OpenMemoryMCPService(MemoryServiceBase):
     """Memory service implementation using OpenMemory MCP as backend.
-    
+
     This class implements the MemoryServiceBase interface by delegating memory
     operations to an OpenMemory MCP server. It handles the translation between
-    Friend-Lite's memory service API and the standardized MCP operations.
+    Chronicle's memory service API and the standardized MCP operations.
     
     Key features:
     - Maintains compatibility with existing MemoryServiceBase interface
@@ -63,7 +63,7 @@ class OpenMemoryMCPService(MemoryServiceBase):
         """
         super().__init__()
         self.server_url = server_url or os.getenv("OPENMEMORY_MCP_URL", "http://localhost:8765")
-        self.client_name = client_name or os.getenv("OPENMEMORY_CLIENT_NAME", "friend_lite")
+        self.client_name = client_name or os.getenv("OPENMEMORY_CLIENT_NAME", "chronicle")
         self.user_id = user_id or os.getenv("OPENMEMORY_USER_ID", "default")
         self.timeout = int(timeout or os.getenv("OPENMEMORY_TIMEOUT", "30"))
         self.mcp_client: Optional[MCPClient] = None
@@ -145,7 +145,7 @@ class OpenMemoryMCPService(MemoryServiceBase):
             # Update MCP client user context for this operation
             original_user_id = self.mcp_client.user_id
             original_user_email = self.mcp_client.user_email
-            self.mcp_client.user_id = user_id  # Use the actual Friend-Lite user's ID
+            self.mcp_client.user_id = user_id  # Use the actual Chronicle user's ID
             self.mcp_client.user_email = user_email  # Use the actual user's email
 
             try:
@@ -206,7 +206,7 @@ class OpenMemoryMCPService(MemoryServiceBase):
         
         # Update MCP client user context for this operation
         original_user_id = self.mcp_client.user_id
-        self.mcp_client.user_id = user_id  # Use the actual Friend-Lite user's ID
+        self.mcp_client.user_id = user_id  # Use the actual Chronicle user's ID
 
         try:
             results = await self.mcp_client.search_memory(
@@ -256,7 +256,7 @@ class OpenMemoryMCPService(MemoryServiceBase):
         
         # Update MCP client user context for this operation
         original_user_id = self.mcp_client.user_id
-        self.mcp_client.user_id = user_id  # Use the actual Friend-Lite user's ID
+        self.mcp_client.user_id = user_id  # Use the actual Chronicle user's ID
 
         try:
             results = await self.mcp_client.list_memories(limit=limit)
@@ -296,7 +296,7 @@ class OpenMemoryMCPService(MemoryServiceBase):
 
         # Update MCP client user context for this operation
         original_user_id = self.mcp_client.user_id
-        self.mcp_client.user_id = user_id or self.user_id  # Use the actual Friend-Lite user's ID
+        self.mcp_client.user_id = user_id or self.user_id  # Use the actual Chronicle user's ID
 
         try:
             result = await self.mcp_client.get_memory(memory_id)
@@ -343,7 +343,7 @@ class OpenMemoryMCPService(MemoryServiceBase):
 
         # Update MCP client user context for this operation
         original_user_id = self.mcp_client.user_id
-        self.mcp_client.user_id = user_id or self.user_id  # Use the actual Friend-Lite user's ID
+        self.mcp_client.user_id = user_id or self.user_id  # Use the actual Chronicle user's ID
 
         try:
             success = await self.mcp_client.update_memory(

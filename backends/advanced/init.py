@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Friend-Lite Advanced Backend Interactive Setup Script
+Chronicle Advanced Backend Interactive Setup Script
 Interactive configuration for all services and API keys
 """
 
@@ -22,7 +22,7 @@ from rich.prompt import Confirm, Prompt
 from rich.text import Text
 
 
-class FriendLiteSetup:
+class ChronicleSetup:
     def __init__(self, args=None):
         self.console = Console()
         self.config: Dict[str, Any] = {}
@@ -265,26 +265,26 @@ class FriendLiteSetup:
         self.print_section("Memory Storage Configuration")
         
         choices = {
-            "1": "Friend-Lite Native (Qdrant + custom extraction)",
+            "1": "Chronicle Native (Qdrant + custom extraction)",
             "2": "OpenMemory MCP (cross-client compatible, external server)"
         }
         
         choice = self.prompt_choice("Choose your memory storage backend:", choices, "1")
 
         if choice == "1":
-            self.config["MEMORY_PROVIDER"] = "friend_lite"
-            self.console.print("[blue][INFO][/blue] Friend-Lite Native memory provider selected")
+            self.config["MEMORY_PROVIDER"] = "chronicle"
+            self.console.print("[blue][INFO][/blue] Chronicle Native memory provider selected")
             
             qdrant_url = self.prompt_value("Qdrant URL", "qdrant")
             self.config["QDRANT_BASE_URL"] = qdrant_url
-            self.console.print("[green][SUCCESS][/green] Friend-Lite memory provider configured")
+            self.console.print("[green][SUCCESS][/green] Chronicle memory provider configured")
 
         elif choice == "2":
             self.config["MEMORY_PROVIDER"] = "openmemory_mcp"
             self.console.print("[blue][INFO][/blue] OpenMemory MCP selected")
             
             mcp_url = self.prompt_value("OpenMemory MCP server URL", "http://host.docker.internal:8765")
-            client_name = self.prompt_value("OpenMemory client name", "friend_lite")
+            client_name = self.prompt_value("OpenMemory client name", "chronicle")
             user_id = self.prompt_value("OpenMemory user ID", "openmemory")
             
             self.config["OPENMEMORY_MCP_URL"] = mcp_url
@@ -473,7 +473,7 @@ class FriendLiteSetup:
         self.console.print(f"✅ Admin Account: {self.config.get('ADMIN_EMAIL', 'Not configured')}")
         self.console.print(f"✅ Transcription: {self.config.get('TRANSCRIPTION_PROVIDER', 'Not configured')}")
         self.console.print(f"✅ LLM Provider: {self.config.get('LLM_PROVIDER', 'Not configured')}")
-        self.console.print(f"✅ Memory Provider: {self.config.get('MEMORY_PROVIDER', 'friend_lite')}")
+        self.console.print(f"✅ Memory Provider: {self.config.get('MEMORY_PROVIDER', 'chronicle')}")
         # Auto-determine URLs based on HTTPS configuration
         if self.config.get('HTTPS_ENABLED') == 'true':
             server_ip = self.config.get('SERVER_IP', 'localhost')
@@ -523,8 +523,8 @@ class FriendLiteSetup:
 
     def run(self):
         """Run the complete setup process"""
-        self.print_header("🚀 Friend-Lite Interactive Setup")
-        self.console.print("This wizard will help you configure Friend-Lite with all necessary services.")
+        self.print_header("🚀 Chronicle Interactive Setup")
+        self.console.print("This wizard will help you configure Chronicle with all necessary services.")
         self.console.print("We'll ask for your API keys and preferences step by step.")
         self.console.print()
 
@@ -569,7 +569,7 @@ class FriendLiteSetup:
 
 def main():
     """Main entry point"""
-    parser = argparse.ArgumentParser(description="Friend-Lite Advanced Backend Setup")
+    parser = argparse.ArgumentParser(description="Chronicle Advanced Backend Setup")
     parser.add_argument("--speaker-service-url", 
                        help="Speaker Recognition service URL (default: prompt user)")
     parser.add_argument("--parakeet-asr-url", 
@@ -581,7 +581,7 @@ def main():
     
     args = parser.parse_args()
     
-    setup = FriendLiteSetup(args)
+    setup = ChronicleSetup(args)
     setup.run()
 
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Friend-Lite web dashboard provides a comprehensive interface for managing conversations, memories, users, and system debugging. Built with modern React and TypeScript, it offers real-time access to audio processing pipelines, advanced memory search, and administrative functions.
+The Chronicle web dashboard provides a comprehensive interface for managing conversations, memories, users, and system debugging. Built with modern React and TypeScript, it offers real-time access to audio processing pipelines, advanced memory search, and administrative functions.
 
 > **Note**: This documentation covers the modern React interface located in `./webui/`. The legacy Streamlit interface has been moved to `src/_webui_original/` for reference.
 

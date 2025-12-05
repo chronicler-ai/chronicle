@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-End-to-end integration test for Friend-Lite backend with unified transcription support.
+End-to-end integration test for Chronicle backend with unified transcription support.
 
 This test validates the complete audio processing pipeline using isolated test environment:
 1. Service startup with docker-compose-test.yml (isolated ports and databases)
@@ -954,7 +954,7 @@ class IntegrationTestRunner:
         client_memories = self.wait_for_memory_processing(memory_job_id, client_id)
         
         # Check if we're using OpenMemory MCP provider
-        memory_provider = os.environ.get("MEMORY_PROVIDER", "friend_lite")
+        memory_provider = os.environ.get("MEMORY_PROVIDER", "chronicle")
         
         if not client_memories:
             if memory_provider == "openmemory_mcp":

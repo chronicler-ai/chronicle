@@ -56,3 +56,11 @@ TEST_CONFIG = {
     "retry_delay": 1,
     "default_timeout": 30
 }
+
+# Docker Container Names (from .env.test)
+BACKEND_CONTAINER = os.getenv('BACKEND_CONTAINER', 'advanced-chronicle-backend-test-1')
+WORKERS_CONTAINER = os.getenv('WORKERS_CONTAINER', 'advanced-workers-test-1')
+MONGO_CONTAINER = os.getenv('MONGO_CONTAINER', 'advanced-mongo-test-1')
+REDIS_CONTAINER = os.getenv('REDIS_CONTAINER', 'advanced-redis-test-1')
+QDRANT_CONTAINER = os.getenv('QDRANT_CONTAINER', 'advanced-qdrant-test-1')
+WEBUI_CONTAINER = os.getenv('WEBUI_CONTAINER', 'advanced-webui-test-1')

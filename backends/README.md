@@ -1,6 +1,6 @@
-# Friend-Lite Backends
+# Chronicle Backends
 
-This directory contains different backend implementations for Friend-Lite, each designed for specific use cases and deployment scenarios.
+This directory contains different backend implementations for Chronicle, each designed for specific use cases and deployment scenarios.
 
 ## Available Backends
 

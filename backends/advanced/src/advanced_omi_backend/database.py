@@ -1,5 +1,5 @@
 """
-Database configuration and utilities for the Friend-Lite backend.
+Database configuration and utilities for the Chronicle backend.
 
 This module provides centralized database access to avoid duplication
 across main.py and router modules.
@@ -22,7 +22,7 @@ mongo_client = AsyncIOMotorClient(
     serverSelectionTimeoutMS=5000,  # Fail fast if server unavailable
     socketTimeoutMS=20000,  # 20 second timeout for operations
 )
-db = mongo_client.get_default_database("friend-lite")
+db = mongo_client.get_default_database("chronicle")
 
 # Collection references (for non-Beanie collections)
 users_col = db["users"]

@@ -52,7 +52,7 @@ class MyceliaMemoryService(MemoryServiceBase):
     """Memory service implementation using Mycelia backend.
 
     This class implements the MemoryServiceBase interface by delegating memory
-    operations to a Mycelia server using JWT authentication from Friend-Lite.
+    operations to a Mycelia server using JWT authentication from Chronicle.
 
     Args:
         api_url: Mycelia API endpoint URL
@@ -196,7 +196,7 @@ class MyceliaMemoryService(MemoryServiceBase):
 
         Args:
             action: Action to perform (create, list, get, delete, etc.)
-            jwt_token: User's JWT token from Friend-Lite
+            jwt_token: User's JWT token from Chronicle
             **params: Additional parameters for the action
 
         Returns:
@@ -246,7 +246,7 @@ class MyceliaMemoryService(MemoryServiceBase):
             return []
 
         try:
-            # Get OpenAI client using Friend-Lite's utility
+            # Get OpenAI client using Chronicle's utility
             client = _get_openai_client(
                 api_key=self.llm_config.get("api_key"),
                 base_url=self.llm_config.get("base_url", "https://api.openai.com/v1"),
@@ -304,7 +304,7 @@ class MyceliaMemoryService(MemoryServiceBase):
             return None
 
         try:
-            # Get OpenAI client using Friend-Lite's utility
+            # Get OpenAI client using Chronicle's utility
             client = _get_openai_client(
                 api_key=self.llm_config.get("api_key"),
                 base_url=self.llm_config.get("base_url", "https://api.openai.com/v1"),
