@@ -15,10 +15,52 @@ export default function Upload() {
   const [isUploading, setIsUploading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [audioUrl, setAudioUrl] = useState('')
 
   const { isAdmin } = useAuth()
 
   const generateId = () => Math.random().toString(36).substr(2, 9)
+
+  const [urlUploadStatus, setUrlUploadStatus] = useState<{
+  type: 'success' | 'error' | null
+  message: string
+}>({ type: null, message: '' })
+
+
+  // Handle URL submission
+  const handleUrlSubmit = async () => {
+  if (!audioUrl) return
+
+  setIsUploading(true)
+  setUrlUploadStatus({ type: null, message: '' })
+
+  try {
+    const response = await uploadApi.uploadAudioFromUrl({
+      drive_folder_id: audioUrl,
+      device_name: 'upload',
+      auto_generate_client: true,
+    })
+
+    console.log('URL Upload response:', response)
+
+    setUrlUploadStatus({
+      type: 'success',
+      message: `Audio submitted successfully`,
+    })
+
+    setAudioUrl('')
+  } catch (err: any) {
+    console.error('URL upload failed:', err)
+
+    setUrlUploadStatus({
+      type: 'error',
+      message:
+        err?.response?.data?.detail || 'Failed to upload audio from URL',
+    })
+  } finally {
+    setIsUploading(false)
+  }
+}
 
   const handleFileSelect = (selectedFiles: FileList | null) => {
     if (!selectedFiles) return
@@ -152,6 +194,44 @@ export default function Upload() {
           Upload Audio Files
         </h1>
       </div>
+      {/* URL Input */}
+      <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+  <label className="block mb-2 font-medium text-gray-900 dark:text-gray-100">
+    Paste audio URL:
+  </label>
+
+  <div className="flex space-x-2">
+    <input
+      type="text"
+      value={audioUrl}
+      onChange={(e) => setAudioUrl(e.target.value)}
+      placeholder="https://example.com/audio.wav"
+      className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:text-gray-100"
+    />
+
+    <button
+      onClick={handleUrlSubmit}
+      disabled={isUploading || !audioUrl}
+      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      {isUploading ? 'Submitting...' : 'Submit URL'}
+    </button>
+  </div>
+
+  {/* ✅ Add the status message here */}
+  {urlUploadStatus.type && (
+    <div
+      className={`mt-3 p-3 rounded-lg text-sm ${
+        urlUploadStatus.type === 'success'
+          ? 'bg-green-100 text-green-800 border border-green-300'
+          : 'bg-red-100 text-red-800 border border-red-300'
+      }`}
+    >
+      {urlUploadStatus.message}
+    </div>
+  )}
+</div>
+
 
       {/* Drop Zone */}
       <div
@@ -290,6 +370,7 @@ export default function Upload() {
           📝 Upload Instructions
         </h3>
         <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+          <li>• Hello world</li>
           <li>• Audio files will be processed sequentially for transcription and memory extraction</li>
           <li>• Processing time varies based on audio length (roughly 3x the audio duration + 60s)</li>
           <li>• Large files or multiple files may cause timeout errors - this is normal</li>

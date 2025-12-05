@@ -24,6 +24,9 @@ dependencies = [
     "redis>=5.0.0",
     "rq>=1.16.0",
     "soundfile>=0.12.1",
+    "google-api-python-client>=2.0.0",
+    "google-auth-oauthlib>=1.0.0",
+    "google-auth-httplib2>=0.2.0",
 ]
 
 [project.optional-dependencies]

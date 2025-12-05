@@ -85,6 +85,30 @@ class AppConfig:
         # Memory service configuration
         self.memory_service_supports_threshold = self.memory_provider == "friend_lite"
 
+        self.gdrive_credentials_path = "data/gdrive_service_account.json"
+        self.gdrive_scopes = ["https://www.googleapis.com/auth/drive.readonly"]
+        self._gdrive_service = None
+
+    def get_gdrive_service(self):
+        """Return Google Drive API client using stored service account."""
+        from google.oauth2.service_account import Credentials
+        from googleapiclient.discovery import build
+        if self._gdrive_service:
+            return self._gdrive_service
+
+        if not os.path.exists(self.gdrive_credentials_path):
+            raise FileNotFoundError(
+                f"Missing Google Drive credentials at {self.gdrive_credentials_path}"
+            )
+
+        creds = Credentials.from_service_account_file(
+            self.gdrive_credentials_path,
+            scopes=self.gdrive_scopes,
+        )
+
+        self._gdrive_service = build("drive", "v3", credentials=creds)
+        return self._gdrive_service
+
 
 # Global configuration instance
 app_config = AppConfig()

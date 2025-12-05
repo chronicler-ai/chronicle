@@ -12,9 +12,23 @@ from advanced_omi_backend.auth import current_superuser, current_active_user
 from advanced_omi_backend.controllers import audio_controller
 from advanced_omi_backend.models.user import User
 from advanced_omi_backend.app_config import get_audio_chunk_dir
+from advanced_omi_backend.utils.gdrive_audio_utils import download_audio_files_from_drive
 
 router = APIRouter(prefix="/audio", tags=["audio"])
 
+
+@router.post("/upload_audio_from_url")
+async def upload_audio_from_drive_folder(
+    drive_folder_id: str = Query(...,alias="url", description="Google Drive Folder ID containing audio files (e.g., the string after /folders/ in the URL)"),
+    current_user: User = Depends(current_superuser),
+    device_name: str = Query(default="upload"),
+    auto_generate_client: bool = Query(default=True),
+):
+    files = await download_audio_files_from_drive(drive_folder_id)
+
+    return await audio_controller.upload_and_process_audio_files(
+        current_user, files, device_name, auto_generate_client
+    )
 
 @router.post("/upload")
 async def upload_audio_files(
