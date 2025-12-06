@@ -1,6 +1,6 @@
 // useAudioStreamer.ts
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { PermissionsAndroid, Platform } from 'react-native';
+import { Alert, PermissionsAndroid, Platform } from 'react-native';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import NetInfo from '@react-native-community/netinfo';
 
@@ -53,10 +53,46 @@ async function ensureNotificationPermission() {
   }
 }
 
+// On Android 14+ (API 34+), FOREGROUND_SERVICE_MICROPHONE is a separate manifest permission
+// with normal protection level (auto-granted at install time), but it does NOT replace RECORD_AUDIO.
+// The manifest must declare FOREGROUND_SERVICE_MICROPHONE, and the app must request/obtain
+// RECORD_AUDIO as a runtime permission BEFORE starting the foreground service.
+// RECORD_AUDIO remains a dangerous permission that must be requested at runtime.
+async function ensureForegroundServiceMicPermission() {
+  if (Platform.OS !== 'android' || Platform.Version < 34) {
+    return true;
+  }
+  try {
+    const audioGranted = await PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+    );
+
+    if (!audioGranted) {
+      console.log('[AudioStreamer] Requesting RECORD_AUDIO permission...');
+      const audioResult = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+      );
+      if (audioResult !== PermissionsAndroid.RESULTS.GRANTED) {
+        Alert.alert('RECORD_AUDIO permission is required for microphone foreground service. Please grant microphone permission in app settings.');
+        return false;
+      }
+    }
+
+    console.log('[AudioStreamer] RECORD_AUDIO permission granted. FOREGROUND_SERVICE_MICROPHONE must be declared in manifest.');
+    return true;
+  } catch (error) {
+    console.error('[AudioStreamer] Error ensuring foreground service mic permission:', error);
+    return false;
+  }
+}
+
 async function startForegroundServiceNotification(title: string, body: string) {
   ensureFgsRegistered();
   await ensureNotificationPermission();
-
+  const success = await ensureForegroundServiceMicPermission();
+  if (!success) {
+    return;
+  }
   // Create channel if needed
   await notifee.createChannel({
     id: FGS_CHANNEL_ID,
