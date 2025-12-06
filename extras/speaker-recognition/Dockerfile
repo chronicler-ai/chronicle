@@ -41,5 +41,5 @@ ENV PYTHONPATH=/app
 EXPOSE 8085
 
 # Run the service
-# Use shell form to allow environment variable expansion
-CMD uv run --extra ${PYTORCH_CUDA_VERSION} --no-dev simple-speaker-service 
+# Use JSON form with shell wrapper for environment variable expansion
+CMD ["sh", "-c", "uv run --extra ${PYTORCH_CUDA_VERSION} --no-dev simple-speaker-service"] 
