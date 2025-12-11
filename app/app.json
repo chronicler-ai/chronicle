@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "chronicle-app",
-    "slug": "chronicle-app",
+    "name": "friend-lite-app",
+    "slug": "friend-lite-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,9 +17,9 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.cupbearer5517.chronicle",
+      "bundleIdentifier": "com.cupbearer5517.friendlite",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Chronicle needs access to your microphone to stream audio to the backend for processing."
+        "NSMicrophoneUsageDescription": "Friend Lite needs access to your microphone to stream audio to the backend for processing."
       }
     },
     "android": {
@@ -27,7 +27,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.cupbearer5517.chronicle",
+      "package": "com.cupbearer5517.friendlite",
       "permissions": [
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",
