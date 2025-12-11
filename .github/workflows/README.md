@@ -1,4 +1,4 @@
-# GitHub Actions CI/CD Setup for Friend Lite
+# GitHub Actions CI/CD Setup for Chronicle
 
 This sets up **automatic GitHub releases** with APK/IPA files whenever you push code.
 

@@ -35,7 +35,7 @@ services:
       - TRANSCRIPTION_PROVIDER=${TRANSCRIPTION_PROVIDER:-deepgram}
       # - PARAKEET_ASR_URL=${PARAKEET_ASR_URL}
       # Memory provider configuration
-      - MEMORY_PROVIDER=${MEMORY_PROVIDER:-friend_lite}
+      - MEMORY_PROVIDER=${MEMORY_PROVIDER:-chronicle}
       - OPENMEMORY_MCP_URL=${OPENMEMORY_MCP_URL:-http://host.docker.internal:8765}
       - OPENMEMORY_USER_ID=${OPENMEMORY_USER_ID:-openmemory}
       - MYCELIA_URL=http://mycelia-backend-test:5173

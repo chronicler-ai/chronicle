@@ -97,7 +97,7 @@ jobs:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         LLM_PROVIDER: openai
         TRANSCRIPTION_PROVIDER: deepgram
-        MEMORY_PROVIDER: friend_lite
+        MEMORY_PROVIDER: chronicle
       run: |
         # Debug: Check if secrets are available
         echo "Checking environment variables..."
