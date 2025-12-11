@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import { OmiConnection, BleAudioCodec, OmiDevice } from 'friend-lite-react-native';
+import { useBluetoothLogger } from './useBluetoothLogger';
 
 interface UseDeviceConnection {
   connectedDevice: OmiDevice | null;
@@ -25,24 +26,39 @@ export const useDeviceConnection = (
   const [batteryLevel, setBatteryLevel] = useState<number>(-1);
   const [connectedDeviceId, setConnectedDeviceId] = useState<string | null>(null);
 
+  // Bluetooth logger
+  const bluetoothLogger = useBluetoothLogger();
+  const currentSessionIdRef = useRef<string | null>(null);
+
   const handleConnectionStateChange = useCallback((id: string, state: string) => {
     console.log(`Device ${id} connection state: ${state}`);
     const isNowConnected = state === 'connected';
     setIsConnecting(false);
 
+    // Log state change
+    bluetoothLogger.logStateChange(id, state);
+
     if (isNowConnected) {
         setConnectedDeviceId(id);
+
+        // Log successful connection
+        bluetoothLogger.logConnectionSuccess(id, undefined, currentSessionIdRef.current || undefined);
+
         // Potentially fetch the device details from omiConnection if needed to set connectedDevice
         // For now, we'll assume the app manages the full OmiDevice object elsewhere or doesn't need it here.
         if (onConnect) onConnect();
     } else {
+        // Log disconnect
+        bluetoothLogger.logDisconnect(id);
+        currentSessionIdRef.current = null;
+
         setConnectedDeviceId(null);
         setConnectedDevice(null);
         setCurrentCodec(null);
         setBatteryLevel(-1);
-        if (onDisconnect) onDisconnect(); 
+        if (onDisconnect) onDisconnect();
     }
-  }, [onDisconnect, onConnect]);
+  }, [onDisconnect, onConnect, bluetoothLogger]);
 
   const connectToDevice = useCallback(async (deviceId: string) => {
     if (connectedDeviceId && connectedDeviceId !== deviceId) {
@@ -59,6 +75,10 @@ export const useDeviceConnection = (
     setCurrentCodec(null);
     setBatteryLevel(-1);
 
+    // Log connection attempt and get session ID
+    const sessionId = await bluetoothLogger.logConnectionAttempt(deviceId);
+    currentSessionIdRef.current = sessionId;
+
     try {
       const success = await omiConnection.connect(deviceId, handleConnectionStateChange);
       if (success) {
@@ -66,6 +86,9 @@ export const useDeviceConnection = (
         // Note: actual connected state is set by handleConnectionStateChange callback
       } else {
         setIsConnecting(false);
+        // Log connection failure
+        await bluetoothLogger.logConnectionFailure(deviceId, 'Connection returned false', sessionId);
+        currentSessionIdRef.current = null;
         Alert.alert('Connection Failed', 'Could not connect to the device. Please try again.');
       }
     } catch (error) {
@@ -73,9 +96,14 @@ export const useDeviceConnection = (
       setIsConnecting(false);
       setConnectedDevice(null);
       setConnectedDeviceId(null);
+
+      // Log connection error
+      await bluetoothLogger.logConnectionFailure(deviceId, String(error), sessionId);
+      currentSessionIdRef.current = null;
+
       Alert.alert('Connection Error', String(error));
     }
-  }, [omiConnection, handleConnectionStateChange, connectedDeviceId]); // Added connectedDeviceId
+  }, [omiConnection, handleConnectionStateChange, connectedDeviceId, bluetoothLogger]);
 
   const disconnectFromDevice = useCallback(async () => {
     console.log('Attempting to disconnect...');
@@ -91,8 +119,15 @@ export const useDeviceConnection = (
       setCurrentCodec(null);
       setBatteryLevel(-1);
       // The handleConnectionStateChange should also be triggered by the SDK upon disconnection
+      // Logging will happen in handleConnectionStateChange
     } catch (error) {
       console.error('Disconnect error:', error);
+
+      // Log disconnect error
+      if (connectedDeviceId) {
+        await bluetoothLogger.logError(connectedDeviceId, `Disconnect error: ${String(error)}`);
+      }
+
       Alert.alert('Disconnect Error', String(error));
       // Even if disconnect fails, reset state as we intend to be disconnected
       setConnectedDevice(null);
@@ -100,7 +135,7 @@ export const useDeviceConnection = (
       setCurrentCodec(null);
       setBatteryLevel(-1);
     }
-  }, [omiConnection, onDisconnect]);
+  }, [omiConnection, onDisconnect, connectedDeviceId, bluetoothLogger]);
 
   const getAudioCodec = useCallback(async () => {
     if (!omiConnection.isConnected() || !connectedDeviceId) {

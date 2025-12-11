@@ -2,10 +2,10 @@
   "expo": {
     "name": "friend-lite-app",
     "slug": "friend-lite-app",
+    "scheme": "friendlite",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "entryPoint": "./app/index.tsx",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
@@ -17,7 +17,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.cupbearer5517.friendlite",
+      "bundleIdentifier": "com.sigmoid.friendlite",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Friend-Lite needs access to your microphone to stream audio to the backend for processing."
       }
@@ -27,7 +27,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.cupbearer5517.friendlite",
+      "package": "com.sigmoid.friendlite",
       "permissions": [
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",
@@ -49,7 +49,9 @@
           "enableNotifications": true,
           "enableBackgroundAudio": true,
           "enableDeviceDetection": true,
-          "iosBackgroundModes": { "useProcessing": true },
+          "iosBackgroundModes": {
+            "useProcessing": true
+          },
           "iosConfig": {
             "microphoneUsageDescription": "We use the mic for live audio streaming"
           }
@@ -91,7 +93,8 @@
             ]
           }
         }
-      ]
+      ],
+      "expo-router"
     ],
     "extra": {
       "eas": {
