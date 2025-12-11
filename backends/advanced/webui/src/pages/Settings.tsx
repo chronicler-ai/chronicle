@@ -12,13 +12,15 @@ import {
   MessageSquare,
   Mic,
   Database,
-  Settings2,
   Shield,
+  Brain,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { settingsApi } from '../services/api'
 
-type Tab = 'core-infra' | 'api-keys' | 'mcp-key' | 'memory' | 'speech' | 'conversations' | 'other'
+type Tab = 'core-infra' | 'api-keys' | 'mcp-key' | 'memory' | 'llm' | 'speech' | 'conversations'
 
 interface Message {
   type: 'success' | 'error'
@@ -39,9 +41,34 @@ export default function Settings() {
   const [infraStatus, setInfraStatus] = useState<any>(null)
   const [infraLoading, setInfraLoading] = useState(false)
 
-  // API Keys status state
-  const [apiKeysStatus, setApiKeysStatus] = useState<any>(null)
-  const [apiKeysLoading, setApiKeysLoading] = useState(false)
+  // Infrastructure settings state
+  const [infraSettings, setInfraSettings] = useState<any>(null)
+  const [infraSettingsOriginal, setInfraSettingsOriginal] = useState<any>(null)
+  const [infraSettingsLoading, setInfraSettingsLoading] = useState(false)
+  const [infraSettingsSaving, setInfraSettingsSaving] = useState(false)
+
+  // API Keys settings state
+  const [apiKeysSettings, setApiKeysSettings] = useState<any>(null)
+  const [apiKeysSettingsOriginal, setApiKeysSettingsOriginal] = useState<any>(null)
+  const [apiKeysSettingsLoading, setApiKeysSettingsLoading] = useState(false)
+  const [apiKeysSettingsSaving, setApiKeysSettingsSaving] = useState(false)
+
+  // API Keys visibility state
+  const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({
+    openai_api_key: false,
+    deepgram_api_key: false,
+    mistral_api_key: false,
+    hf_token: false,
+    langfuse_public_key: false,
+    langfuse_secret_key: false,
+    ngrok_authtoken: false,
+  })
+
+  // API Keys save options
+  const [saveToFile, setSaveToFile] = useState(true)
+  const [saveToDatabase, setSaveToDatabase] = useState(true)
+  const [apiKeysFilePath, setApiKeysFilePath] = useState('.env.api-keys')
+  const [loadingFromFile, setLoadingFromFile] = useState(false)
 
   // Application settings state
   const [appSettings, setAppSettings] = useState<any>(null)
@@ -54,11 +81,13 @@ export default function Settings() {
   }, [user])
 
   useEffect(() => {
-    if (activeTab === 'core-infra' && !infraStatus) {
-      loadInfrastructureStatus()
-    } else if (activeTab === 'api-keys' && !apiKeysStatus) {
-      loadApiKeysStatus()
-    } else if (['memory', 'speech', 'conversations', 'other'].includes(activeTab) && !appSettings) {
+    if (activeTab === 'core-infra') {
+      if (!infraStatus) loadInfrastructureStatus()
+      if (!infraSettings) loadInfrastructureSettings()
+      if (!appSettings) loadApplicationSettings() // Load for network & misc settings
+    } else if (activeTab === 'api-keys') {
+      if (!apiKeysSettings) loadApiKeysSettings()
+    } else if (['memory', 'llm', 'speech', 'conversations'].includes(activeTab) && !appSettings) {
       loadApplicationSettings()
     }
   }, [activeTab])
@@ -83,16 +112,101 @@ export default function Settings() {
     }
   }
 
-  const loadApiKeysStatus = async () => {
+  const loadInfrastructureSettings = async () => {
     try {
-      setApiKeysLoading(true)
-      const response = await settingsApi.getApiKeysStatus()
-      setApiKeysStatus(response.data)
+      setInfraSettingsLoading(true)
+      const response = await settingsApi.getInfrastructure()
+      setInfraSettings(response.data)
+      setInfraSettingsOriginal(response.data)
     } catch (error: any) {
-      console.error('Failed to load API keys status:', error)
-      showMessage('error', 'Failed to load API keys status')
+      console.error('Failed to load infrastructure settings:', error)
+      showMessage('error', 'Failed to load infrastructure settings')
     } finally {
-      setApiKeysLoading(false)
+      setInfraSettingsLoading(false)
+    }
+  }
+
+  const saveInfrastructureSettings = async () => {
+    try {
+      setInfraSettingsSaving(true)
+      await settingsApi.updateInfrastructure(infraSettings)
+      setInfraSettingsOriginal(infraSettings)
+      showMessage('success', 'Infrastructure settings saved successfully')
+      // Reload status to reflect new settings
+      loadInfrastructureStatus()
+    } catch (error: any) {
+      console.error('Failed to save infrastructure settings:', error)
+      showMessage('error', error.response?.data?.detail || 'Failed to save infrastructure settings')
+    } finally {
+      setInfraSettingsSaving(false)
+    }
+  }
+
+  const resetInfrastructureSettings = () => {
+    setInfraSettings({ ...infraSettingsOriginal })
+  }
+
+  const loadApiKeysSettings = async () => {
+    try {
+      setApiKeysSettingsLoading(true)
+      const response = await settingsApi.getApiKeys()
+      setApiKeysSettings(response.data)
+      setApiKeysSettingsOriginal(response.data)
+    } catch (error: any) {
+      console.error('Failed to load API keys settings:', error)
+      showMessage('error', 'Failed to load API keys settings')
+    } finally {
+      setApiKeysSettingsLoading(false)
+    }
+  }
+
+  const saveApiKeysSettings = async () => {
+    try {
+      setApiKeysSettingsSaving(true)
+      const response = await settingsApi.saveApiKeys(apiKeysSettings, saveToFile, saveToDatabase)
+
+      if (response.data.success) {
+        setApiKeysSettingsOriginal(apiKeysSettings)
+        const savedTo: string[] = []
+        if (response.data.saved_to.file) savedTo.push('file')
+        if (response.data.saved_to.database) savedTo.push('database')
+        showMessage('success', `API keys saved to ${savedTo.join(' and ')}`)
+      } else {
+        showMessage('error', response.data.errors.join(', ') || 'Failed to save API keys')
+      }
+    } catch (error: any) {
+      console.error('Failed to save API keys:', error)
+      showMessage('error', error.response?.data?.detail || 'Failed to save API keys')
+    } finally {
+      setApiKeysSettingsSaving(false)
+    }
+  }
+
+  const resetApiKeysSettings = () => {
+    setApiKeysSettings({ ...apiKeysSettingsOriginal })
+  }
+
+  // Toggle API key visibility
+  const toggleApiKeyVisibility = (keyName: string) => {
+    setShowApiKeys(prev => ({ ...prev, [keyName]: !prev[keyName] }))
+  }
+
+  // Load API keys from file
+  const loadApiKeysFromFile = async () => {
+    try {
+      setLoadingFromFile(true)
+      const response = await settingsApi.loadApiKeysFromFile(apiKeysFilePath)
+
+      if (response.data) {
+        setApiKeysSettings(response.data)
+        setApiKeysSettingsOriginal(response.data)
+        showMessage('success', `API keys loaded from ${apiKeysFilePath}`)
+      }
+    } catch (error: any) {
+      console.error('Failed to load API keys from file:', error)
+      showMessage('error', error.response?.data?.detail || 'Failed to load API keys from file')
+    } finally {
+      setLoadingFromFile(false)
     }
   }
 
@@ -302,9 +416,9 @@ export default function Settings() {
     { id: 'api-keys' as Tab, label: 'API Keys', icon: Shield, adminOnly: true },
     { id: 'mcp-key' as Tab, label: 'MCP Key', icon: Key, adminOnly: false },
     { id: 'memory' as Tab, label: 'Memory', icon: Database, adminOnly: true },
+    { id: 'llm' as Tab, label: 'LLM', icon: Brain, adminOnly: true },
     { id: 'speech' as Tab, label: 'Speech', icon: Mic, adminOnly: true },
     { id: 'conversations' as Tab, label: 'Conversations', icon: MessageSquare, adminOnly: true },
-    { id: 'other' as Tab, label: 'Other', icon: Settings2, adminOnly: true },
   ]
 
   return (
@@ -378,77 +492,335 @@ export default function Settings() {
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Core Infrastructure
               </h2>
-              <button
-                onClick={loadInfrastructureStatus}
-                disabled={infraLoading}
-                className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-              >
-                <RefreshCw className={`h-4 w-4 ${infraLoading ? 'animate-spin' : ''}`} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={loadInfrastructureStatus}
+                  disabled={infraLoading}
+                  className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 p-2"
+                  title="Refresh connection status"
+                >
+                  <RefreshCw className={`h-4 w-4 ${infraLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
 
-            {infraLoading && !infraStatus ? (
+            {infraSettingsLoading && !infraSettings ? (
               <div className="text-center py-8">
                 <RefreshCw className="h-8 w-8 text-gray-400 animate-spin mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">Loading infrastructure status...</p>
+                <p className="text-gray-500 dark:text-gray-400">Loading infrastructure settings...</p>
               </div>
-            ) : infraStatus ? (
-              <div className="space-y-4">
-                {Object.entries(infraStatus).map(([service, info]: [string, any]) => (
-                  <div
-                    key={service}
-                    className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-medium text-gray-900 dark:text-gray-100 capitalize">
-                        {service}
-                      </h3>
+            ) : infraSettings ? (
+              <div className="space-y-6">
+                {/* MongoDB */}
+                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100">MongoDB</h3>
+                    {infraStatus?.mongodb && (
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          info.connected
+                          infraStatus.mongodb.connected
                             ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
                             : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
                         }`}
                       >
-                        {info.connected ? 'Connected' : 'Disconnected'}
+                        {infraStatus.mongodb.connected ? 'Connected' : 'Disconnected'}
                       </span>
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        MongoDB URI
+                      </label>
+                      <input
+                        type="text"
+                        value={infraSettings.mongodb_uri || ''}
+                        onChange={(e) => setInfraSettings({ ...infraSettings, mongodb_uri: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        placeholder="mongodb://mongo:27017"
+                      />
                     </div>
-                    <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                      {info.url && (
-                        <p>
-                          <span className="font-medium">URL:</span>{' '}
-                          <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">
-                            {info.url}
-                          </code>
-                        </p>
-                      )}
-                      {info.host && (
-                        <p>
-                          <span className="font-medium">Host:</span> {info.host}
-                        </p>
-                      )}
-                      {info.database && (
-                        <p>
-                          <span className="font-medium">Database:</span> {info.database}
-                        </p>
-                      )}
-                      {info.user && (
-                        <p>
-                          <span className="font-medium">User:</span> {info.user}
-                        </p>
-                      )}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Database Name
+                      </label>
+                      <input
+                        type="text"
+                        value={infraSettings.mongodb_database || ''}
+                        onChange={(e) => setInfraSettings({ ...infraSettings, mongodb_database: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        placeholder="friend-lite"
+                      />
                     </div>
                   </div>
-                ))}
+                </div>
+
+                {/* Redis */}
+                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100">Redis</h3>
+                    {infraStatus?.redis && (
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          infraStatus.redis.connected
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                            : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                        }`}
+                      >
+                        {infraStatus.redis.connected ? 'Connected' : 'Disconnected'}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Redis URL
+                    </label>
+                    <input
+                      type="text"
+                      value={infraSettings.redis_url || ''}
+                      onChange={(e) => setInfraSettings({ ...infraSettings, redis_url: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      placeholder="redis://localhost:6379/0"
+                    />
+                  </div>
+                </div>
+
+                {/* Qdrant */}
+                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100">Qdrant</h3>
+                    {infraStatus?.qdrant && (
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          infraStatus.qdrant.connected
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                            : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                        }`}
+                      >
+                        {infraStatus.qdrant.connected ? 'Connected' : 'Disconnected'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Base URL
+                      </label>
+                      <input
+                        type="text"
+                        value={infraSettings.qdrant_base_url || ''}
+                        onChange={(e) => setInfraSettings({ ...infraSettings, qdrant_base_url: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        placeholder="qdrant"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Port
+                      </label>
+                      <input
+                        type="text"
+                        value={infraSettings.qdrant_port || ''}
+                        onChange={(e) => setInfraSettings({ ...infraSettings, qdrant_port: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        placeholder="6333"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Neo4j */}
+                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100">Neo4j</h3>
+                    {infraStatus?.neo4j && (
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          infraStatus.neo4j.connected
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                            : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                        }`}
+                      >
+                        {infraStatus.neo4j.connected ? 'Connected' : 'Disconnected'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Host
+                      </label>
+                      <input
+                        type="text"
+                        value={infraSettings.neo4j_host || ''}
+                        onChange={(e) => setInfraSettings({ ...infraSettings, neo4j_host: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        placeholder="neo4j-mem0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        User
+                      </label>
+                      <input
+                        type="text"
+                        value={infraSettings.neo4j_user || ''}
+                        onChange={(e) => setInfraSettings({ ...infraSettings, neo4j_user: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        placeholder="neo4j"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Network Settings */}
+                {appSettings && (
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Network & Public Access</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Host IP/Hostname
+                        </label>
+                        <input
+                          type="text"
+                          value={appSettings.network.host_ip || ''}
+                          onChange={(e) => setAppSettings({
+                            ...appSettings,
+                            network: { ...appSettings.network, host_ip: e.target.value }
+                          })}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                          placeholder="localhost"
+                        />
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Public IP or hostname for browser access
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Backend Public Port
+                          </label>
+                          <input
+                            type="number"
+                            value={appSettings.network.backend_public_port || ''}
+                            onChange={(e) => setAppSettings({
+                              ...appSettings,
+                              network: { ...appSettings.network, backend_public_port: parseInt(e.target.value) }
+                            })}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                            placeholder="8000"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            WebUI Port
+                          </label>
+                          <input
+                            type="number"
+                            value={appSettings.network.webui_port || ''}
+                            onChange={(e) => setAppSettings({
+                              ...appSettings,
+                              network: { ...appSettings.network, webui_port: parseInt(e.target.value) }
+                            })}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                            placeholder="5173"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* System Settings */}
+                {appSettings && (
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-3">System</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Debug Directory
+                        </label>
+                        <input
+                          type="text"
+                          value={appSettings.misc.debug_dir || ''}
+                          onChange={(e) => setAppSettings({
+                            ...appSettings,
+                            misc: { ...appSettings.misc, debug_dir: e.target.value }
+                          })}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                          placeholder="./data/debug_dir"
+                        />
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Directory for debug files
+                        </p>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="langfuse_telemetry"
+                          checked={appSettings.misc.langfuse_enable_telemetry || false}
+                          onChange={(e) => setAppSettings({
+                            ...appSettings,
+                            misc: { ...appSettings.misc, langfuse_enable_telemetry: e.target.checked }
+                          })}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="langfuse_telemetry" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                          Enable Langfuse Telemetry
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Save and Reset buttons */}
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-600">
+                  <button
+                    onClick={() => {
+                      resetInfrastructureSettings()
+                      if (appSettings) {
+                        loadApplicationSettings()
+                      }
+                    }}
+                    disabled={infraSettingsSaving || appSettingsLoading}
+                    className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await saveInfrastructureSettings()
+                      if (appSettings) {
+                        await updateCategorySettings('network', appSettings.network)
+                        await updateCategorySettings('misc', appSettings.misc)
+                      }
+                    }}
+                    disabled={infraSettingsSaving || appSettingsLoading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {infraSettingsSaving || appSettingsLoading ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4" />
+                        Save Settings
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="text-center py-8">
                 <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
                 <p className="text-gray-500 dark:text-gray-400 mb-4">
-                  Failed to load infrastructure status
+                  Failed to load infrastructure settings
                 </p>
                 <button
-                  onClick={loadInfrastructureStatus}
+                  onClick={loadInfrastructureSettings}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Retry
@@ -467,47 +839,316 @@ export default function Settings() {
 
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
               <p className="text-sm text-blue-800 dark:text-blue-300">
-                <strong>Note:</strong> API keys are configured via environment variables and require
-                a server restart to change. This page shows which keys are currently configured.
+                <strong>Note:</strong> API keys are stored securely and take effect immediately after saving.
+                Leave fields empty to keep existing keys unchanged.
               </p>
             </div>
 
-            {apiKeysLoading ? (
+            {/* Load from File Section */}
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600 mb-6">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Load API Keys from File
+              </h3>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={apiKeysFilePath}
+                  onChange={(e) => setApiKeysFilePath(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono text-sm"
+                  placeholder=".env.api-keys"
+                />
+                <button
+                  onClick={loadApiKeysFromFile}
+                  disabled={loadingFromFile || !apiKeysFilePath}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {loadingFromFile ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4" />
+                      Load from File
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Load API keys from a file on the server. Default: .env.api-keys in project root.
+              </p>
+            </div>
+
+            {apiKeysSettingsLoading && !apiKeysSettings ? (
               <div className="text-center py-8">
                 <RefreshCw className="h-8 w-8 text-gray-400 animate-spin mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">Loading API keys status...</p>
+                <p className="text-gray-500 dark:text-gray-400">Loading API keys...</p>
               </div>
-            ) : apiKeysStatus ? (
-              <div className="space-y-3">
-                {Object.entries(apiKeysStatus).map(([key, info]: [string, any]) => (
-                  <div
-                    key={key}
-                    className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
-                  >
-                    <div>
-                      <h3 className="font-medium text-gray-900 dark:text-gray-100">{info.name}</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">
-                          {info.env_var}
-                        </code>
-                      </p>
-                    </div>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        info.configured
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-                      }`}
+            ) : apiKeysSettings ? (
+              <div className="space-y-6">
+                {/* OpenAI */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    OpenAI API Key
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showApiKeys.openai_api_key ? 'text' : 'password'}
+                      value={apiKeysSettings.openai_api_key || ''}
+                      onChange={(e) => setApiKeysSettings({ ...apiKeysSettings, openai_api_key: e.target.value })}
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm"
+                      placeholder="sk-..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleApiKeyVisibility('openai_api_key')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      title={showApiKeys.openai_api_key ? 'Hide API key' : 'Show API key'}
                     >
-                      {info.configured ? 'Configured' : 'Not Set'}
-                    </span>
+                      {showApiKeys.openai_api_key ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
                   </div>
-                ))}
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    For GPT models and embeddings
+                  </p>
+                </div>
+
+                {/* Deepgram */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Deepgram API Key
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showApiKeys.deepgram_api_key ? 'text' : 'password'}
+                      value={apiKeysSettings.deepgram_api_key || ''}
+                      onChange={(e) => setApiKeysSettings({ ...apiKeysSettings, deepgram_api_key: e.target.value })}
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm"
+                      placeholder="Enter Deepgram API key"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleApiKeyVisibility('deepgram_api_key')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      title={showApiKeys.deepgram_api_key ? 'Hide API key' : 'Show API key'}
+                    >
+                      {showApiKeys.deepgram_api_key ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    For speech-to-text transcription
+                  </p>
+                </div>
+
+                {/* Mistral */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Mistral API Key
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showApiKeys.mistral_api_key ? 'text' : 'password'}
+                      value={apiKeysSettings.mistral_api_key || ''}
+                      onChange={(e) => setApiKeysSettings({ ...apiKeysSettings, mistral_api_key: e.target.value })}
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm"
+                      placeholder="Enter Mistral API key"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleApiKeyVisibility('mistral_api_key')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      title={showApiKeys.mistral_api_key ? 'Hide API key' : 'Show API key'}
+                    >
+                      {showApiKeys.mistral_api_key ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    For Mistral/Voxtral transcription
+                  </p>
+                </div>
+
+                {/* HuggingFace */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    HuggingFace Token
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showApiKeys.hf_token ? 'text' : 'password'}
+                      value={apiKeysSettings.hf_token || ''}
+                      onChange={(e) => setApiKeysSettings({ ...apiKeysSettings, hf_token: e.target.value })}
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm"
+                      placeholder="hf_..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleApiKeyVisibility('hf_token')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      title={showApiKeys.hf_token ? 'Hide API key' : 'Show API key'}
+                    >
+                      {showApiKeys.hf_token ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    For accessing HuggingFace models
+                  </p>
+                </div>
+
+                {/* Langfuse */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 mt-6">
+                    Langfuse (Observability)
+                  </h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Public Key
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showApiKeys.langfuse_public_key ? 'text' : 'password'}
+                          value={apiKeysSettings.langfuse_public_key || ''}
+                          onChange={(e) => setApiKeysSettings({ ...apiKeysSettings, langfuse_public_key: e.target.value })}
+                          className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm"
+                          placeholder="pk-lf-..."
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleApiKeyVisibility('langfuse_public_key')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                          title={showApiKeys.langfuse_public_key ? 'Hide API key' : 'Show API key'}
+                        >
+                          {showApiKeys.langfuse_public_key ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Secret Key
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showApiKeys.langfuse_secret_key ? 'text' : 'password'}
+                          value={apiKeysSettings.langfuse_secret_key || ''}
+                          onChange={(e) => setApiKeysSettings({ ...apiKeysSettings, langfuse_secret_key: e.target.value })}
+                          className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm"
+                          placeholder="sk-lf-..."
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleApiKeyVisibility('langfuse_secret_key')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                          title={showApiKeys.langfuse_secret_key ? 'Hide API key' : 'Show API key'}
+                        >
+                          {showApiKeys.langfuse_secret_key ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ngrok */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Ngrok Auth Token
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showApiKeys.ngrok_authtoken ? 'text' : 'password'}
+                      value={apiKeysSettings.ngrok_authtoken || ''}
+                      onChange={(e) => setApiKeysSettings({ ...apiKeysSettings, ngrok_authtoken: e.target.value })}
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm"
+                      placeholder="Enter Ngrok auth token"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleApiKeyVisibility('ngrok_authtoken')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      title={showApiKeys.ngrok_authtoken ? 'Hide API key' : 'Show API key'}
+                    >
+                      {showApiKeys.ngrok_authtoken ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    For public URL tunneling
+                  </p>
+                </div>
+
+                {/* Save Options */}
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Save Options
+                  </h4>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={saveToFile}
+                        onChange={(e) => setSaveToFile(e.target.checked)}
+                        className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        Save to .env.api-keys file
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={saveToDatabase}
+                        onChange={(e) => setSaveToDatabase(e.target.checked)}
+                        className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        Save to database
+                      </span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    You can save to file only, database only, or both for redundancy.
+                  </p>
+                </div>
+
+                {/* Save and Reset buttons */}
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-600">
+                  <button
+                    onClick={resetApiKeysSettings}
+                    disabled={apiKeysSettingsSaving}
+                    className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    onClick={saveApiKeysSettings}
+                    disabled={apiKeysSettingsSaving || (!saveToFile && !saveToDatabase)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {apiKeysSettingsSaving ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4" />
+                        Save API Keys
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="text-center py-8">
                 <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">Failed to load API keys status</p>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  Failed to load API keys
+                </p>
+                <button
+                  onClick={loadApiKeysSettings}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Retry
+                </button>
               </div>
             )}
           </div>
@@ -644,16 +1285,40 @@ export default function Settings() {
         {/* Speech Settings */}
         {activeTab === 'speech' && appSettings && (
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
               Speech & Audio Settings
             </h2>
 
             <div className="space-y-6">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+              {/* Transcription */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-4">
+                  Transcription
+                </h3>
+                <div className="pl-4 border-l-2 border-blue-200 dark:border-blue-800">
+                  {renderSettingsField(
+                    'providers',
+                    'transcription_provider',
+                    appSettings.providers.transcription_provider,
+                    'Transcription Service',
+                    'Choose which service to use for speech-to-text',
+                    'select',
+                    [
+                      { value: 'auto', label: 'Auto-detect' },
+                      { value: 'deepgram', label: 'Deepgram' },
+                      { value: 'mistral', label: 'Mistral' },
+                      { value: 'parakeet', label: 'Parakeet (Local)' },
+                    ]
+                  )}
+                </div>
+              </div>
+
+              {/* Speech Detection */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-4">
                   Speech Detection
                 </h3>
-                <div className="space-y-2">
+                <div className="pl-4 border-l-2 border-blue-200 dark:border-blue-800 space-y-2">
                   {renderSettingsField(
                     'speech_detection',
                     'min_words',
@@ -681,11 +1346,49 @@ export default function Settings() {
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+              {/* Diarization */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-4">
+                  Speaker Diarization
+                </h3>
+                <div className="pl-4 border-l-2 border-blue-200 dark:border-blue-800 space-y-2">
+                  {renderSettingsField(
+                    'diarization',
+                    'diarization_source',
+                    appSettings.diarization.diarization_source,
+                    'Diarization Source',
+                    'Service to use for speaker identification',
+                    'select',
+                    [
+                      { value: 'pyannote', label: 'PyAnnote' },
+                      { value: 'deepgram', label: 'Deepgram' },
+                    ]
+                  )}
+                  {renderSettingsField(
+                    'diarization',
+                    'min_speakers',
+                    appSettings.diarization.min_speakers,
+                    'Minimum Speakers',
+                    'Minimum number of speakers to detect',
+                    'number'
+                  )}
+                  {renderSettingsField(
+                    'diarization',
+                    'max_speakers',
+                    appSettings.diarization.max_speakers,
+                    'Maximum Speakers',
+                    'Maximum number of speakers to detect',
+                    'number'
+                  )}
+                </div>
+              </div>
+
+              {/* Audio Processing */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-4">
                   Audio Processing
                 </h3>
-                <div className="space-y-2">
+                <div className="pl-4 border-l-2 border-blue-200 dark:border-blue-800 space-y-2">
                   {renderSettingsField(
                     'audio_processing',
                     'audio_cropping_enabled',
@@ -712,34 +1415,15 @@ export default function Settings() {
                   )}
                 </div>
               </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  Transcription Provider
-                </h3>
-                {renderSettingsField(
-                  'providers',
-                  'transcription_provider',
-                  appSettings.providers.transcription_provider,
-                  'Transcription Service',
-                  'Choose which service to use for speech-to-text',
-                  'select',
-                  [
-                    { value: 'auto', label: 'Auto-detect' },
-                    { value: 'deepgram', label: 'Deepgram' },
-                    { value: 'mistral', label: 'Mistral' },
-                    { value: 'parakeet', label: 'Parakeet (Local)' },
-                  ]
-                )}
-              </div>
             </div>
 
-            <div className="mt-6 flex space-x-3">
+            <div className="mt-6 flex justify-end">
               <button
                 onClick={async () => {
-                  await updateCategorySettings('speech_detection', appSettings.speech_detection)
-                  await updateCategorySettings('audio_processing', appSettings.audio_processing)
                   await updateCategorySettings('providers', appSettings.providers)
+                  await updateCategorySettings('speech_detection', appSettings.speech_detection)
+                  await updateCategorySettings('diarization', appSettings.diarization)
+                  await updateCategorySettings('audio_processing', appSettings.audio_processing)
                 }}
                 disabled={appSettingsLoading}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
@@ -806,53 +1490,18 @@ export default function Settings() {
           </div>
         )}
 
-        {/* Other Settings */}
-        {activeTab === 'other' && appSettings && (
+        {/* LLM Settings */}
+        {activeTab === 'llm' && appSettings && (
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Other Settings
+              LLM Configuration
             </h2>
 
             <div className="space-y-6">
+              {/* Provider Selection */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  Speaker Diarization
-                </h3>
-                <div className="space-y-2">
-                  {renderSettingsField(
-                    'diarization',
-                    'diarization_source',
-                    appSettings.diarization.diarization_source,
-                    'Diarization Source',
-                    'Service to use for speaker identification',
-                    'select',
-                    [
-                      { value: 'pyannote', label: 'PyAnnote' },
-                      { value: 'deepgram', label: 'Deepgram' },
-                    ]
-                  )}
-                  {renderSettingsField(
-                    'diarization',
-                    'min_speakers',
-                    appSettings.diarization.min_speakers,
-                    'Minimum Speakers',
-                    'Minimum number of speakers to detect',
-                    'number'
-                  )}
-                  {renderSettingsField(
-                    'diarization',
-                    'max_speakers',
-                    appSettings.diarization.max_speakers,
-                    'Maximum Speakers',
-                    'Maximum number of speakers to detect',
-                    'number'
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  LLM Configuration
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 border-b border-gray-200 dark:border-gray-600 pb-2">
+                  Provider
                 </h3>
                 <div className="space-y-2">
                   {renderSettingsField(
@@ -860,85 +1509,96 @@ export default function Settings() {
                     'llm_provider',
                     appSettings.llm.llm_provider,
                     'LLM Provider',
-                    'Language model provider for memory extraction',
+                    'Language model provider for memory extraction and chat',
                     'select',
                     [
                       { value: 'openai', label: 'OpenAI' },
                       { value: 'ollama', label: 'Ollama' },
                     ]
                   )}
-                  {renderSettingsField(
-                    'llm',
-                    'openai_model',
-                    appSettings.llm.openai_model,
-                    'OpenAI Model',
-                    'Model to use for OpenAI requests',
-                    'text'
-                  )}
-                  {renderSettingsField(
-                    'llm',
-                    'chat_temperature',
-                    appSettings.llm.chat_temperature,
-                    'Chat Temperature',
-                    'Temperature for chat responses (0.0-2.0)',
-                    'number'
-                  )}
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  Network & System
-                </h3>
-                <div className="space-y-2">
-                  {renderSettingsField(
-                    'network',
-                    'host_ip',
-                    appSettings.network.host_ip,
-                    'Host IP',
-                    'Public IP or hostname for browser access',
-                    'text'
-                  )}
-                  {renderSettingsField(
-                    'network',
-                    'backend_public_port',
-                    appSettings.network.backend_public_port,
-                    'Backend Port',
-                    'Public port for backend API',
-                    'number'
-                  )}
-                  {renderSettingsField(
-                    'misc',
-                    'langfuse_enable_telemetry',
-                    appSettings.misc.langfuse_enable_telemetry,
-                    'Enable Langfuse Telemetry',
-                    'Enable telemetry for Langfuse',
-                    'boolean'
-                  )}
+              {/* OpenAI Settings */}
+              {appSettings.llm.llm_provider === 'openai' && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 border-b border-gray-200 dark:border-gray-600 pb-2">
+                    OpenAI Settings
+                  </h3>
+                  <div className="space-y-2">
+                    {renderSettingsField(
+                      'llm',
+                      'openai_model',
+                      appSettings.llm.openai_model,
+                      'OpenAI Model',
+                      'Model to use for general tasks',
+                      'text'
+                    )}
+                    {renderSettingsField(
+                      'llm',
+                      'chat_llm_model',
+                      appSettings.llm.chat_llm_model || '',
+                      'Chat Model (Optional)',
+                      'Specific model for chat (defaults to OpenAI model if not set)',
+                      'text'
+                    )}
+                    {renderSettingsField(
+                      'llm',
+                      'chat_temperature',
+                      appSettings.llm.chat_temperature,
+                      'Chat Temperature',
+                      'Temperature for chat responses (0.0-2.0)',
+                      'number'
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Ollama Settings */}
+              {appSettings.llm.llm_provider === 'ollama' && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 border-b border-gray-200 dark:border-gray-600 pb-2">
+                    Ollama Settings
+                  </h3>
+                  <div className="space-y-2">
+                    {renderSettingsField(
+                      'llm',
+                      'ollama_model',
+                      appSettings.llm.ollama_model || '',
+                      'Ollama Model',
+                      'Model name for Ollama',
+                      'text'
+                    )}
+                    {renderSettingsField(
+                      'llm',
+                      'ollama_embedder_model',
+                      appSettings.llm.ollama_embedder_model || '',
+                      'Ollama Embedder Model',
+                      'Embedder model name for Ollama',
+                      'text'
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 flex space-x-3">
               <button
                 onClick={async () => {
-                  await updateCategorySettings('diarization', appSettings.diarization)
                   await updateCategorySettings('llm', appSettings.llm)
-                  await updateCategorySettings('network', appSettings.network)
-                  await updateCategorySettings('misc', appSettings.misc)
                 }}
                 disabled={appSettingsLoading}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
-                <span>Save Other Settings</span>
+                <span>Save LLM Settings</span>
               </button>
             </div>
           </div>
         )}
 
         {/* Loading state for settings tabs */}
-        {['memory', 'speech', 'conversations', 'other'].includes(activeTab) &&
+        {['memory', 'llm', 'speech', 'conversations'].includes(activeTab) &&
           appSettingsLoading &&
           !appSettings && (
             <div className="text-center py-12">

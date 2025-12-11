@@ -303,8 +303,22 @@ export const settingsApi = {
   getNetwork: () => api.get('/api/settings/network'),
   updateNetwork: (settings: any) => api.put('/api/settings/network', settings),
 
+  getInfrastructure: () => api.get('/api/settings/infrastructure'),
+  updateInfrastructure: (settings: any) => api.put('/api/settings/infrastructure', settings),
+
   getMisc: () => api.get('/api/settings/misc'),
   updateMisc: (settings: any) => api.put('/api/settings/misc', settings),
+
+  getApiKeys: () => api.get('/api/settings/api-keys'),
+  updateApiKeys: (settings: any) => api.put('/api/settings/api-keys', settings),
+  saveApiKeys: (settings: any, saveToFile: boolean = true, saveToDatabase: boolean = true) =>
+    api.post('/api/settings/api-keys/save', settings, {
+      params: { save_to_file: saveToFile, save_to_database: saveToDatabase }
+    }),
+  loadApiKeysFromFile: (filePath: string = '.env.api-keys') =>
+    api.get('/api/settings/api-keys/load-from-file', {
+      params: { file_path: filePath }
+    }),
 
   // Cache management
   invalidateCache: (category?: string) => api.post('/api/settings/cache/invalidate', null, {

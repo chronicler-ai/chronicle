@@ -226,6 +226,39 @@ class NetworkSettings(BaseModel):
     )
 
 
+class InfrastructureSettings(BaseModel):
+    """Core infrastructure service settings."""
+
+    mongodb_uri: str = Field(
+        default="mongodb://mongo:27017",
+        description="MongoDB connection URI"
+    )
+    mongodb_database: str = Field(
+        default="friend-lite",
+        description="MongoDB database name"
+    )
+    redis_url: str = Field(
+        default="redis://localhost:6379/0",
+        description="Redis connection URL"
+    )
+    qdrant_base_url: str = Field(
+        default="qdrant",
+        description="Qdrant base URL/hostname"
+    )
+    qdrant_port: str = Field(
+        default="6333",
+        description="Qdrant port"
+    )
+    neo4j_host: str = Field(
+        default="neo4j-mem0",
+        description="Neo4j host"
+    )
+    neo4j_user: str = Field(
+        default="neo4j",
+        description="Neo4j username"
+    )
+
+
 class MiscSettings(BaseModel):
     """Miscellaneous settings."""
 
@@ -239,6 +272,39 @@ class MiscSettings(BaseModel):
     )
 
 
+class ApiKeysSettings(BaseModel):
+    """External service API keys."""
+
+    openai_api_key: Optional[str] = Field(
+        default=None,
+        description="OpenAI API Key"
+    )
+    deepgram_api_key: Optional[str] = Field(
+        default=None,
+        description="Deepgram API Key"
+    )
+    mistral_api_key: Optional[str] = Field(
+        default=None,
+        description="Mistral API Key"
+    )
+    hf_token: Optional[str] = Field(
+        default=None,
+        description="HuggingFace Token"
+    )
+    langfuse_public_key: Optional[str] = Field(
+        default=None,
+        description="Langfuse Public Key"
+    )
+    langfuse_secret_key: Optional[str] = Field(
+        default=None,
+        description="Langfuse Secret Key"
+    )
+    ngrok_authtoken: Optional[str] = Field(
+        default=None,
+        description="Ngrok Auth Token"
+    )
+
+
 class AllSettings(BaseModel):
     """Combined model for all application settings."""
 
@@ -249,4 +315,6 @@ class AllSettings(BaseModel):
     llm: LLMSettings = Field(default_factory=LLMSettings)
     providers: ProviderSettings = Field(default_factory=ProviderSettings)
     network: NetworkSettings = Field(default_factory=NetworkSettings)
+    infrastructure: InfrastructureSettings = Field(default_factory=InfrastructureSettings)
     misc: MiscSettings = Field(default_factory=MiscSettings)
+    api_keys: ApiKeysSettings = Field(default_factory=ApiKeysSettings)

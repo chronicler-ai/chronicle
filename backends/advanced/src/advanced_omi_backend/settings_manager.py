@@ -15,9 +15,11 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from advanced_omi_backend.settings_models import (
     AllSettings,
+    ApiKeysSettings,
     AudioProcessingSettings,
     ConversationSettings,
     DiarizationSettings,
+    InfrastructureSettings,
     LLMSettings,
     MiscSettings,
     NetworkSettings,
@@ -155,12 +157,41 @@ class SettingsManager:
         )
         await self._save_to_db("network", network.dict(), "system")
 
+        # Infrastructure settings
+        from advanced_omi_backend.app_config import get_app_config
+        config = get_app_config()
+        infrastructure = InfrastructureSettings(
+            mongodb_uri=config.mongodb_uri,
+            mongodb_database=config.mongodb_database,
+            redis_url=config.redis_url,
+            qdrant_base_url=config.qdrant_base_url,
+            qdrant_port=config.qdrant_port,
+            neo4j_host=os.getenv("NEO4J_HOST", "neo4j-mem0"),
+            neo4j_user=os.getenv("NEO4J_USER", "neo4j"),
+        )
+        await self._save_to_db("infrastructure", infrastructure.dict(), "system")
+
         # Misc settings
         misc = MiscSettings(
             debug_dir=os.getenv("DEBUG_DIR", "./data/debug_dir"),
             langfuse_enable_telemetry=os.getenv("LANGFUSE_ENABLE_TELEMETRY", "false").lower() == "true",
         )
         await self._save_to_db("misc", misc.dict(), "system")
+
+        # API Keys settings - read from .env.api-keys file first, fallback to env vars
+        from advanced_omi_backend.utils.api_keys_manager import read_api_keys_from_file
+
+        file_keys = read_api_keys_from_file(".env.api-keys")
+        api_keys = ApiKeysSettings(
+            openai_api_key=file_keys.get("openai_api_key") or os.getenv("OPENAI_API_KEY"),
+            deepgram_api_key=file_keys.get("deepgram_api_key") or os.getenv("DEEPGRAM_API_KEY"),
+            mistral_api_key=file_keys.get("mistral_api_key") or os.getenv("MISTRAL_API_KEY"),
+            hf_token=file_keys.get("hf_token") or os.getenv("HF_TOKEN"),
+            langfuse_public_key=file_keys.get("langfuse_public_key") or os.getenv("LANGFUSE_PUBLIC_KEY"),
+            langfuse_secret_key=file_keys.get("langfuse_secret_key") or os.getenv("LANGFUSE_SECRET_KEY"),
+            ngrok_authtoken=file_keys.get("ngrok_authtoken") or os.getenv("NGROK_AUTHTOKEN"),
+        )
+        await self._save_to_db("api_keys", api_keys.dict(), "system")
 
         logger.info("✅ Initialized all settings from environment variables")
 
@@ -345,6 +376,20 @@ class SettingsManager:
         """Update network settings."""
         await self._update_settings("network", settings, updated_by)
 
+    # Infrastructure Settings
+
+    async def get_infrastructure(self) -> InfrastructureSettings:
+        """Get infrastructure settings."""
+        return await self._get_from_cache_or_db("infrastructure", InfrastructureSettings)
+
+    async def update_infrastructure(
+        self,
+        settings: InfrastructureSettings,
+        updated_by: str = "user",
+    ):
+        """Update infrastructure settings."""
+        await self._update_settings("infrastructure", settings, updated_by)
+
     # Misc Settings
 
     async def get_misc(self) -> MiscSettings:
@@ -359,6 +404,20 @@ class SettingsManager:
         """Update miscellaneous settings."""
         await self._update_settings("misc", settings, updated_by)
 
+    # API Keys Settings
+
+    async def get_api_keys(self) -> ApiKeysSettings:
+        """Get API keys settings."""
+        return await self._get_from_cache_or_db("api_keys", ApiKeysSettings)
+
+    async def update_api_keys(
+        self,
+        settings: ApiKeysSettings,
+        updated_by: str = "user",
+    ):
+        """Update API keys settings."""
+        await self._update_settings("api_keys", settings, updated_by)
+
     # Combined Settings
 
     async def get_all_settings(self) -> AllSettings:
@@ -371,7 +430,9 @@ class SettingsManager:
             llm=await self.get_llm(),
             providers=await self.get_providers(),
             network=await self.get_network(),
+            infrastructure=await self.get_infrastructure(),
             misc=await self.get_misc(),
+            api_keys=await self.get_api_keys(),
         )
 
     async def update_all_settings(
@@ -387,7 +448,9 @@ class SettingsManager:
         await self.update_llm(settings.llm, updated_by)
         await self.update_providers(settings.providers, updated_by)
         await self.update_network(settings.network, updated_by)
+        await self.update_infrastructure(settings.infrastructure, updated_by)
         await self.update_misc(settings.misc, updated_by)
+        await self.update_api_keys(settings.api_keys, updated_by)
 
     def invalidate_cache(self, key: Optional[str] = None):
         """

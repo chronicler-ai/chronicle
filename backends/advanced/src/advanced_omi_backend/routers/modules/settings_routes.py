@@ -13,9 +13,11 @@ from advanced_omi_backend.auth import current_active_user, current_superuser
 from advanced_omi_backend.settings_manager import get_settings_manager, SettingsManager
 from advanced_omi_backend.settings_models import (
     AllSettings,
+    ApiKeysSettings,
     AudioProcessingSettings,
     ConversationSettings,
     DiarizationSettings,
+    InfrastructureSettings,
     LLMSettings,
     MiscSettings,
     NetworkSettings,
@@ -249,6 +251,33 @@ async def update_network_settings(
     return await settings_mgr.get_network()
 
 
+# Infrastructure Settings
+
+
+@router.get("/infrastructure", response_model=InfrastructureSettings)
+async def get_infrastructure_settings(
+    current_user: User = Depends(current_active_user),
+    settings_mgr: SettingsManager = Depends(get_settings_manager),
+):
+    """Get infrastructure settings."""
+    return await settings_mgr.get_infrastructure()
+
+
+@router.put("/infrastructure", response_model=InfrastructureSettings)
+async def update_infrastructure_settings(
+    settings: InfrastructureSettings,
+    current_user: User = Depends(current_superuser),
+    settings_mgr: SettingsManager = Depends(get_settings_manager),
+):
+    """
+    Update infrastructure settings. Admin only.
+
+    Controls MongoDB, Redis, Qdrant, and Neo4j connection settings.
+    """
+    await settings_mgr.update_infrastructure(settings, updated_by=str(current_user.id))
+    return await settings_mgr.get_infrastructure()
+
+
 # Miscellaneous Settings
 
 
@@ -274,6 +303,120 @@ async def update_misc_settings(
     """
     await settings_mgr.update_misc(settings, updated_by=str(current_user.id))
     return await settings_mgr.get_misc()
+
+
+# API Keys Settings
+
+
+@router.get("/api-keys", response_model=ApiKeysSettings)
+async def get_api_keys_settings(
+    current_user: User = Depends(current_active_user),
+    settings_mgr: SettingsManager = Depends(get_settings_manager),
+):
+    """Get API keys settings."""
+    return await settings_mgr.get_api_keys()
+
+
+@router.put("/api-keys", response_model=ApiKeysSettings)
+async def update_api_keys_settings(
+    settings: ApiKeysSettings,
+    current_user: User = Depends(current_superuser),
+    settings_mgr: SettingsManager = Depends(get_settings_manager),
+):
+    """
+    Update API keys settings. Admin only.
+
+    Controls external service API keys.
+    """
+    await settings_mgr.update_api_keys(settings, updated_by=str(current_user.id))
+    return await settings_mgr.get_api_keys()
+
+
+@router.get("/api-keys/load-from-file", response_model=ApiKeysSettings)
+async def load_api_keys_from_file(
+    file_path: str = ".env.api-keys",
+    current_user: User = Depends(current_superuser),
+):
+    """
+    Load API keys from a file. Admin only.
+
+    Args:
+        file_path: Path to the API keys file (default: .env.api-keys)
+
+    Returns:
+        API keys loaded from the file
+    """
+    from advanced_omi_backend.utils.api_keys_manager import read_api_keys_from_file
+
+    try:
+        keys_dict = read_api_keys_from_file(file_path)
+        return ApiKeysSettings(**keys_dict)
+    except Exception as e:
+        logger.error(f"Error loading API keys from file {file_path}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to load API keys from {file_path}: {str(e)}"
+        )
+
+
+@router.post("/api-keys/save")
+async def save_api_keys(
+    settings: ApiKeysSettings,
+    save_to_file: bool = True,
+    save_to_database: bool = True,
+    current_user: User = Depends(current_superuser),
+    settings_mgr: SettingsManager = Depends(get_settings_manager),
+):
+    """
+    Save API keys to file and/or database. Admin only.
+
+    Args:
+        settings: API keys to save
+        save_to_file: Save to .env.api-keys file (default: True)
+        save_to_database: Save to MongoDB (default: True)
+    """
+    from advanced_omi_backend.utils.api_keys_manager import write_api_keys_to_file
+
+    results = {"file": False, "database": False, "errors": []}
+
+    # Save to file
+    if save_to_file:
+        try:
+            keys_dict = {
+                "openai_api_key": settings.openai_api_key,
+                "deepgram_api_key": settings.deepgram_api_key,
+                "mistral_api_key": settings.mistral_api_key,
+                "hf_token": settings.hf_token,
+                "langfuse_public_key": settings.langfuse_public_key,
+                "langfuse_secret_key": settings.langfuse_secret_key,
+                "ngrok_authtoken": settings.ngrok_authtoken,
+            }
+            success = write_api_keys_to_file(keys_dict, ".env.api-keys")
+            results["file"] = success
+            if not success:
+                results["errors"].append("Failed to write to .env.api-keys file")
+        except Exception as e:
+            logger.error(f"Error writing API keys to file: {e}")
+            results["errors"].append(f"File write error: {str(e)}")
+
+    # Save to database
+    if save_to_database:
+        try:
+            await settings_mgr.update_api_keys(settings, updated_by=str(current_user.id))
+            results["database"] = True
+        except Exception as e:
+            logger.error(f"Error saving API keys to database: {e}")
+            results["errors"].append(f"Database save error: {str(e)}")
+
+    return {
+        "success": results["file"] or results["database"],
+        "saved_to": {
+            "file": results["file"],
+            "database": results["database"],
+        },
+        "errors": results["errors"],
+        "settings": await settings_mgr.get_api_keys(),
+    }
 
 
 # Cache Management
@@ -304,34 +447,37 @@ async def invalidate_settings_cache(
 @router.get("/infrastructure/status")
 async def get_infrastructure_status(
     current_user: User = Depends(current_active_user),
+    settings_mgr: SettingsManager = Depends(get_settings_manager),
 ):
     """
     Get infrastructure service connection status.
 
     Returns URLs and connection status for MongoDB, Redis, Qdrant, Neo4j.
+    Uses editable settings from database.
     """
-    import os
     from advanced_omi_backend.app_config import get_app_config
 
+    # Get infrastructure settings from database
+    infra_settings = await settings_mgr.get_infrastructure()
     config = get_app_config()
 
     status = {
         "mongodb": {
-            "url": config.mongodb_uri,
-            "database": config.mongodb_database,
+            "url": infra_settings.mongodb_uri,
+            "database": infra_settings.mongodb_database,
             "connected": False,
         },
         "redis": {
-            "url": config.redis_url,
+            "url": infra_settings.redis_url,
             "connected": False,
         },
         "qdrant": {
-            "url": f"http://{config.qdrant_base_url}:{config.qdrant_port}",
+            "url": f"http://{infra_settings.qdrant_base_url}:{infra_settings.qdrant_port}",
             "connected": False,
         },
         "neo4j": {
-            "host": os.getenv("NEO4J_HOST", "neo4j-mem0"),
-            "user": os.getenv("NEO4J_USER", "neo4j"),
+            "host": infra_settings.neo4j_host,
+            "user": infra_settings.neo4j_user,
             "connected": False,
         },
     }
