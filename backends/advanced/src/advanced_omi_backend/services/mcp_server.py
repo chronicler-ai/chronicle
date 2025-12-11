@@ -122,7 +122,7 @@ async def list_conversations(
         if start_date:
             try:
                 start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
-                query = query.find(Conversation.start_datetime >= start_dt)
+                query = query.find(Conversation.created_at >= start_dt)
             except ValueError as e:
                 logger.warning(f"Invalid start_date format: {start_date}, error: {e}")
                 return json.dumps({"error": f"Invalid start_date format: {start_date}. Use ISO 8601 format."}, indent=2)
@@ -130,7 +130,7 @@ async def list_conversations(
         if end_date:
             try:
                 end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
-                query = query.find(Conversation.start_datetime <= end_dt)
+                query = query.find(Conversation.created_at <= end_dt)
             except ValueError as e:
                 logger.warning(f"Invalid end_date format: {end_date}, error: {e}")
                 return json.dumps({"error": f"Invalid end_date format: {end_date}. Use ISO 8601 format."}, indent=2)
@@ -140,9 +140,9 @@ async def list_conversations(
 
         # Apply sorting
         if order_by == "created_at_asc":
-            query = query.sort(Conversation.start_datetime)
+            query = query.sort(Conversation.created_at)
         else:  # Default to newest first
-            query = query.sort(-Conversation.start_datetime)
+            query = query.sort(-Conversation.created_at)
 
         # Apply pagination
         conversations = await query.skip(offset).limit(limit).to_list()
@@ -155,8 +155,8 @@ async def list_conversations(
                 "conversation_id": conv.conversation_id,
                 "title": conv.title,
                 "summary": conv.summary,
-                "start_datetime": conv.start_datetime.isoformat(),
-                "end_datetime": conv.end_datetime.isoformat() if conv.end_datetime else None,
+                "start_datetime": conv.created_at.isoformat(),
+                "end_datetime": conv.completed_at.isoformat() if conv.completed_at else None,
                 "segment_count": len(conv.segments),
                 "memory_count": conv.memory_count,
                 "client_id": conv.client_id,
@@ -218,8 +218,8 @@ async def get_conversation(conversation_id: str) -> str:
             "client_id": conversation.client_id,
 
             # Metadata
-            "start_datetime": conversation.start_datetime.isoformat(),
-            "end_datetime": conversation.end_datetime.isoformat() if conversation.end_datetime else None,
+            "start_datetime": conversation.created_at.isoformat(),
+            "end_datetime": conversation.completed_at.isoformat() if conversation.completed_at else None,
             "title": conversation.title,
             "summary": conversation.summary,
             # "detailed_summary": conversation.detailed_summary,
@@ -299,7 +299,7 @@ async def get_segments_from_conversation(conversation_id: str) -> str:
         return json.dumps({"error": f"Failed to get segments: {str(e)}"}, indent=2)
 
 
-@mcp.resource(uri="conversation://{conversation_id}/audio", name="Conversation Audio", description="Get the audio file for a conversation")
+@mcp.resource(uri="conversation://{conversation_id}/audio", name="Conversation Audio", description="Get the audio file for a conversation", mime_type="text/plain")
 async def get_conversation_audio(conversation_id: str) -> str:
     """
     Get audio file for a conversation.
@@ -308,7 +308,7 @@ async def get_conversation_audio(conversation_id: str) -> str:
         conversation_id: The unique conversation identifier
 
     Returns:
-        Base64-encoded audio data with metadata
+        JSON string with base64-encoded audio data
     """
     uid = user_id_var.get(None)
     if not uid:
@@ -368,7 +368,7 @@ async def get_conversation_audio(conversation_id: str) -> str:
         return json.dumps({"error": f"Failed to get audio: {str(e)}"}, indent=2)
 
 
-@mcp.resource(uri="conversation://{conversation_id}/cropped_audio", name="Conversation Cropped Audio", description="Get the cropped (speech-only) audio file for a conversation")
+@mcp.resource(uri="conversation://{conversation_id}/cropped_audio", name="Conversation Cropped Audio", description="Get the cropped (speech-only) audio file for a conversation", mime_type="text/plain")
 async def get_conversation_cropped_audio(conversation_id: str) -> str:
     """
     Get cropped audio file for a conversation.
@@ -377,7 +377,7 @@ async def get_conversation_cropped_audio(conversation_id: str) -> str:
         conversation_id: The unique conversation identifier
 
     Returns:
-        Base64-encoded cropped audio data with metadata
+        JSON string with base64-encoded cropped audio data
     """
     uid = user_id_var.get(None)
     if not uid:
