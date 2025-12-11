@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
-import { BleAudioCodec } from 'chronicle-react-native';
+import { BleAudioCodec } from 'friend-lite-react-native';
 
 interface DeviceDetailsProps {
   // Device Info
