@@ -235,7 +235,7 @@ async def sync_admin_on_startup():
     logger.info("🔄 Starting Mycelia OAuth synchronization...")
 
     # Check if Mycelia sync is enabled
-    memory_provider = os.getenv("MEMORY_PROVIDER", "chronicle")
+    memory_provider = os.getenv("MEMORY_PROVIDER", "chronicle").lower()
     if memory_provider != "mycelia":
         logger.info("Mycelia sync skipped (MEMORY_PROVIDER != mycelia)")
         return

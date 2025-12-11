@@ -156,7 +156,9 @@ def get_service_info() -> dict:
         # Try to determine provider from service type
         if "OpenMemoryMCP" in info["service_type"]:
             info["memory_provider"] = "openmemory_mcp"
-        elif "Chronicle" in info["service_type"] or "MemoryService" in info["service_type"]:
+        elif info["service_type"] == "ChronicleMemoryService":
             info["memory_provider"] = "chronicle"
+        elif info["service_type"] == "MyceliaMemoryService":
+            info["memory_provider"] = "mycelia"
     
     return info

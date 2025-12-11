@@ -146,9 +146,15 @@ def build_memory_config_from_env() -> MemoryConfig:
     try:
         # Determine memory provider
         memory_provider = os.getenv("MEMORY_PROVIDER", "chronicle").lower()
+
+        # Map legacy provider names to current names
+        if memory_provider in ("friend-lite", "friend_lite"):
+            memory_logger.info(f"🔧 Mapping legacy provider '{memory_provider}' to 'chronicle'")
+            memory_provider = "chronicle"
+
         if memory_provider not in [p.value for p in MemoryProvider]:
             raise ValueError(f"Unsupported memory provider: {memory_provider}")
-        
+
         memory_provider_enum = MemoryProvider(memory_provider)
         
         # For OpenMemory MCP, configuration is much simpler

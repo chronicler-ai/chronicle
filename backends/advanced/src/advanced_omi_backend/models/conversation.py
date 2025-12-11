@@ -31,6 +31,7 @@ class Conversation(Document):
         CHRONICLE = "chronicle"
         OPENMEMORY_MCP = "openmemory_mcp"
         MYCELIA = "mycelia"
+        FRIEND_LITE = "friend_lite"  # Legacy value
 
     class ConversationStatus(str, Enum):
         """Conversation processing status."""
