@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { authApi } from '../services/api'
+import { getStorageKey } from '../utils/storage'
 
 interface User {
   id: string
@@ -21,7 +22,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'))
+  const [token, setToken] = useState<string | null>(localStorage.getItem(getStorageKey('token')))
   const [isLoading, setIsLoading] = useState(true)
 
   // Check if user is admin
@@ -30,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       console.log('🔐 AuthContext: Initializing authentication...')
-      const savedToken = localStorage.getItem('token')
+      const savedToken = localStorage.getItem(getStorageKey('token'))
       console.log('🔐 AuthContext: Saved token exists:', !!savedToken)
       
       if (savedToken) {
@@ -44,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           console.error('❌ AuthContext: Token verification failed:', error)
           // Token is invalid, clear it
-          localStorage.removeItem('token')
+          localStorage.removeItem(getStorageKey('token'))
           setToken(null)
           setUser(null)
         }
@@ -64,9 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { access_token } = response.data
       setToken(access_token)
-      localStorage.setItem('token', access_token)
+      localStorage.setItem(getStorageKey('token'), access_token)
       // Store JWT for Mycelia auto-login (enables seamless access to Mycelia frontend)
-      localStorage.setItem('mycelia_jwt_token', access_token)
+      localStorage.setItem(getStorageKey('mycelia_jwt_token'), access_token)
 
       // Get user info
       const userResponse = await authApi.getMe()
@@ -100,8 +101,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null)
     setToken(null)
-    localStorage.removeItem('token')
-    localStorage.removeItem('mycelia_jwt_token')
+    localStorage.removeItem(getStorageKey('token'))
+    localStorage.removeItem(getStorageKey('mycelia_jwt_token'))
   }
 
   return (

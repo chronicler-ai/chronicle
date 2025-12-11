@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { MessageSquare, RefreshCw, Calendar, User, Play, Pause, MoreVertical, RotateCcw, Zap, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import { conversationsApi, BACKEND_URL } from '../services/api'
 import ConversationVersionHeader from '../components/ConversationVersionHeader'
+import { getStorageKey } from '../utils/storage'
 
 interface Conversation {
   conversation_id?: string
@@ -330,7 +331,7 @@ export default function Conversations() {
 
     // Check if we need to create a new audio element (none exists or previous had error)
     if (!audio || audio.error) {
-      const token = localStorage.getItem('token') || '';
+      const token = localStorage.getItem(getStorageKey('token')) || '';
       const audioUrl = `${BACKEND_URL}/api/audio/get_audio/${conversationId}?cropped=${useCropped}&token=${token}`;
       console.log('Creating audio element with URL:', audioUrl);
       console.log('Token present:', !!token, 'Token length:', token.length);
@@ -647,7 +648,7 @@ export default function Conversations() {
                         className="w-full h-10"
                         preload="metadata"
                         style={{ minWidth: '300px' }}
-                        src={`${BACKEND_URL}/api/audio/get_audio/${conversation.conversation_id}?cropped=${!debugMode}&token=${localStorage.getItem('token') || ''}`}
+                        src={`${BACKEND_URL}/api/audio/get_audio/${conversation.conversation_id}?cropped=${!debugMode}&token=${localStorage.getItem(getStorageKey('token')) || ''}`}
                       >
                         Your browser does not support the audio element.
                       </audio>

@@ -7,6 +7,11 @@ from dotenv import load_dotenv
 test_env_path = Path(__file__).resolve().parents[1] / ".env.test"
 load_dotenv(test_env_path)
 
+# Load .env from backends/advanced directory to get COMPOSE_PROJECT_NAME
+backend_env_path = Path(__file__).resolve().parents[2] / "backends" / "advanced" / ".env"
+if backend_env_path.exists():
+    load_dotenv(backend_env_path, override=False)
+
 # API Configuration
 API_URL = 'http://localhost:8001'  # Use BACKEND_URL from test.env
 API_BASE = 'http://localhost:8001/api'
@@ -57,10 +62,11 @@ TEST_CONFIG = {
     "default_timeout": 30
 }
 
-# Docker Container Names (from .env.test)
-BACKEND_CONTAINER = os.getenv('BACKEND_CONTAINER', 'advanced-chronicle-backend-test-1')
-WORKERS_CONTAINER = os.getenv('WORKERS_CONTAINER', 'advanced-workers-test-1')
-MONGO_CONTAINER = os.getenv('MONGO_CONTAINER', 'advanced-mongo-test-1')
-REDIS_CONTAINER = os.getenv('REDIS_CONTAINER', 'advanced-redis-test-1')
-QDRANT_CONTAINER = os.getenv('QDRANT_CONTAINER', 'advanced-qdrant-test-1')
-WEBUI_CONTAINER = os.getenv('WEBUI_CONTAINER', 'advanced-webui-test-1')
+# Docker Container Names (dynamically based on COMPOSE_PROJECT_NAME)
+# Default to 'advanced' if not set (which is the directory name)
+COMPOSE_PROJECT_NAME = os.getenv('COMPOSE_PROJECT_NAME', 'advanced')
+WORKERS_CONTAINER = f"{COMPOSE_PROJECT_NAME}-workers-test-1"
+REDIS_CONTAINER = f"{COMPOSE_PROJECT_NAME}-redis-test-1"
+BACKEND_CONTAINER = f"{COMPOSE_PROJECT_NAME}-friend-backend-test-1"
+MONGO_CONTAINER = f"{COMPOSE_PROJECT_NAME}-mongo-test-1"
+QDRANT_CONTAINER = f"{COMPOSE_PROJECT_NAME}-qdrant-test-1"

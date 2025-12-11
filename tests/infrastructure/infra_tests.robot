@@ -26,8 +26,8 @@ Suite Setup      Suite Setup
 Suite Teardown   Suite Teardown
 Test Setup       Test Cleanup
 *** Variables ***
-# Container names are now loaded from test_env.py via .env.test
-# These local variables can override if needed, but default to env values
+# Container names are now dynamically loaded from test_env.py based on COMPOSE_PROJECT_NAME
+# This allows tests to work with different docker-compose project names
 
 *** Keywords ***
 

@@ -142,18 +142,21 @@ class OpenMemoryMCPService(MemoryServiceBase):
                 memory_logger.info(f"Skipping empty transcript for {source_id}")
                 return True, []
             
-            # Update MCP client user context for this operation
+            # Pass Friend-Lite user details to OpenMemory for proper user tracking
+            # OpenMemory will auto-create users if they don't exist
             original_user_id = self.mcp_client.user_id
             original_user_email = self.mcp_client.user_email
-            self.mcp_client.user_id = user_id  # Use the actual Chronicle user's ID
-            self.mcp_client.user_email = user_email  # Use the actual user's email
+
+            # Update MCP client with Friend-Lite user details
+            self.mcp_client.user_id = user_id
+            self.mcp_client.user_email = user_email
 
             try:
                 # Thin client approach: Send raw transcript to OpenMemory MCP server
                 # OpenMemory handles: extraction, deduplication, vector storage, ACL
                 enriched_transcript = f"[Source: {source_id}, Client: {client_id}] {transcript}"
 
-                memory_logger.info(f"Delegating memory processing to OpenMemory MCP for user {user_id}, source {source_id}")
+                memory_logger.info(f"Delegating memory processing to OpenMemory for user {user_id} (email: {user_email}), source {source_id}")
                 memory_ids = await self.mcp_client.add_memories(text=enriched_transcript)
 
             finally:
@@ -204,7 +207,7 @@ class OpenMemoryMCPService(MemoryServiceBase):
         if not self._initialized:
             await self.initialize()
         
-        # Update MCP client user context for this operation
+        # Update MCP client user context for this search operation
         original_user_id = self.mcp_client.user_id
         self.mcp_client.user_id = user_id  # Use the actual Chronicle user's ID
 
@@ -231,7 +234,7 @@ class OpenMemoryMCPService(MemoryServiceBase):
             memory_logger.error(f"Search memories failed: {e}")
             return []
         finally:
-            # Restore original user_id
+            # Restore original user context
             self.mcp_client.user_id = original_user_id
     
     async def get_all_memories(

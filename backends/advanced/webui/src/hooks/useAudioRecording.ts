@@ -1,4 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { BACKEND_URL } from '../services/api'
+import { getStorageKey } from '../utils/storage'
 
 export interface ComponentErrors {
   websocket: string | null
@@ -126,48 +128,26 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
     setError(null)
 
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem(getStorageKey('token'))
       if (!token) {
         throw new Error('No authentication token found')
       }
 
-      // Build WebSocket URL using same logic as API service
-              let wsUrl: string
-        const { protocol, port } = window.location
-                 // Check if we have a backend URL from environment
-        if (import.meta.env.VITE_BACKEND_URL) {
-          const backendUrl = import.meta.env.VITE_BACKEND_URL
-          const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:'
-          // Fallback logic based on current location
-          const isStandardPort = (protocol === 'https:' && (port === '' || port === '443')) || 
-                                 (protocol === 'http:' && (port === '' || port === '80'))
-          
-          if (isStandardPort || backendUrl === '') {
-            // Use same origin for Ingress access
-            wsUrl = `${wsProtocol}//${window.location.host}/ws_pcm?token=${token}&device_name=webui-recorder`
-          } else if (backendUrl != undefined && backendUrl != '') {
-            wsUrl = `${wsProtocol}//${backendUrl}/ws_pcm?token=${token}&device_name=webui-recorder`
-          }    
-          else if (port === '5173') {
-            // Development mode
-            wsUrl = `ws://localhost:8000/ws_pcm?token=${token}&device_name=webui-recorder`
-          } else {
-            // Fallback - use same origin instead of hardcoded port 8000
-            wsUrl = `${wsProtocol}//${window.location.host}/ws_pcm?token=${token}&device_name=webui-recorder`
-          }
+      // Build WebSocket URL using BACKEND_URL from API service (handles base path correctly)
+        const { protocol } = window.location
+        const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:'
+
+        let wsUrl: string
+        if (BACKEND_URL && BACKEND_URL.startsWith('http')) {
+          // BACKEND_URL is a full URL (e.g., http://localhost:8000)
+          const backendHost = BACKEND_URL.replace(/^https?:\/\//, '')
+          wsUrl = `${wsProtocol}//${backendHost}/ws_pcm?token=${token}&device_name=webui-recorder`
+        } else if (BACKEND_URL && BACKEND_URL !== '') {
+          // BACKEND_URL is a path (e.g., /prod)
+          wsUrl = `${wsProtocol}//${window.location.host}${BACKEND_URL}/ws_pcm?token=${token}&device_name=webui-recorder`
         } else {
-          // No environment variable set, use fallback logic
-          const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:'
-          const isStandardPort = (protocol === 'https:' && (port === '' || port === '443')) || 
-                                 (protocol === 'http:' && (port === '' || port === '80'))
-          
-          if (isStandardPort) {
-            wsUrl = `${wsProtocol}//${window.location.host}/ws_pcm?token=${token}&device_name=webui-recorder`
-          } else if (port === '5173') {
-            wsUrl = `ws://localhost:8000/ws_pcm?token=${token}&device_name=webui-recorder`
-          } else {
-            wsUrl = `${wsProtocol}//${window.location.host}/ws_pcm?token=${token}&device_name=webui-recorder`
-          }
+          // BACKEND_URL is empty (same origin)
+          wsUrl = `${wsProtocol}//${window.location.host}/ws_pcm?token=${token}&device_name=webui-recorder`
         }
       const ws = new WebSocket(wsUrl)
       // Note: Don't set binaryType yet - will cause protocol violations with text messages

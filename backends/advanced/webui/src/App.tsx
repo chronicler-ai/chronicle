@@ -18,12 +18,15 @@ import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary'
 
 function App() {
   console.log('🚀 Full App restored with working login!')
-  
+
+  // Get base path from Vite config (e.g., "/prod/" for path-based routing)
+  const basename = import.meta.env.BASE_URL
+
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
-          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <Router basename={basename} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/" element={
