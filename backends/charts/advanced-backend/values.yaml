@@ -55,9 +55,9 @@ ingress:
    
   # hosts: defined in ingress-values.yaml and overridden by Skaffold
   # tls:
-  #   - secretName: friend-lite-tls
+  #   - secretName: chronicle-tls
   #     hosts:
-  #       - friend-lite.192-168-1-42.nip.io
+  #       - chronicle.192-168-1-42.nip.io
 
 resources:
   limits:

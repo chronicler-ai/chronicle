@@ -258,7 +258,7 @@ export default function Memories() {
             </h1>
             {memoryProvider && (
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Provider: {memoryProvider === 'friend_lite' ? 'Friend-Lite' : memoryProvider === 'openmemory_mcp' ? 'OpenMemory MCP' : memoryProvider}
+                Provider: {memoryProvider === 'chronicle' ? 'Chronicle' : memoryProvider === 'openmemory_mcp' ? 'OpenMemory MCP' : memoryProvider}
               </p>
             )}
           </div>
@@ -313,7 +313,7 @@ export default function Memories() {
               </button>
             </div>
 
-            {/* Initial Search Threshold Slider - Show for Friend-Lite provider */}
+            {/* Initial Search Threshold Slider - Show for Chronicle provider */}
             {memoryProviderSupportsThreshold && (
               <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-4">
                 <div className="flex items-center justify-between mb-2">

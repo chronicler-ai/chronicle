@@ -1,4 +1,4 @@
-# Friend-Lite Test Makefile
+# Chronicle Test Makefile
 # Shortcuts for running tests
 
 .PHONY: help all clean
@@ -8,7 +8,7 @@ OUTPUTDIR ?= results
 TEST_DIR = endpoints integration infrastructure
 
 help:
-	@echo "Friend-Lite Test Targets:"
+	@echo "Chronicle Test Targets:"
 	@echo ""
 	@echo "Running Tests:"
 	@echo "  make all         - Run all tests"

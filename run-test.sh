@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Friend-Lite Local Test Runner
+# Chronicle Local Test Runner
 # Runs the same tests as GitHub CI but configured for local development
 # Usage: ./run-test.sh [advanced-backend|speaker-recognition|all]
 
@@ -63,12 +63,12 @@ run_speaker_recognition_tests() {
 }
 
 # Main execution
-print_info "Friend-Lite Local Test Runner"
+print_info "Chronicle Local Test Runner"
 print_info "=============================="
 
 # Check if we're in the right directory
 if [ ! -f "CLAUDE.md" ]; then
-    print_error "Please run this script from the friend-lite root directory"
+    print_error "Please run this script from the chronicle root directory"
     exit 1
 fi
 

@@ -6,16 +6,16 @@ metadata:
   name: speech-config-reader
   namespace: speech
 ---
-# Role in friend-lite namespace to read ConfigMap/Secret
+# Role in chronicle namespace to read ConfigMap/Secret
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: config-reader
-  namespace: friend-lite
+  namespace: chronicle
 rules:
 - apiGroups: [""]
   resources: ["configmaps", "secrets"]
-  resourceNames: ["friend-lite-config", "friend-lite-secrets"]
+  resourceNames: ["chronicle-config", "chronicle-secrets"]
   verbs: ["get", "list"]
 ---
 # RoleBinding to allow speech service account to read config
@@ -23,7 +23,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: speech-config-access
-  namespace: friend-lite
+  namespace: chronicle
 subjects:
 - kind: ServiceAccount
   name: speech-config-reader

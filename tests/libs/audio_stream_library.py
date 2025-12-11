@@ -103,6 +103,34 @@ def send_audio_chunks(
     )
 
 
+def send_audio_stop_event(stream_id: str) -> None:
+    """Send audio-stop event without closing the WebSocket connection.
+
+    This is used to test the user_stopped end_reason scenario where
+    the user manually stops recording but the connection remains open.
+    """
+    session = _manager._sessions.get(stream_id)
+    if not session:
+        raise ValueError(f"Stream {stream_id} not found")
+
+    import asyncio
+
+    async def _send_stop():
+        try:
+            await session.client.send_audio_stop()
+            session.audio_stopped = True
+        except Exception as e:
+            session.error = str(e)
+            raise
+
+    # Run in the stream's event loop
+    future = asyncio.run_coroutine_threadsafe(_send_stop(), session.loop)
+    future.result(timeout=5)  # Wait for audio-stop to be sent
+
+    if session.error:
+        raise RuntimeError(f"Failed to send audio-stop: {session.error}")
+
+
 def stop_audio_stream(stream_id: str) -> int:
     """Stop an audio stream and close the connection."""
     return _manager.stop_stream(stream_id)

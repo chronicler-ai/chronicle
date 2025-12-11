@@ -2,7 +2,7 @@
 
 > 📖 **Prerequisite**: Read [quickstart.md](./quickstart.md) first for system overview.
 
-This document explains how to configure and customize the memory service in the friend-lite backend.
+This document explains how to configure and customize the memory service in the chronicle backend.
 
 **Code References**: 
 - **Main Implementation**: `src/memory/memory_service.py`
@@ -65,7 +65,7 @@ OLLAMA_BASE_URL=http://192.168.0.110:11434
 QDRANT_BASE_URL=localhost
 
 # Mem0 Organization Settings (optional)
-MEM0_ORGANIZATION_ID=friend-lite-org
+MEM0_ORGANIZATION_ID=chronicle-org
 MEM0_PROJECT_ID=audio-conversations
 MEM0_APP_ID=omi-backend
 
@@ -391,7 +391,7 @@ process_memory.add(
         "timestamp": 1720616655,
         "conversation_context": "audio_transcription",
         "device_type": "audio_recording",
-        "organization_id": "friend-lite-org",
+        "organization_id": "chronicle-org",
         "project_id": "audio-conversations",
         "app_id": "omi-backend"
     }
@@ -583,7 +583,7 @@ The memory service exposes these endpoints with enhanced search capabilities:
 - **Vector-based**: Uses embeddings for contextual understanding beyond keyword matching
 
 **Memory Count API**: 
-- **Friend-Lite Provider**: Native Qdrant count API provides accurate total counts
+- **Chronicle Provider**: Native Qdrant count API provides accurate total counts
 - **OpenMemory MCP Provider**: Count support varies by OpenMemory implementation
 - **Response Format**: `{"memories": [...], "total_count": 42}` when supported
 

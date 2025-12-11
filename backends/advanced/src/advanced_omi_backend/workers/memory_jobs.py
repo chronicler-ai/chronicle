@@ -28,7 +28,7 @@ async def process_memory_job(conversation_id: str, *, redis_client=None) -> Dict
     V2 Architecture:
         1. Extracts memories from conversation transcript
         2. Checks primary speakers filter if configured
-        3. Uses configured memory provider (friend_lite or openmemory_mcp)
+        3. Uses configured memory provider (chronicle or openmemory_mcp)
         4. Stores memory references in conversation document
 
     Note: Listening jobs are restarted by open_conversation_job (not here).
@@ -145,7 +145,7 @@ async def process_memory_job(conversation_id: str, *, redis_client=None) -> Dict
                 transcript_version_id = conversation_model.active_transcript_version or "unknown"
 
                 # Determine memory provider from memory service
-                memory_provider = conversation_model.MemoryProvider.FRIEND_LITE  # Default
+                memory_provider = conversation_model.MemoryProvider.CHRONICLE  # Default
                 try:
                     memory_service_obj = get_memory_service()
                     provider_name = memory_service_obj.__class__.__name__

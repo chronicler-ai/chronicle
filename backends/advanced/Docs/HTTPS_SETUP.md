@@ -1,6 +1,6 @@
-# HTTPS Setup for Friend-Lite Advanced Backend
+# HTTPS Setup for Chronicle Advanced Backend
 
-This guide explains how to set up HTTPS/SSL access for Friend-Lite Advanced Backend, enabling secure microphone access and network connectivity.
+This guide explains how to set up HTTPS/SSL access for Chronicle Advanced Backend, enabling secure microphone access and network connectivity.
 
 ## Why HTTPS is Needed
 
@@ -40,7 +40,7 @@ docker compose up --build -d
 
 ### 3. Access the Services
 
-#### Friend-Lite Advanced Backend (Primary - ports 80/443)
+#### Chronicle Advanced Backend (Primary - ports 80/443)
 - **HTTPS:** https://localhost/ or https://your-ip/ (accept SSL certificate)
 - **HTTP:** http://localhost/ (redirects to HTTPS)
 - **Features:** Dashboard, Live Recording, Conversations, Memories
@@ -238,12 +238,12 @@ For production deployments:
 ## Integration with Other Services
 
 ### Speaker Recognition
-If using the speaker recognition service alongside Friend-Lite:
+If using the speaker recognition service alongside Chronicle:
 
 ```bash
 # Use different HTTPS ports to avoid conflicts
 # Speaker Recognition: 443/80
-# Friend-Lite: 8443/8080
+# Chronicle: 8443/8080
 docker compose up -d
 ```
 

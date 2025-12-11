@@ -1,5 +1,5 @@
 """
-Chat API routes for Friend-Lite with streaming support and memory integration.
+Chat API routes for Chronicle with streaming support and memory integration.
 
 This module provides:
 - RESTful chat session management endpoints

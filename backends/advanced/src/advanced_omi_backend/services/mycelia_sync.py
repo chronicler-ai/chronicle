@@ -1,9 +1,9 @@
 """
 Mycelia OAuth Synchronization Service.
 
-This module synchronizes Friend-Lite users with Mycelia OAuth API keys,
+This module synchronizes Chronicle users with Mycelia OAuth API keys,
 ensuring that when users access Mycelia directly, they use credentials
-that map to their Friend-Lite user ID.
+that map to their Chronicle user ID.
 """
 
 import base64
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class MyceliaSyncService:
-    """Synchronize Friend-Lite users with Mycelia OAuth API keys."""
+    """Synchronize Chronicle users with Mycelia OAuth API keys."""
 
     def __init__(self):
         """Initialize the sync service."""
@@ -35,17 +35,15 @@ class MyceliaSyncService:
         # Test environment uses mycelia_test, production uses mycelia
         self.mycelia_db = os.getenv("MYCELIA_DB", os.getenv("DATABASE_NAME", "mycelia"))
 
-        # Friend-Lite database - extract from MONGODB_URI or use default
-        # Test env: test_db, Production: friend-lite
+        # Chronicle database - extract from MONGODB_URI or use default
+        # Test env: test_db, Production: chronicle
         if "/" in self.mongo_url and self.mongo_url.count("/") >= 3:
             # Extract database name from mongodb://host:port/database
-            self.friendlite_db = self.mongo_url.split("/")[-1].split("?")[0] or "friend-lite"
+            self.chronicle_db = self.mongo_url.split("/")[-1].split("?")[0] or "chronicle"
         else:
-            self.friendlite_db = "friend-lite"
+            self.chronicle_db = "chronicle"
 
-        logger.info(
-            f"MyceliaSyncService initialized: {self.mongo_url}, Mycelia DB: {self.mycelia_db}, Friend-Lite DB: {self.friendlite_db}"
-        )
+        logger.info(f"MyceliaSyncService initialized: {self.mongo_url}, Mycelia DB: {self.mycelia_db}, Chronicle DB: {self.chronicle_db}")
 
     def _hash_api_key_with_salt(self, api_key: str, salt: bytes) -> str:
         """Hash API key with salt (matches Mycelia's implementation)."""
@@ -56,10 +54,10 @@ class MyceliaSyncService:
 
     def _create_mycelia_api_key(self, user_id: str, user_email: str) -> Tuple[str, str]:
         """
-        Create a Mycelia API key for a Friend-Lite user.
+        Create a Mycelia API key for a Chronicle user.
 
         Args:
-            user_id: Friend-Lite user ID (MongoDB ObjectId as string)
+            user_id: Chronicle user ID (MongoDB ObjectId as string)
             user_email: User email address
 
         Returns:
@@ -84,9 +82,11 @@ class MyceliaSyncService:
         api_keys_collection = db["api_keys"]
 
         # Check if user already has an active API key
-        existing = api_keys_collection.find_one(
-            {"owner": user_id, "isActive": True, "name": f"Friend-Lite Auto ({user_email})"}
-        )
+        existing = api_keys_collection.find_one({
+            "owner": user_id,
+            "isActive": True,
+            "name": f"Chronicle Auto ({user_email})"
+        })
 
         if existing:
             logger.info(f"User {user_email} already has Mycelia API key: {existing['_id']}")
@@ -97,10 +97,16 @@ class MyceliaSyncService:
         # Create new API key document
         api_key_doc = {
             "hashedKey": hashed_key,
-            "salt": base64.b64encode(salt).decode("utf-8"),
-            "owner": user_id,  # CRITICAL: owner = Friend-Lite user ID
-            "name": f"Friend-Lite Auto ({user_email})",
-            "policies": [{"resource": "**", "action": "*", "effect": "allow"}],
+            "salt": base64.b64encode(salt).decode('utf-8'),
+            "owner": user_id,  # CRITICAL: owner = Chronicle user ID
+            "name": f"Chronicle Auto ({user_email})",
+            "policies": [
+                {
+                    "resource": "**",
+                    "action": "*",
+                    "effect": "allow"
+                }
+            ],
             "openPrefix": open_prefix,
             "createdAt": datetime.utcnow(),
             "isActive": True,
@@ -116,10 +122,10 @@ class MyceliaSyncService:
 
     def sync_user_to_mycelia(self, user_id: str, user_email: str) -> Optional[Tuple[str, str]]:
         """
-        Sync a Friend-Lite user to Mycelia OAuth.
+        Sync a Chronicle user to Mycelia OAuth.
 
         Args:
-            user_id: Friend-Lite user ID
+            user_id: Chronicle user ID
             user_email: User email
 
         Returns:
@@ -129,10 +135,10 @@ class MyceliaSyncService:
             # Create Mycelia API key
             client_id, api_key = self._create_mycelia_api_key(user_id, user_email)
 
-            # Store credentials in Friend-Lite user document (if new key was created)
+            # Store credentials in Chronicle user document (if new key was created)
             if api_key:
                 client = MongoClient(self.mongo_url)
-                db = client[self.friendlite_db]
+                db = client[self.chronicle_db]
                 users_collection = db["users"]
 
                 users_collection.update_one(
@@ -171,9 +177,9 @@ class MyceliaSyncService:
                 logger.warning("ADMIN_EMAIL not set, skipping Mycelia sync")
                 return None
 
-            # Get admin user from Friend-Lite database
+            # Get admin user from Chronicle database
             client = MongoClient(self.mongo_url)
-            db = client[self.friendlite_db]
+            db = client[self.chronicle_db]
             users_collection = db["users"]
 
             admin_user = users_collection.find_one({"email": admin_email})
@@ -229,7 +235,7 @@ async def sync_admin_on_startup():
     logger.info("🔄 Starting Mycelia OAuth synchronization...")
 
     # Check if Mycelia sync is enabled
-    memory_provider = os.getenv("MEMORY_PROVIDER", "friend_lite")
+    memory_provider = os.getenv("MEMORY_PROVIDER", "chronicle").lower()
     if memory_provider != "mycelia":
         logger.info("Mycelia sync skipped (MEMORY_PROVIDER != mycelia)")
         return

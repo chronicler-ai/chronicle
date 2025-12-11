@@ -1,7 +1,7 @@
 """Memory service package.
 
 This package provides memory management functionality with support for
-multiple memory providers (Friend-Lite, Mycelia, OpenMemory MCP).
+multiple memory providers (Chronicle, Mycelia, OpenMemory MCP).
 
 The memory service handles extraction, storage, and retrieval of memories
 from user conversations and interactions.
@@ -10,7 +10,7 @@ Architecture:
 - base.py: Abstract base classes and interfaces
 - config.py: Configuration management
 - service_factory.py: Provider selection and instantiation
-- providers/friend_lite.py: Friend-Lite native provider (LLM + Qdrant)
+- providers/chronicle.py: Chronicle native provider (LLM + Qdrant)
 - providers/mycelia.py: Mycelia backend provider
 - providers/openmemory_mcp.py: OpenMemory MCP provider
 - providers/llm_providers.py: LLM implementations (OpenAI, Ollama)

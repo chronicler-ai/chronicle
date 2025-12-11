@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Friend-Lite Backend Startup Script
+# Chronicle Backend Startup Script
 # Starts both the FastAPI backend and RQ workers
 
 set -e
 
-echo "🚀 Starting Friend-Lite Backend..."
+echo "🚀 Starting Chronicle Backend..."
 
 # Function to handle shutdown
 shutdown() {

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Friend-Lite is at the core an AI-powered personal system - various devices, including but not limited to wearables from OMI can be used for at the very least audio capture, speaker specific transcription, memory extraction and retrieval.
+Chronicle is at the core an AI-powered personal system - various devices, including but not limited to wearables from OMI can be used for at the very least audio capture, speaker specific transcription, memory extraction and retrieval.
 On top of that - it is being designed to support other services, that can help a user with these inputs such as reminders, action items, personal diagnosis etc.
 
 This supports a comprehensive web dashboard for management.
@@ -147,7 +147,7 @@ docker compose up --build
 - **Job Tracker**: Tracks pipeline jobs with stage events (audio → transcription → memory) and completion status
 - **Task Management**: BackgroundTaskManager tracks all async tasks to prevent orphaned processes
 - **Unified Transcription**: Deepgram/Mistral transcription with fallback to offline ASR services
-- **Memory System**: Pluggable providers (Friend-Lite native or OpenMemory MCP)
+- **Memory System**: Pluggable providers (Chronicle native or OpenMemory MCP)
 - **Authentication**: Email-based login with MongoDB ObjectId user system
 - **Client Management**: Auto-generated client IDs as `{user_id_suffix}-{device_name}`, centralized ClientManager
 - **Data Storage**: MongoDB (`audio_chunks` collection for conversations), vector storage (Qdrant or OpenMemory)
@@ -161,7 +161,7 @@ Required:
   - LLM Service: Memory extraction and action items (OpenAI or Ollama)
 
 Recommended:
-  - Vector Storage: Qdrant (Friend-Lite provider) or OpenMemory MCP server
+  - Vector Storage: Qdrant (Chronicle provider) or OpenMemory MCP server
   - Transcription: Deepgram, Mistral, or offline ASR services
 
 Optional:
@@ -179,8 +179,8 @@ Optional:
 4. **Speech-Driven Conversation Creation**: User-facing conversations only created when speech is detected
 5. **Dual Storage System**: Audio sessions always stored in `audio_chunks`, conversations created in `conversations` collection only with speech
 6. **Versioned Processing**: Transcript and memory versions tracked with active version pointers
-7. **Memory Processing**: Pluggable providers (Friend-Lite native with individual facts or OpenMemory MCP delegation)
-8. **Memory Storage**: Direct Qdrant (Friend-Lite) or OpenMemory server (MCP provider)
+7. **Memory Processing**: Pluggable providers (Chronicle native with individual facts or OpenMemory MCP delegation)
+8. **Memory Storage**: Direct Qdrant (Chronicle) or OpenMemory server (MCP provider)
 9. **Action Items**: Automatic task detection with "Simon says" trigger phrases
 10. **Audio Optimization**: Speech segment extraction removes silence automatically
 11. **Task Tracking**: BackgroundTaskManager ensures proper cleanup of all async operations
@@ -230,11 +230,11 @@ DEEPGRAM_API_KEY=your-deepgram-key-here
 # Optional: TRANSCRIPTION_PROVIDER=deepgram
 
 # Memory Provider
-MEMORY_PROVIDER=friend_lite  # or openmemory_mcp
+MEMORY_PROVIDER=chronicle  # or openmemory_mcp
 
 # Database
 MONGODB_URI=mongodb://mongo:27017
-# Database name: friend-lite
+# Database name: chronicle
 QDRANT_BASE_URL=qdrant
 
 # Network Configuration
@@ -246,12 +246,12 @@ CORS_ORIGINS=http://localhost:3000,http://localhost:5173
 
 ### Memory Provider Configuration
 
-Friend-Lite supports two pluggable memory backends:
+Chronicle supports two pluggable memory backends:
 
-#### Friend-Lite Memory Provider (Default)
+#### Chronicle Memory Provider (Default)
 ```bash
-# Use Friend-Lite memory provider (default)
-MEMORY_PROVIDER=friend_lite
+# Use Chronicle memory provider (default)
+MEMORY_PROVIDER=chronicle
 
 # LLM Configuration for memory extraction
 LLM_PROVIDER=openai
@@ -269,7 +269,7 @@ MEMORY_PROVIDER=openmemory_mcp
 
 # OpenMemory MCP Server Configuration
 OPENMEMORY_MCP_URL=http://host.docker.internal:8765
-OPENMEMORY_CLIENT_NAME=friend_lite
+OPENMEMORY_CLIENT_NAME=chronicle
 OPENMEMORY_USER_ID=openmemory
 OPENMEMORY_TIMEOUT=30
 
@@ -279,7 +279,7 @@ OPENAI_API_KEY=your-openai-key-here
 
 ### Transcription Provider Configuration
 
-Friend-Lite supports multiple transcription services:
+Chronicle supports multiple transcription services:
 
 ```bash
 # Option 1: Deepgram (High quality, recommended)

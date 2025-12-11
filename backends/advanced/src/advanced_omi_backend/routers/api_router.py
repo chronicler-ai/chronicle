@@ -1,5 +1,5 @@
 """
-Main API router for Friend-Lite backend.
+Main API router for Chronicle backend.
 
 This module aggregates all the functional router modules and provides
 a single entry point for the API endpoints.

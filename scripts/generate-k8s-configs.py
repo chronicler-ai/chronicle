@@ -12,7 +12,7 @@ sys.path.append(str(Path(__file__).parent / 'lib'))
 
 from env_utils import get_resolved_env_vars, classify_secrets
 
-def generate_k8s_manifests(namespace: str = "friend-lite"):
+def generate_k8s_manifests(namespace: str = "chronicle"):
     """Generate Kubernetes ConfigMap and Secret manifests"""
     print(f"Generating Kubernetes ConfigMap and Secret for namespace {namespace}...")
     
@@ -30,10 +30,10 @@ def generate_k8s_manifests(namespace: str = "friend-lite"):
         f.write("apiVersion: v1\n")
         f.write("kind: ConfigMap\n")
         f.write("metadata:\n")
-        f.write(f"  name: friend-lite-config\n")
+        f.write(f"  name: chronicle-config\n")
         f.write(f"  namespace: {namespace}\n")
         f.write("  labels:\n")
-        f.write("    app.kubernetes.io/name: friend-lite\n")
+        f.write("    app.kubernetes.io/name: chronicle\n")
         f.write("    app.kubernetes.io/component: config\n")
         f.write("data:\n")
         
@@ -50,10 +50,10 @@ def generate_k8s_manifests(namespace: str = "friend-lite"):
         f.write("kind: Secret\n")
         f.write("type: Opaque\n")
         f.write("metadata:\n")
-        f.write(f"  name: friend-lite-secrets\n")
+        f.write(f"  name: chronicle-secrets\n")
         f.write(f"  namespace: {namespace}\n")
         f.write("  labels:\n")
-        f.write("    app.kubernetes.io/name: friend-lite\n")
+        f.write("    app.kubernetes.io/name: chronicle\n")
         f.write("    app.kubernetes.io/component: secrets\n")
         f.write("data:\n")
         
@@ -74,7 +74,7 @@ def generate_k8s_manifests(namespace: str = "friend-lite"):
 
 def main():
     """Main entry point"""
-    namespace = sys.argv[1] if len(sys.argv) > 1 else "friend-lite"
+    namespace = sys.argv[1] if len(sys.argv) > 1 else "chronicle"
     generate_k8s_manifests(namespace)
 
 if __name__ == "__main__":

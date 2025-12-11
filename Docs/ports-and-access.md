@@ -1,11 +1,11 @@
-# Friend-Lite Port Configuration & User Journey
+# Chronicle Port Configuration & User Journey
 
 ## User Journey: Git Clone to Running Services
 
 ### 1. Clone & Setup
 ```bash
 git clone <repo>
-cd friend-lite
+cd chronicle
 
 # Configure all services
 uv run --with-requirements setup-requirements.txt python init.py

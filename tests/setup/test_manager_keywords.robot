@@ -34,14 +34,16 @@ Clear Test Databases
     Log To Console    Clearing test databases and audio files...
 
     # Clear MongoDB collections but preserve admin user and fixtures
-    Run Process    docker exec advanced-mongo-test-1 mongosh test_db --eval "db.users.deleteMany({'email': {\\$ne:'${ADMIN_EMAIL}'}})"    shell=True
+    Run Process    docker exec ${MONGO_CONTAINER} mongosh test_db --eval "db.users.deleteMany({'email': {\\$ne:'${ADMIN_EMAIL}'}})"    shell=True
 
-    # Clear conversations and audio_chunks except those tagged as fixtures
-    Run Process    docker exec advanced-mongo-test-1 mongosh test_db --eval "db.conversations.deleteMany({\\$or: [{'is_fixture': {\\$exists: false}}, {'is_fixture': false}]})"    shell=True
-    Run Process    docker exec advanced-mongo-test-1 mongosh test_db --eval "db.audio_chunks.deleteMany({\\$or: [{'is_fixture': {\\$exists: false}}, {'is_fixture': false}]})"    shell=True
+    # Clear conversations except those tagged as fixtures
+    Run Process    docker exec ${MONGO_CONTAINER} mongosh test_db --eval "db.conversations.deleteMany({\\$or: [{'is_fixture': {\\$exists: false}}, {'is_fixture': false}]})"    shell=True
+
+    # Clear job references from remaining conversations to prevent "No such job" errors
+    Run Process    docker exec ${MONGO_CONTAINER} mongosh test_db --eval "db.conversations.updateMany({}, {\\$unset: {'transcription_job_id': '', 'speaker_job_id': '', 'memory_job_id': ''}})"    shell=True
 
     # Count fixtures for logging
-    ${result}=    Run Process    docker exec advanced-mongo-test-1 mongosh test_db --eval "db.conversations.countDocuments({'is_fixture': true})" --quiet    shell=True
+    ${result}=    Run Process    docker exec ${MONGO_CONTAINER} mongosh test_db --eval "db.conversations.countDocuments({'is_fixture': true})" --quiet    shell=True
     ${fixture_count}=    Strip String    ${result.stdout}
 
     IF    '${fixture_count}' != '0'
@@ -51,7 +53,7 @@ Clear Test Databases
     END
 
     # Clear admin user's registered_clients dict to prevent client_id counter increments
-    Run Process    docker exec advanced-mongo-test-1 mongosh test_db --eval "db.users.updateOne({'email':'${ADMIN_EMAIL}'}, {\\$set: {'registered_clients': {}}})"    shell=True
+    Run Process    docker exec ${MONGO_CONTAINER} mongosh test_db --eval "db.users.updateOne({'email':'${ADMIN_EMAIL}'}, {\\$set: {'registered_clients': {}}})"    shell=True
 
     # Clear Qdrant collections
     # Note: Fixture memories will be lost here unless we implement Qdrant metadata filtering
@@ -65,13 +67,13 @@ Clear Test Databases
     Log To Console    Audio files cleared (fixtures/ subfolder preserved)
 
     # Clear container audio files (except fixtures subfolder)
-    Run Process    bash    -c    docker exec advanced-friend-backend-test-1 find /app/audio_chunks -maxdepth 1 -name "*.wav" -delete || true    shell=True
-    Run Process    bash    -c    docker exec advanced-friend-backend-test-1 find /app/debug_dir -name "*" -type f -delete || true    shell=True
+    Run Process    bash    -c    docker exec ${BACKEND_CONTAINER} find /app/audio_chunks -maxdepth 1 -name "*.wav" -delete || true    shell=True
+    Run Process    bash    -c    docker exec ${BACKEND_CONTAINER} find /app/debug_dir -name "*" -type f -delete || true    shell=True
 
     # Clear Redis queues and job registries (preserve worker registrations, failed and completed jobs)
     # Delete all rq:* keys except worker registrations (rq:worker:*), failed jobs (rq:failed:*), and completed jobs (rq:finished:*)
     ${redis_clear_script}=    Set Variable    redis-cli --scan --pattern "rq:*" | grep -Ev "^rq:(worker|failed|finished)" | xargs -r redis-cli DEL; redis-cli --scan --pattern "audio:*" | xargs -r redis-cli DEL; redis-cli --scan --pattern "consumer:*" | xargs -r redis-cli DEL
-    Run Process    docker    exec    advanced-redis-test-1    sh    -c    ${redis_clear_script}    shell=True
+    Run Process    docker    exec    ${REDIS_CONTAINER}    sh    -c    ${redis_clear_script}    shell=True
     Log To Console    Redis queues and job registries cleared (worker registrations preserved)
 
 Clear All Test Data
@@ -79,9 +81,8 @@ Clear All Test Data
     Log To Console    Clearing ALL test data including admin user and fixtures...
 
     # Wipe all MongoDB collections
-    Run Process    docker exec advanced-mongo-test-1 mongosh test_db --eval "db.users.deleteMany({})"    shell=True
-    Run Process    docker exec advanced-mongo-test-1 mongosh test_db --eval "db.conversations.deleteMany({})"    shell=True
-    Run Process    docker exec advanced-mongo-test-1 mongosh test_db --eval "db.audio_chunks.deleteMany({})"    shell=True
+    Run Process    docker exec ${MONGO_CONTAINER} mongosh test_db --eval "db.users.deleteMany({})"    shell=True
+    Run Process    docker exec ${MONGO_CONTAINER} mongosh test_db --eval "db.conversations.deleteMany({})"    shell=True
     Log To Console    MongoDB completely cleared
 
     # Clear Qdrant
@@ -93,7 +94,7 @@ Clear All Test Data
     Run Process    bash    -c    rm -rf ${EXECDIR}/backends/advanced/data/test_debug_dir/* || true    shell=True
 
     # Clear all Redis data
-    Run Process    docker    exec    advanced-redis-test-1    redis-cli    FLUSHALL    shell=True
+    Run Process    docker    exec    ${REDIS_CONTAINER}    redis-cli    FLUSHALL    shell=True
     Log To Console    All test data cleared
 
 
@@ -125,12 +126,8 @@ Create Fixture Conversation
     Should Not Be Empty    ${transcript}    Fixture conversation has no transcript
 
     # Tag this conversation as a fixture in MongoDB so cleanup preserves it
-    ${result}=    Run Process    docker exec advanced-mongo-test-1 mongosh test_db --eval "db.conversations.updateOne({'conversation_id': '${conversation_id}'}, {\\$set: {'is_fixture': true}})"    shell=True
+    ${result}=    Run Process    docker exec ${MONGO_CONTAINER} mongosh test_db --eval "db.conversations.updateOne({'conversation_id': '${conversation_id}'}, {\\$set: {'is_fixture': true}})"    shell=True
     Should Be Equal As Integers    ${result.rc}    0    Failed to tag conversation as fixture: ${result.stderr}
-
-    # Also tag audio_chunks
-    ${result2}=    Run Process    docker exec advanced-mongo-test-1 mongosh test_db --eval "db.audio_chunks.updateMany({'conversation_id': '${conversation_id}'}, {\\$set: {'is_fixture': true}})"    shell=True
-    Should Be Equal As Integers    ${result2.rc}    0    Failed to tag audio chunks as fixture: ${result2.stderr}
 
     Log To Console    ✓ Audio files stored in fixtures/ subfolder
 

@@ -1,6 +1,6 @@
-# Friend-Lite API Tests
+# Chronicle API Tests
 
-Comprehensive Robot Framework test suite for the Friend-Lite advanced backend API endpoints.
+Comprehensive Robot Framework test suite for the Chronicle advanced backend API endpoints.
 
 ## Quick Start
 
@@ -87,7 +87,7 @@ If you already have the backend running, you can use the Makefile directly:
 ## Running Tests
 
 ### Prerequisites
-1. Friend-Lite backend running at `http://localhost:8001` (or set `API_URL` in `.env`)
+1. Chronicle backend running at `http://localhost:8001` (or set `API_URL` in `.env`)
 2. Admin user credentials configured in `.env`
 3. Robot Framework and RequestsLibrary installed
 

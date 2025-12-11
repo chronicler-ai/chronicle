@@ -1,16 +1,16 @@
 # Getting Started
 
-# Friend-Lite Backend Quickstart Guide
+# Chronicle Backend Quickstart Guide
 
-> 📖 **New to friend-lite?** This is your starting point! After reading this, continue with [architecture.md](./architecture.md) for technical details.
+> 📖 **New to chronicle?** This is your starting point! After reading this, continue with [architecture.md](./architecture.md) for technical details.
 
 ## Overview
 
-Friend-Lite is an eco-system of services to support "AI wearable" agents/functionality.
+Chronicle is an eco-system of services to support "AI wearable" agents/functionality.
 At the moment, the basic functionalities are:
 - Audio capture (via WebSocket, from OMI device, files, or a laptop)
 - Audio transcription
-- **Advanced memory system** with pluggable providers (Friend-Lite native or OpenMemory MCP)
+- **Advanced memory system** with pluggable providers (Chronicle native or OpenMemory MCP)
 - **Enhanced memory extraction** with individual fact storage and smart updates
 - **Semantic memory search** with relevance threshold filtering and live results
 - Action item extraction
@@ -38,13 +38,13 @@ cd backends/advanced
 - **Authentication**: Admin email/password setup
 - **Transcription Provider**: Choose Deepgram, Mistral, or Offline (Parakeet)
 - **LLM Provider**: Choose OpenAI or Ollama for memory extraction
-- **Memory Provider**: Choose Friend-Lite Native or OpenMemory MCP
+- **Memory Provider**: Choose Chronicle Native or OpenMemory MCP
 - **Optional Services**: Speaker Recognition and other extras
 - **Network Configuration**: Ports and host settings
 
 **Example flow:**
 ```
-🚀 Friend-Lite Interactive Setup
+🚀 Chronicle Interactive Setup
 ===============================================
 
 ► Authentication Setup
@@ -126,13 +126,13 @@ ADMIN_EMAIL=admin@example.com
 **Memory Provider Configuration:**
 ```bash
 # Memory Provider (Choose One)
-# Option 1: Friend-Lite Native (Default - Recommended)
-MEMORY_PROVIDER=friend_lite
+# Option 1: Chronicle Native (Default - Recommended)
+MEMORY_PROVIDER=chronicle
 
 # Option 2: OpenMemory MCP (Cross-client compatibility)
 # MEMORY_PROVIDER=openmemory_mcp
 # OPENMEMORY_MCP_URL=http://host.docker.internal:8765
-# OPENMEMORY_CLIENT_NAME=friend_lite
+# OPENMEMORY_CLIENT_NAME=chronicle
 # OPENMEMORY_USER_ID=openmemory
 ```
 
@@ -325,8 +325,8 @@ curl -X POST "http://localhost:8000/api/process-audio-files" \
 ### Memory & Intelligence
 
 #### Pluggable Memory System
-- **Two memory providers**: Choose between Friend-Lite native or OpenMemory MCP
-- **Friend-Lite Provider**: Full control with custom extraction, individual fact storage, smart deduplication
+- **Two memory providers**: Choose between Chronicle native or OpenMemory MCP
+- **Chronicle Provider**: Full control with custom extraction, individual fact storage, smart deduplication
 - **OpenMemory MCP Provider**: Cross-client compatibility (Claude Desktop, Cursor, Windsurf), professional processing
 
 #### Enhanced Memory Processing
@@ -482,7 +482,7 @@ tailscale ip -4
 
 ## Data Architecture
 
-The friend-lite backend uses a **user-centric data architecture**:
+The chronicle backend uses a **user-centric data architecture**:
 
 - **All memories are keyed by database user_id** (not client_id)
 - **Client information is stored in metadata** for reference and debugging
@@ -495,12 +495,12 @@ For detailed information, see [User Data Architecture](user-data-architecture.md
 
 ### Choosing a Memory Provider
 
-Friend-Lite offers two memory backends:
+Chronicle offers two memory backends:
 
-#### 1. Friend-Lite Native 
+#### 1. Chronicle Native 
 ```bash
 # In your .env file
-MEMORY_PROVIDER=friend_lite
+MEMORY_PROVIDER=chronicle
 LLM_PROVIDER=openai
 OPENAI_API_KEY=your-openai-key-here
 ```
@@ -519,7 +519,7 @@ OPENAI_API_KEY=your-openai-key-here
 cd extras/openmemory-mcp
 docker compose up -d
 
-# Then configure Friend-Lite
+# Then configure Chronicle
 MEMORY_PROVIDER=openmemory_mcp
 OPENMEMORY_MCP_URL=http://host.docker.internal:8765
 ```

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Friend-Lite Service Management
+Chronicle Service Management
 Start, stop, and manage configured services
 """
 
@@ -265,7 +265,7 @@ def show_status():
     console.print("\n💡 [dim]Use 'python services.py start --all' to start all configured services[/dim]")
 
 def main():
-    parser = argparse.ArgumentParser(description="Friend-Lite Service Management")
+    parser = argparse.ArgumentParser(description="Chronicle Service Management")
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
     # Start command

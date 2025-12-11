@@ -1,10 +1,10 @@
 # Robot Framework Test Tags Reference
 
-This document defines the standard tags used across the Friend-Lite test suite.
+This document defines the standard tags used across the Chronicle test suite.
 
 ## Simplified Tag Set
 
-Friend-Lite uses a **minimal, focused tag set** for test organization. Only 11 tags are permitted.
+Chronicle uses a **minimal, focused tag set** for test organization. Only 11 tags are permitted.
 
 ## Tag Format
 

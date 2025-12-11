@@ -1,4 +1,4 @@
-# Friend-Lite Initialization System
+# Chronicle Initialization System
 
 ## Quick Links
 
@@ -10,14 +10,14 @@
 
 ## Overview
 
-Friend-Lite uses a unified initialization system with clean separation of concerns:
+Chronicle uses a unified initialization system with clean separation of concerns:
 
 - **Configuration** (`wizard.py`) - Set up service configurations, API keys, and .env files
 - **Service Management** (`services.py`) - Start, stop, and manage running services
 
 The root orchestrator handles service selection and delegates configuration to individual service scripts. In general, setup scripts only configure and do not start services automatically. Exceptions: `extras/asr-services` and `extras/openmemory-mcp` are startup scripts. This prevents unnecessary resource usage and gives you control over when services actually run.
 
-> **New to Friend-Lite?** Most users should start with the [Quick Start Guide](../quickstart.md) instead of this detailed reference.
+> **New to Chronicle?** Most users should start with the [Quick Start Guide](../quickstart.md) instead of this detailed reference.
 
 ## Architecture
 
@@ -133,7 +133,7 @@ Services use `host.docker.internal` for inter-container communication:
 
 ## Service Management
 
-Friend-Lite now separates **configuration** from **service lifecycle management**:
+Chronicle now separates **configuration** from **service lifecycle management**:
 
 ### Unified Service Management
 Use the `services.py` script for all service operations:

@@ -34,7 +34,7 @@ spec:
               protocol: TCP
           envFrom:
             - configMapRef:
-                name: friend-lite-config
+                name: chronicle-config
             - secretRef:
                 name: {{ .Values.secrets.name | default (printf "%s-secrets" .Release.Name) }}
           env:

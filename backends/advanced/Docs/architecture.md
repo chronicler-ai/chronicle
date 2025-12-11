@@ -1,11 +1,11 @@
-# Friend-Lite Backend Architecture
+# Chronicle Backend Architecture
 
 > 📖 **Prerequisite**: Read [quickstart.md](./quickstart.md) first for basic system understanding.
 
 ## System Overview
 
 
-Friend-Lite is a comprehensive real-time conversation processing system that captures audio streams, performs speech-to-text transcription, and extracts memories. The system features a FastAPI backend with WebSocket audio streaming, versioned transcript and memory processing, a React web dashboard with search capabilities, and user authentication with role-based access control.
+Chronicle is a comprehensive real-time conversation processing system that captures audio streams, performs speech-to-text transcription, and extracts memories. The system features a FastAPI backend with WebSocket audio streaming, versioned transcript and memory processing, a React web dashboard with search capabilities, and user authentication with role-based access control.
 
 
 **Core Implementation**: The complete system is implemented in `src/advanced_omi_backend/main.py` with supporting services in dedicated modules, using a modular router/controller architecture pattern.
@@ -1049,7 +1049,7 @@ src/advanced_omi_backend/
   "memory_versions": [
     {
       "version_id": "version_def",
-      "provider": "friend_lite",
+      "provider": "chronicle",
       "created_at": "2025-01-15T10:32:00Z",
       "memory_count": 5
     }

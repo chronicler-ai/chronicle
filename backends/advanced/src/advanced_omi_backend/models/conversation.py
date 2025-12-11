@@ -1,5 +1,5 @@
 """
-Conversation models for Friend-Lite backend.
+Conversation models for Chronicle backend.
 
 This module contains Beanie Document and Pydantic models for conversations,
 transcript versions, and memory versions.
@@ -28,9 +28,10 @@ class Conversation(Document):
 
     class MemoryProvider(str, Enum):
         """Supported memory providers."""
-        FRIEND_LITE = "friend_lite"
+        CHRONICLE = "chronicle"
         OPENMEMORY_MCP = "openmemory_mcp"
         MYCELIA = "mycelia"
+        FRIEND_LITE = "friend_lite"  # Legacy value
 
     class ConversationStatus(str, Enum):
         """Conversation processing status."""

@@ -106,7 +106,7 @@ Start Docker Services
 
     # Clean up any stopped/stuck containers first
     Run Process    docker    compose    -f    ${compose_file}    down    -v    cwd=${working_dir}    shell=True
-    Run Process    docker    rm    -f    advanced-mongo-test-1    advanced-redis-test-1    advanced-qdrant-test-1    advanced-friend-backend-test-1    advanced-workers-test-1    shell=True
+    Run Process    docker    rm    -f    ${MONGO_CONTAINER}    ${REDIS_CONTAINER}    ${QDRANT_CONTAINER}    ${BACKEND_CONTAINER}    ${WORKERS_CONTAINER}    ${WEBUI_CONTAINER}    shell=True
 
     # Start containers
     IF    ${build}

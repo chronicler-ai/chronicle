@@ -526,7 +526,7 @@ async def main():
     
     # Print startup banner with authentication info
     logger.info("🎵 ========================================")
-    logger.info("🎵 Friend-Lite HAVPE Relay with Authentication")
+    logger.info("🎵 Chronicle HAVPE Relay with Authentication")
     logger.info("🎵 ========================================")
     logger.info(f"🎧 ESP32 Server: {args.host}:{args.port}")
     logger.info(f"📡 Backend API: {BACKEND_URL}")

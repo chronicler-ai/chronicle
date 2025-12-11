@@ -4,7 +4,7 @@
 
 set -e
 
-echo "🚀 Starting Friend-Lite Workers..."
+echo "🚀 Starting Chronicle Workers..."
 
 # Clean up any stale worker registrations from previous runs
 echo "🧹 Cleaning up stale worker registrations from Redis..."

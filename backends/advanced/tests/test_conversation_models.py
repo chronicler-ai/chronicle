@@ -92,7 +92,7 @@ class TestConversationModel:
             version_id="mem-v1",
             memory_count=5,
             transcript_version_id="trans-v1",
-            provider=MemoryProvider.FRIEND_LITE,
+            provider=MemoryProvider.CHRONICLE,
             model="gpt-4o-mini",
             created_at=datetime.now(),
             processing_time_seconds=45.2,
@@ -102,7 +102,7 @@ class TestConversationModel:
         assert version.version_id == "mem-v1"
         assert version.memory_count == 5
         assert version.transcript_version_id == "trans-v1"
-        assert version.provider == MemoryProvider.FRIEND_LITE
+        assert version.provider == MemoryProvider.CHRONICLE
         assert version.model == "gpt-4o-mini"
         assert version.processing_time_seconds == 45.2
         assert version.metadata["extraction_quality"] == "high"
@@ -151,7 +151,7 @@ class TestConversationModel:
             version_id="m1",
             memory_count=3,
             transcript_version_id="v1",
-            provider=MemoryProvider.FRIEND_LITE,
+            provider=MemoryProvider.CHRONICLE,
             model="gpt-4o-mini",
             processing_time_seconds=30.0
         )
@@ -198,7 +198,7 @@ class TestConversationModel:
         # Add versions
         segments = [SpeakerSegment(start=0.0, end=5.0, text="Test", speaker="Speaker A")]
         conversation.add_transcript_version("v1", "Test", segments, TranscriptProvider.DEEPGRAM)
-        conversation.add_memory_version("m1", 2, "v1", MemoryProvider.FRIEND_LITE)
+        conversation.add_memory_version("m1", 2, "v1", MemoryProvider.CHRONICLE)
 
         # Should return active versions
         active_transcript = conversation.active_transcript
@@ -217,7 +217,7 @@ class TestConversationModel:
         assert TranscriptProvider.PARAKEET == "parakeet"
 
         # Test MemoryProvider enum
-        assert MemoryProvider.FRIEND_LITE == "friend_lite"
+        assert MemoryProvider.CHRONICLE == "chronicle"
         assert MemoryProvider.OPENMEMORY_MCP == "openmemory_mcp"
 
     def test_conversation_model_dump(self):
@@ -227,7 +227,7 @@ class TestConversationModel:
         # Add some versions
         segments = [SpeakerSegment(start=0.0, end=5.0, text="Test", speaker="Speaker A")]
         conversation.add_transcript_version("v1", "Test", segments, TranscriptProvider.DEEPGRAM)
-        conversation.add_memory_version("m1", 2, "v1", MemoryProvider.FRIEND_LITE)
+        conversation.add_memory_version("m1", 2, "v1", MemoryProvider.CHRONICLE)
 
         # Test model_dump() works
         conv_dict = conversation.model_dump()

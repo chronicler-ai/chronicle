@@ -1,5 +1,5 @@
 """
-Client management routes for Friend-Lite API.
+Client management routes for Chronicle API.
 
 Handles active client monitoring and management.
 """

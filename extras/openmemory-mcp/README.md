@@ -1,6 +1,6 @@
 # OpenMemory MCP Service
 
-This directory contains a local deployment of the OpenMemory MCP (Model Context Protocol) server, which can be used as an alternative memory provider for Friend-Lite.
+This directory contains a local deployment of the OpenMemory MCP (Model Context Protocol) server, which can be used as an alternative memory provider for Chronicle.
 
 ## What is OpenMemory MCP?
 
@@ -30,9 +30,9 @@ cp .env.template .env
 ./run.sh --with-ui
 ```
 
-### 3. Configure Friend-Lite
+### 3. Configure Chronicle
 
-In your Friend-Lite backend `.env` file:
+In your Chronicle backend `.env` file:
 
 ```bash
 # Use OpenMemory MCP instead of built-in memory processing
@@ -52,7 +52,7 @@ The deployment includes:
 2. **Qdrant Vector Database** (port 6334)
    - Stores memory embeddings
    - Enables semantic search
-   - Isolated from main Friend-Lite Qdrant
+   - Isolated from main Chronicle Qdrant
 
 3. **OpenMemory UI** (port 3001, optional)
    - Web interface for memory management
@@ -69,16 +69,16 @@ The deployment includes:
 
 - **UI** (if enabled): http://localhost:3001
 
-## How It Works with Friend-Lite
+## How It Works with Chronicle
 
-When configured with `MEMORY_PROVIDER=openmemory_mcp`, Friend-Lite will:
+When configured with `MEMORY_PROVIDER=openmemory_mcp`, Chronicle will:
 
 1. Send raw conversation transcripts to OpenMemory MCP
 2. OpenMemory extracts memories using OpenAI
 3. Memories are stored in the dedicated Qdrant instance
-4. Friend-Lite can search memories via the MCP protocol
+4. Chronicle can search memories via the MCP protocol
 
-This replaces Friend-Lite's built-in memory processing with OpenMemory's implementation.
+This replaces Chronicle's built-in memory processing with OpenMemory's implementation.
 
 ## Managing Services
 
@@ -98,7 +98,7 @@ docker compose restart
 
 ## Testing
 
-### Standalone Test (No Friend-Lite Dependencies)
+### Standalone Test (No Chronicle Dependencies)
 
 Test the OpenMemory MCP server directly:
 
@@ -117,9 +117,9 @@ This test verifies:
 - Memory deletion
 - MCP protocol endpoints
 
-### Integration Test (With Friend-Lite)
+### Integration Test (With Chronicle)
 
-Test the integration between Friend-Lite and OpenMemory MCP:
+Test the integration between Chronicle and OpenMemory MCP:
 
 ```bash
 # From backends/advanced directory
@@ -134,7 +134,7 @@ This test verifies:
 - MCP client functionality
 - OpenMemoryMCPService implementation
 - Service factory integration
-- Memory operations through Friend-Lite interface
+- Memory operations through Chronicle interface
 
 ## Troubleshooting
 
@@ -143,35 +143,35 @@ This test verifies:
 If ports are already in use, edit `docker-compose.yml`:
 - Change `8765:8765` to another port for MCP server
 - Change `6334:6333` to another port for Qdrant
-- Update Friend-Lite's `OPENMEMORY_MCP_URL` accordingly
+- Update Chronicle's `OPENMEMORY_MCP_URL` accordingly
 
 ### Memory Not Working
 
 1. Check OpenMemory logs: `docker compose logs openmemory-mcp`
 2. Verify OPENAI_API_KEY is set correctly
-3. Ensure Friend-Lite backend is configured with correct URL
+3. Ensure Chronicle backend is configured with correct URL
 4. Test MCP endpoint: `curl http://localhost:8765/api/v1/memories?user_id=test`
 
 ### Connection Issues
 
-- Ensure containers are on same network if running Friend-Lite in Docker
+- Ensure containers are on same network if running Chronicle in Docker
 - Use `host.docker.internal` instead of `localhost` when connecting from Docker containers
 
 ## Advanced Configuration
 
 ### Using with Docker Network
 
-If Friend-Lite backend is also running in Docker:
+If Chronicle backend is also running in Docker:
 
 ```yaml
-# In Friend-Lite docker-compose.yml
+# In Chronicle docker-compose.yml
 networks:
   default:
     external:
       name: openmemory-mcp_openmemory-network
 ```
 
-Then use container names in Friend-Lite .env:
+Then use container names in Chronicle .env:
 ```bash
 OPENMEMORY_MCP_URL=http://openmemory-mcp:8765
 ```
@@ -184,4 +184,4 @@ OpenMemory uses OpenAI by default. To use different models, you would need to mo
 
 - [OpenMemory Documentation](https://docs.mem0.ai/open-memory/introduction)
 - [MCP Protocol Spec](https://github.com/mem0ai/mem0/tree/main/openmemory)
-- [Friend-Lite Memory Docs](../../backends/advanced/MEMORY_PROVIDERS.md)
+- [Chronicle Memory Docs](../../backends/advanced/MEMORY_PROVIDERS.md)

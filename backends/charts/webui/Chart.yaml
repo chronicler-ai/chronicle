@@ -1,10 +1,10 @@
 apiVersion: v2
 name: webui
-description: Friend-lite WebUI
+description: Chronicle WebUI
 version: 0.1.0
 appVersion: "1.0"
 keywords:
-  - friend-lite
+  - chronicle
   - webui
   - frontend
 sources:

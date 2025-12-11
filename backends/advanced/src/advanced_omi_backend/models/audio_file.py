@@ -1,5 +1,5 @@
 """
-AudioFile models for Friend-Lite backend.
+AudioFile models for Chronicle backend.
 
 This module contains the Beanie Document model for audio_chunks collection,
 which stores ALL audio files (both with and without speech). This is the

@@ -1,5 +1,5 @@
 """
-Conversation management routes for Friend-Lite API.
+Conversation management routes for Chronicle API.
 
 Handles conversation CRUD operations, audio processing, and transcript management.
 """

@@ -31,7 +31,7 @@ load_config_env() {
     export SPEAKER_NODE="${SPEAKER_NODE:-}"
     export CONTAINER_REGISTRY="${CONTAINER_REGISTRY:-localhost:32000}"
     export INFRASTRUCTURE_NAMESPACE="${INFRASTRUCTURE_NAMESPACE:-root}"
-    export APPLICATION_NAMESPACE="${APPLICATION_NAMESPACE:-friend-lite}"
+    export APPLICATION_NAMESPACE="${APPLICATION_NAMESPACE:-chronicle}"
     export STORAGE_CLASS="${STORAGE_CLASS:-openebs-hostpath}"
 }
 

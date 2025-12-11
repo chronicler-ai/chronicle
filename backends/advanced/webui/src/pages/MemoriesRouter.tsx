@@ -4,7 +4,7 @@ import Memories from './Memories'
 
 /**
  * Memories page wrapper that stores JWT for cross-origin Mycelia access.
- * Always displays Friend-Lite native Memories component (backend proxies to provider).
+ * Always displays Chronicle native Memories component (backend proxies to provider).
  */
 export default function MemoriesRouter() {
   const { token } = useAuth()
@@ -17,6 +17,6 @@ export default function MemoriesRouter() {
   }, [token])
 
   // Always show the native Memories page (works for all providers)
-  // Friend-Lite backend will proxy to Mycelia when needed
+  // Chronicle backend will proxy to Mycelia when needed
   return <Memories />
 }

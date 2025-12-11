@@ -89,6 +89,15 @@ Send Audio Chunks To Stream
     Log    Sent ${chunks_sent} chunks to stream ${stream_id}
     RETURN    ${chunks_sent}
 
+Send Audio Stop Event
+    [Documentation]    Send audio-stop event without closing the WebSocket
+    ...                This simulates a user manually stopping recording
+    [Arguments]    ${stream_id}
+
+    # Call the Python library method directly
+    Send Audio Stop Event    ${stream_id}
+    Log    Sent audio-stop event to stream ${stream_id}
+
 Close Audio Stream
     [Documentation]    Stop an audio stream and close the connection
     [Arguments]    ${stream_id}

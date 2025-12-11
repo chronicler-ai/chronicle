@@ -1,6 +1,6 @@
 
 """
-WebSocket controller for Friend-Lite backend.
+WebSocket controller for Chronicle backend.
 
 This module handles WebSocket connections for audio streaming.
 """

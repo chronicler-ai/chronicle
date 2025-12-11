@@ -1,6 +1,6 @@
-# Friend-Lite Kubernetes Setup Guide
+# Chronicle Kubernetes Setup Guide
 
-This guide walks you through setting up Friend-Lite from scratch on a fresh Ubuntu system, including MicroK8s installation, Docker registry configuration, and deployment via Skaffold.
+This guide walks you through setting up Chronicle from scratch on a fresh Ubuntu system, including MicroK8s installation, Docker registry configuration, and deployment via Skaffold.
 
 ## System Architecture
 
@@ -245,7 +245,7 @@ This guide walks you through setting up Friend-Lite from scratch on a fresh Ubun
 
 ### **Directory Structure**
 ```
-friend-lite/
+chronicle/
 ├── scripts/                    # Kubernetes deployment and management scripts
 │   ├── deploy-all-services.sh  # Deploy all services
 │   ├── cluster-status.sh       # Check cluster health
@@ -267,7 +267,7 @@ friend-lite/
 1. **Clone Repository**
    ```bash
    # Clone Friend-Lite repository with submodules
-   git clone --recursive https://github.com/yourusername/friend-lite.git
+   git clone --recursive https://github.com/chronicle-ai/chronicle.git
    cd friend-lite
 
    # If you already cloned without --recursive, initialize submodules:
@@ -392,7 +392,7 @@ The following scripts are available in the `scripts/` folder to simplify common 
 ./scripts/cluster-status.sh
 
 # Check status of specific namespace
-./scripts/cluster-status.sh friend-lite
+./scripts/cluster-status.sh chronicle
 ```
 
 ### **Setup Scripts**
@@ -487,14 +487,14 @@ This directory contains standalone Kubernetes manifests that are not managed by 
 3. **Verify Deployment**
    ```bash
    # Check all resources
-   kubectl get all -n friend-lite
+   kubectl get all -n chronicle
    kubectl get all -n root
    
    # Check Ingress
-   kubectl get ingress -n friend-lite
+   kubectl get ingress -n chronicle
    
    # Check services
-   kubectl get svc -n friend-lite
+   kubectl get svc -n chronicle
    ```
 
 ## Multi-Node Cluster Management
@@ -635,14 +635,14 @@ spec:
 1. **Check Application Health**
    ```bash
    # Check backend health
-   curl -k https://friend-lite.192-168-1-42.nip.io:32623/health
+   curl -k https://chronicle.192-168-1-42.nip.io:32623/health
    
    # Check WebUI
-   curl -k https://friend-lite.192-168-1-42.nip.io:32623/
+   curl -k https://chronicle.192-168-1-42.nip.io:32623/
    ```
 
 2. **Access WebUI**
-   - Open browser to: `https://friend-lite.192-168-1-42.nip.io:32623/`
+   - Open browser to: `https://chronicle.192-168-1-42.nip.io:32623/`
    - Accept self-signed certificate warning
    - Create admin user account
    - Test audio recording functionality
@@ -681,7 +681,7 @@ spec:
    kubectl get pods -n ingress-nginx
    
    # Check Ingress configuration (run on build machine)
-   kubectl describe ingress -n friend-lite
+   kubectl describe ingress -n chronicle
    ```
 
 4. **Build Issues**
@@ -734,20 +734,20 @@ spec:
 
 ```bash
 # View logs (run on build machine)
-kubectl logs -n friend-lite deployment/advanced-backend
-kubectl logs -n friend-lite deployment/webui
+kubectl logs -n chronicle deployment/advanced-backend
+kubectl logs -n chronicle deployment/webui
 
 # Port forward for debugging (run on build machine)
-kubectl port-forward -n friend-lite svc/advanced-backend 8000:8000
-kubectl port-forward -n friend-lite svc/webui 8080:80
+kubectl port-forward -n chronicle svc/advanced-backend 8000:8000
+kubectl port-forward -n chronicle svc/webui 8080:80
 
 # Check resource usage (run on build machine)
-kubectl top pods -n friend-lite
+kubectl top pods -n chronicle
 kubectl top nodes
 
 # Restart deployments (run on build machine)
-kubectl rollout restart deployment/advanced-backend -n friend-lite
-kubectl rollout restart deployment/webui -n friend-lite
+kubectl rollout restart deployment/advanced-backend -n chronicle
+kubectl rollout restart deployment/webui -n chronicle
 ```
 
 ## Maintenance
@@ -778,7 +778,7 @@ kubectl rollout restart deployment/webui -n friend-lite
    cp skaffold.env skaffold.env.backup
    
    # Backup Kubernetes manifests (run on build machine)
-   kubectl get all -n friend-lite -o yaml > friend-lite-backup.yaml
+   kubectl get all -n chronicle -o yaml > chronicle-backup.yaml
    kubectl get all -n root -o yaml > infrastructure-backup.yaml
    ```
 
@@ -796,7 +796,7 @@ chmod +x init.sh
 ./init.sh
 ```
 
-This will guide you through setting up Friend-Lite using Docker Compose instead of Kubernetes.
+This will guide you through setting up Chronicle using Docker Compose instead of Kubernetes.
 
 ## Speaker Recognition Deployment
 

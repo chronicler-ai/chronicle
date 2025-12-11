@@ -1,5 +1,5 @@
 """
-Middleware configuration for Friend-Lite backend.
+Middleware configuration for Chronicle backend.
 
 Centralizes CORS configuration and global exception handlers.
 """

@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🚀 Starting OpenMemory MCP installation for Friend-Lite..."
+echo "🚀 Starting OpenMemory MCP installation for Chronicle..."
 
 # Set environment variables
 OPENAI_API_KEY="${OPENAI_API_KEY:-}"
@@ -64,9 +64,9 @@ if docker ps | grep -q openmemory-mcp; then
         curl -s http://localhost:8765/openapi.json | jq '.paths | keys[]'
     fi
     echo ""
-    echo "📚 Integration with Friend-Lite:"
-    echo "   Set MEMORY_PROVIDER=openmemory_mcp in your Friend-Lite .env"
-    echo "   Set OPENMEMORY_MCP_URL=http://localhost:8765 in your Friend-Lite .env"
+    echo "📚 Integration with Chronicle:"
+    echo "   Set MEMORY_PROVIDER=openmemory_mcp in your Chronicle .env"
+    echo "   Set OPENMEMORY_MCP_URL=http://localhost:8765 in your Chronicle .env"
     echo ""
     echo "🔍 Check logs: docker compose logs -f"
     echo "🛑 Stop services: docker compose down"

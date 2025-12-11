@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Friend-Lite Speaker Recognition Setup Script
+Chronicle Speaker Recognition Setup Script
 Interactive configuration for speaker recognition service
 """
 

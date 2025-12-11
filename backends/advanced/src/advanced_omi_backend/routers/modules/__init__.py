@@ -1,5 +1,5 @@
 """
-Router modules for Friend-Lite API.
+Router modules for Chronicle API.
 
 This package contains organized router modules for different functional areas:
 - user_routes: User management and authentication
