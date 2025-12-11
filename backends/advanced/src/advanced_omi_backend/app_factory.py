@@ -66,6 +66,16 @@ async def lifespan(app: FastAPI):
         application_logger.error(f"Failed to initialize Beanie: {e}")
         raise
 
+    # Initialize settings manager
+    try:
+        from advanced_omi_backend.settings_manager import init_settings_manager
+        settings_mgr = init_settings_manager(config.db)
+        await settings_mgr.initialize()
+        application_logger.info("✅ Settings manager initialized and loaded from environment/database")
+    except Exception as e:
+        application_logger.error(f"Failed to initialize settings manager: {e}")
+        # Don't raise - use fallback to environment variables if settings manager fails
+
     # Create admin user if needed
     try:
         await create_admin_user_if_needed()
