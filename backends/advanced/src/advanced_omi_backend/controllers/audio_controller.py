@@ -81,6 +81,8 @@ async def upload_and_process_audio_files(
                 # Read file content
                 content = await file.read()
 
+                gdrive_file_id = getattr(file, "gdrive_file_id", None)
+
                 # Generate audio UUID and timestamp
                 audio_uuid = str(uuid.uuid4())
                 timestamp = int(time.time() * 1000)
@@ -103,7 +105,8 @@ async def upload_and_process_audio_files(
                         user_email=user.email,
                         timestamp=timestamp,
                         chunk_dir=chunk_dir,
-                        validate=True  # Validate WAV format, convert stereo→mono
+                        validate=True,  # Validate WAV format, convert stereo→mono
+                        gdrive_file_id=gdrive_file_id
                     )
                 except AudioValidationError as e:
                     processed_files.append({
@@ -133,7 +136,7 @@ async def upload_and_process_audio_files(
                 # Use the relative path returned by write_audio_file (already includes folder prefix if applicable)
                 conversation.audio_path = relative_audio_path
                 await conversation.insert()
-                conversation_id = conversation.conversation_id  # Get the auto-generated ID
+                conversation_id = conversation.conversation_id  # Get the auto-gener    ated ID
 
                 audio_logger.info(f"📝 Created conversation {conversation_id} for uploaded file")
 

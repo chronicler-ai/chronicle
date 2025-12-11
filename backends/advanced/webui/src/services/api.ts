@@ -204,7 +204,7 @@ export const queueApi = {
 }
 
 export const uploadApi = {
-  uploadAudioFiles: (files: FormData, onProgress?: (progress: number) => void) => 
+  uploadAudioFiles: (files: FormData, onProgress?: (progress: number) => void) =>
     api.post('/api/audio/upload', files, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 300000, // 5 minutes
@@ -213,9 +213,20 @@ export const uploadApi = {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
           onProgress(progress)
         }
-      }
+      },
+    }),
+
+  uploadFromGDriveFolder: (payload: { gdrive_folder_id: string; device_name?: string; auto_generate_client?: boolean }) =>
+    api.post('/api/audio/upload_audio_from_gdrive', null, {
+      params: {
+        gdrive_folder_id: payload.gdrive_folder_id,
+        device_name: payload.device_name,
+        auto_generate_client: payload.auto_generate_client,
+      },
+      timeout: 300000,
     }),
 }
+
 
 export const chatApi = {
   // Session management

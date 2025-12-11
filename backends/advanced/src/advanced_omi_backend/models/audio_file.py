@@ -51,11 +51,15 @@ class AudioFile(Document):
         description="Speech detection results"
     )
 
+    gdrive_file_id: Optional[str] = Field(default=None, description="Google Drive file id")
+
+
     class Settings:
         name = "audio_chunks"
         indexes = [
             "audio_uuid",
             "client_id",
             "user_id",
-            "timestamp"
+            "timestamp", 
+            "gdrive_file_id"
         ]

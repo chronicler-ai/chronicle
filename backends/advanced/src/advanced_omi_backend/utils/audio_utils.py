@@ -107,7 +107,8 @@ async def write_audio_file(
     user_email: str,
     timestamp: int,
     chunk_dir: Optional[Path] = None,
-    validate: bool = True
+    validate: bool = True,
+    gdrive_file_id: Optional[str] = None,
 ) -> tuple[str, str, float]:
     """
     Validate, write audio data to WAV file, and create AudioSession database entry.
@@ -203,7 +204,8 @@ async def write_audio_file(
         user_id=user_id,
         user_email=user_email,
         has_speech=False,  # Will be updated by transcription
-        speech_analysis={}
+        speech_analysis={}, 
+        gdrive_file_id=gdrive_file_id
     )
     await audio_file.insert()
 

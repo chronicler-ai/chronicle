@@ -86,6 +86,9 @@ class AppConfig:
         # Memory service configuration
         self.memory_service_supports_threshold = self.memory_provider == "friend_lite"
 
+        self.gdrive_credentials_path = "data/gdrive_service_account.json"
+        self.gdrive_scopes = ["https://www.googleapis.com/auth/drive.readonly"]
+
 
 # Global configuration instance
 app_config = AppConfig()
