@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 test_env_path = Path(__file__).resolve().parents[1] / ".env.test"
 load_dotenv(test_env_path)
 
+CREATE_FIXTURE=True
+
 # API Configuration
 API_URL = 'http://localhost:8001'  # Use BACKEND_URL from test.env
 API_BASE = 'http://localhost:8001/api'

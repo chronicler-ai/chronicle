@@ -38,7 +38,7 @@ Dev Mode Teardown
     Log To Console    \n=== Dev Mode Teardown (Default) ===
     Log To Console    ✓ Keeping containers running for next test run
     Log To Console    Tip: Use 'TEST_MODE=prod' for full cleanup or run manually:
-    Log To Console         docker compose -f backends/advanced/docker-compose-ci.yml down -v
+    Log To Console         docker compose -f backends/advanced/docker-compose-test.yml down -v
 
     # Only delete HTTP sessions
     Delete All Sessions
@@ -70,7 +70,7 @@ Prod Mode Teardown
 #     [Documentation]    DEPRECATED: Dev mode teardown keeps containers running
 #     Log To Console    \n=== Partial Cleanup (Legacy) ===
 #     Log To Console    Stopping containers (preserving volumes)...
-#     Run Process    docker    compose    -f    backends/advanced/docker-compose-ci.yml    stop    shell=True
+#     Run Process    docker    compose    -f    backends/advanced/docker-compose-test.yml    stop    shell=True
 #     Delete All Sessions
 #     Log To Console    Containers stopped, volumes preserved for next run
 
@@ -115,8 +115,8 @@ Prod Mode Teardown
 #     Log To Console    \n=== Emergency Cleanup ===
 
 #     # Force remove containers
-#     Run Process    docker    compose    -f    backends/advanced/docker-compose-ci.yml    kill    shell=True
-#     Run Process    docker    compose    -f    backends/advanced/docker-compose-ci.yml    rm    -f    -v    shell=True
+#     Run Process    docker    compose    -f    backends/advanced/docker-compose-test.yml    kill    shell=True
+#     Run Process    docker    compose    -f    backends/advanced/docker-compose-test.yml    rm    -f    -v    shell=True
 
 #     # Remove all test data
 #     Run Process    rm    -rf    backends/advanced/data/test_*    shell=True
