@@ -45,9 +45,9 @@ async def _ensure_beanie_initialized():
             # Create MongoDB client
             client = AsyncIOMotorClient(mongodb_uri)
             try:
-                database = client.get_default_database("friend-lite")
+                database = client.get_default_database("chronicle")
             except ConfigurationError:
-                database = client["friend-lite"]
+                database = client["chronicle"]
                 raise
             _beanie_initialized = True
             # Initialize Beanie

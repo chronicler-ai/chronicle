@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Friend-Lite Health Status Checker
+Chronicle Health Status Checker
 Show runtime health status of all services
 """
 
@@ -162,7 +162,7 @@ def get_service_health(service_name: str) -> Dict[str, Any]:
 
 def show_quick_status():
     """Show quick status overview"""
-    console.print("\n🏥 [bold]Friend-Lite Health Status[/bold]\n")
+    console.print("\n🏥 [bold]Chronicle Health Status[/bold]\n")
 
     table = Table(title="Service Status Overview")
     table.add_column("Service", style="cyan", no_wrap=True)
@@ -215,7 +215,7 @@ def show_quick_status():
 
 def show_detailed_status():
     """Show detailed status with backend health breakdown"""
-    console.print("\n🏥 [bold]Friend-Lite Detailed Health Status[/bold]\n")
+    console.print("\n🏥 [bold]Chronicle Detailed Health Status[/bold]\n")
 
     # Get all service statuses
     for service_name, service_info in SERVICES.items():
@@ -320,7 +320,7 @@ def show_json_status():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Friend-Lite Health Status Checker",
+        description="Chronicle Health Status Checker",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

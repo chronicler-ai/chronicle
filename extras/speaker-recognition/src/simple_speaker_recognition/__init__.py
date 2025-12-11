@@ -18,7 +18,7 @@ Usage:
 """
 
 __version__ = "0.1.0"
-__author__ = "Friend-Lite Team"
+__author__ = "Chronicle Team"
 
 # Import core classes for convenience
 from .core.audio_backend import AudioBackend

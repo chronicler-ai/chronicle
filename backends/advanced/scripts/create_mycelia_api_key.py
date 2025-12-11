@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a proper Mycelia API key (not OAuth client) for Friend-Lite user."""
+"""Create a proper Mycelia API key (not OAuth client) for Chronicle user."""
 
 import base64
 import os
@@ -72,7 +72,7 @@ def main():
         "hashedKey": hashed_key,  # Note: hashedKey, not hash!
         "salt": base64.b64encode(salt).decode('utf-8'),  # Store as base64 like Mycelia
         "owner": USER_ID,
-        "name": "Friend-Lite Integration",
+        "name": "Chronicle Integration",
         "policies": [
             {
                 "resource": "**",

@@ -2,7 +2,7 @@
 """Standalone test script for OpenMemory MCP server.
 
 This script tests the OpenMemory MCP server directly using its REST API,
-without any dependencies on Friend-Lite backend code.
+without any dependencies on Chronicle backend code.
 """
 
 import asyncio

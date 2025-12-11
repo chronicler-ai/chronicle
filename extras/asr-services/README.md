@@ -1,6 +1,6 @@
 # ASR Services
 
-Offline Automatic Speech Recognition (ASR) services for Friend-Lite using the Wyoming protocol.
+Offline Automatic Speech Recognition (ASR) services for Chronicle using the Wyoming protocol.
 
 ## Overview
 
@@ -100,7 +100,7 @@ services:
 
 ## Integration
 
-### With Friend-Lite Backend
+### With Chronicle Backend
 The ASR services integrate as fallback transcription when Deepgram is unavailable:
 ```bash
 # Backend configuration

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Friend-Lite Root Setup Orchestrator
+Chronicle Root Setup Orchestrator
 Handles service selection and delegation only - no configuration duplication
 """
 
@@ -100,7 +100,7 @@ def check_service_exists(service_name, service_config):
 
 def select_services():
     """Let user select which services to setup"""
-    console.print("🚀 [bold cyan]Friend-Lite Service Setup[/bold cyan]")
+    console.print("🚀 [bold cyan]Chronicle Service Setup[/bold cyan]")
     console.print("Select which services to configure:\n")
     
     selected = []
@@ -302,7 +302,7 @@ def setup_git_hooks():
 
 def main():
     """Main orchestration logic"""
-    console.print("🎉 [bold green]Welcome to Friend-Lite![/bold green]\n")
+    console.print("🎉 [bold green]Welcome to Chronicle![/bold green]\n")
 
     # Setup git hooks first
     setup_git_hooks()
@@ -411,7 +411,7 @@ def main():
     console.print("4. Stop services when done:")
     console.print("   [cyan]uv run --with-requirements setup-requirements.txt python services.py stop --all[/cyan]")
     
-    console.print(f"\n🚀 [bold]Enjoy Friend-Lite![/bold]")
+    console.print(f"\n🚀 [bold]Enjoy Chronicle![/bold]")
     
     # Show individual service usage
     console.print(f"\n💡 [dim]Tip: You can also setup services individually:[/dim]")

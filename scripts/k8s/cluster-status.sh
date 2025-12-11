@@ -5,7 +5,7 @@
 #
 # Usage: ./scripts/cluster-status.sh [namespace]
 # Example: ./scripts/cluster-status.sh
-# Example: ./scripts/cluster-status.sh friend-lite
+# Example: ./scripts/cluster-status.sh chronicle
 
 set -e
 

@@ -1,5 +1,5 @@
 """
-Application factory for Friend-Lite backend.
+Application factory for Chronicle backend.
 
 Creates and configures the FastAPI application with all routers, middleware,
 and service initializations.

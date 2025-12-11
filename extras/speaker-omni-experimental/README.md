@@ -355,7 +355,7 @@ Approximate processing times (7B model on RTX 4090):
 
 ## 🔮 Integration Path
 
-This experimental system can be integrated with the existing Friend-Lite backend:
+This experimental system can be integrated with the existing Chronicle backend:
 
 1. **Standalone Testing**: Use this directory for initial family testing
 2. **API Wrapper**: Create FastAPI endpoint similar to traditional speaker service
@@ -372,7 +372,7 @@ This experimental system can be integrated with the existing Friend-Lite backend
 ## 🔗 Related Files
 
 - `../speaker-recognition/`: Traditional PyAnnote-based system
-- `../../backends/advanced-backend/`: Main Friend-Lite backend
+- `../../backends/advanced-backend/`: Main Chronicle backend
 - `../../extras/test-audios/`: Sample audio files for testing
 
 ## 📝 Development Notes
@@ -394,4 +394,4 @@ This is an experimental system. Feedback and improvements welcome:
 
 ## 📄 License
 
-Part of the Friend-Lite project. See main repository license.
+Part of the Chronicle project. See main repository license.

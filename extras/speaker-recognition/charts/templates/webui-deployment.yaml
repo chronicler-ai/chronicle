@@ -28,9 +28,9 @@ spec:
               protocol: TCP
           envFrom:
             - configMapRef:
-                name: friend-lite-config
+                name: chronicle-config
             - secretRef:
-                name: friend-lite-secrets
+                name: chronicle-secrets
           env:
             {{- range $key, $value := .Values.webui.env }}
             - name: {{ $key }}

@@ -1,4 +1,4 @@
-"""Client implementations for Friend-Lite backend.
+"""Client implementations for Chronicle backend.
 
 This module provides reusable client implementations that can be used for:
 - Integration testing

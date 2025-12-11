@@ -2,7 +2,7 @@
 
 ## Overview
 
-Friend-Lite uses a comprehensive authentication system built on `fastapi-users` with support for multiple authentication methods including JWT tokens and cookies. The system provides secure user management with proper data isolation and role-based access control using MongoDB ObjectIds for user identification.
+Chronicle uses a comprehensive authentication system built on `fastapi-users` with support for multiple authentication methods including JWT tokens and cookies. The system provides secure user management with proper data isolation and role-based access control using MongoDB ObjectIds for user identification.
 
 ## Architecture Components
 
@@ -269,7 +269,7 @@ echo $ADMIN_PASSWORD
 ### Debug Commands
 ```bash
 # Check user database
-docker exec -it mongo-container mongosh friend-lite
+docker exec -it mongo-container mongosh chronicle
 
 # View authentication logs
 docker compose logs friend-backend | grep -i auth

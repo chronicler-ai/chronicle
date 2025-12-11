@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Friend-Lite Advanced Backend Initialization Script
+# Chronicle Advanced Backend Initialization Script
 # Comprehensive setup for all configuration files and optional services
 
 # Colors for output
@@ -73,8 +73,8 @@ if [ ! -f "pyproject.toml" ] || [ ! -d "src" ]; then
     exit 1
 fi
 
-print_header "Friend-Lite Advanced Backend Initialization"
-echo "This script will help you set up the Friend-Lite backend with all necessary configurations."
+print_header "Chronicle Advanced Backend Initialization"
+echo "This script will help you set up the Chronicle backend with all necessary configurations."
 echo ""
 
 # Function to prompt yes/no

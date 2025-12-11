@@ -1,5 +1,5 @@
 """
-Memory management routes for Friend-Lite API.
+Memory management routes for Chronicle API.
 
 Handles memory CRUD operations, search, and debug functionality.
 """
