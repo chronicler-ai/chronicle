@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 from advanced_omi_backend.auth import current_active_user
-from advanced_omi_backend.controllers.queue_controller import get_jobs, get_job_stats, get_queue_health, redis_conn, QUEUE_NAMES
+from advanced_omi_backend.controllers.queue_controller import get_jobs, get_job_stats, redis_conn, QUEUE_NAMES
 from advanced_omi_backend.users import User
 from rq.job import Job
 import redis.asyncio as aioredis
@@ -23,11 +23,13 @@ async def list_jobs(
     limit: int = Query(20, ge=1, le=100, description="Number of jobs to return"),
     offset: int = Query(0, ge=0, description="Number of jobs to skip"),
     queue_name: str = Query(None, description="Filter by queue name"),
+    job_type: str = Query(None, description="Filter by job type (matches func_name)"),
+    client_id: str = Query(None, description="Filter by client_id in meta"),
     current_user: User = Depends(current_active_user)
 ):
     """List jobs with pagination and filtering."""
     try:
-        result = get_jobs(limit=limit, offset=offset, queue_name=queue_name)
+        result = get_jobs(limit=limit, offset=offset, queue_name=queue_name, job_type=job_type, client_id=client_id)
 
         # Filter jobs by user if not admin
         if not current_user.is_superuser:
@@ -46,6 +48,47 @@ async def list_jobs(
     except Exception as e:
         logger.error(f"Failed to list jobs: {e}")
         return {"error": "Failed to list jobs", "jobs": [], "pagination": {"total": 0, "limit": limit, "offset": offset, "has_more": False}}
+
+
+@router.get("/jobs/{job_id}/status")
+async def get_job_status(
+    job_id: str,
+    current_user: User = Depends(current_active_user)
+):
+    """Get just the status of a specific job (lightweight endpoint)."""
+    try:
+        job = Job.fetch(job_id, connection=redis_conn)
+
+        # Check user permission (non-admins can only see their own jobs)
+        if not current_user.is_superuser:
+            job_user_id = job.kwargs.get("user_id") if job.kwargs else None
+            if job_user_id != str(current_user.user_id):
+                raise HTTPException(status_code=403, detail="Access forbidden")
+
+        # Determine status from registries
+        status = "unknown"
+        if job.is_queued:
+            status = "queued"
+        elif job.is_started:
+            status = "processing"
+        elif job.is_finished:
+            status = "completed"
+        elif job.is_failed:
+            status = "failed"
+        elif job.is_deferred:
+            status = "deferred"
+
+        return {
+            "job_id": job.id,
+            "status": status
+        }
+
+    except HTTPException:
+        # Re-raise HTTPException unchanged (e.g., 403 Forbidden)
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get job status {job_id}: {e}")
+        raise HTTPException(status_code=404, detail="Job not found")
 
 
 @router.get("/jobs/{job_id}")
@@ -91,6 +134,9 @@ async def get_job(
             "error_message": str(job.exc_info) if job.exc_info else None,
         }
 
+    except HTTPException:
+        # Re-raise HTTPException unchanged (e.g., 403 Forbidden)
+        raise
     except Exception as e:
         logger.error(f"Failed to get job {job_id}: {e}")
         raise HTTPException(status_code=404, detail="Job not found")
@@ -131,7 +177,10 @@ async def cancel_job(
                 "message": f"Job {job_id} has been deleted"
             }
 
-    except HTTPException as e:
+    except HTTPException:
+        # Re-raise HTTPException unchanged (e.g., 403 Forbidden)
+        raise
+    except Exception as e:
         logger.error(f"Failed to cancel/delete job {job_id}: {e}")
         raise HTTPException(status_code=404, detail=f"Job not found or could not be cancelled: {str(e)}")
 
@@ -299,19 +348,37 @@ async def get_queue_stats_endpoint(
         return {"total_jobs": 0, "queued_jobs": 0, "processing_jobs": 0, "completed_jobs": 0, "failed_jobs": 0, "cancelled_jobs": 0, "deferred_jobs": 0}
 
 
-@router.get("/health")
-async def get_queue_health_endpoint():
-    """Get queue system health status."""
+@router.get("/worker-details")
+async def get_queue_worker_details(
+    current_user: User = Depends(current_active_user)
+):
+    """Get detailed queue and worker status including task manager health."""
     try:
-        health = get_queue_health()
-        return health
+        from advanced_omi_backend.controllers.queue_controller import get_queue_health
+        from advanced_omi_backend.task_manager import get_task_manager
+        import time
+
+        # Get queue health directly
+        queue_health = get_queue_health()
+
+        status = {
+            "architecture": "rq_workers",
+            "timestamp": int(time.time()),
+            "workers": {
+                "total": queue_health.get("total_workers", 0),
+                "active": queue_health.get("active_workers", 0),
+                "idle": queue_health.get("idle_workers", 0),
+                "details": queue_health.get("workers", [])
+            },
+            "queues": queue_health.get("queues", {}),
+            "redis_connection": queue_health.get("redis_connection", "unknown")
+        }
+
+        return status
 
     except Exception as e:
-        logger.error(f"Failed to get queue health: {e}")
-        return {
-            "status": "unhealthy",
-            "message": f"Health check failed: {str(e)}"
-        }
+        logger.error(f"Failed to get queue worker details: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get worker details: {str(e)}")
 
 
 @router.get("/streams")
@@ -434,6 +501,8 @@ class FlushJobsRequest(BaseModel):
 
 class FlushAllJobsRequest(BaseModel):
     confirm: bool
+    include_failed: bool = False  # By default, preserve failed jobs for debugging
+    include_completed: bool = False  # By default, preserve completed jobs for debugging
 
 
 @router.post("/flush")
@@ -509,7 +578,11 @@ async def flush_all_jobs(
     request: FlushAllJobsRequest,
     current_user: User = Depends(current_active_user)
 ):
-    """Flush ALL jobs (DANGER - requires confirmation)."""
+    """
+    Flush jobs from queues and registries.
+    By default preserves failed and completed jobs for debugging.
+    Set include_failed=true or include_completed=true to flush those as well.
+    """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin access required")
 
@@ -539,15 +612,19 @@ async def flush_all_jobs(
             total_removed += queued_count
             logger.info(f"Emptied {queued_count} queued jobs from {queue_name}")
 
-            # Remove from all registries
+            # Build list of registries to flush based on request parameters
             registries = [
-                ("finished", FinishedJobRegistry(queue=queue)),
-                ("failed", FailedJobRegistry(queue=queue)),
-                ("canceled", CanceledJobRegistry(queue=queue)),
-                ("started", StartedJobRegistry(queue=queue)),
-                ("deferred", DeferredJobRegistry(queue=queue)),
-                ("scheduled", ScheduledJobRegistry(queue=queue))
+                ("started", StartedJobRegistry(queue=queue)),  # Always flush in-progress
+                ("deferred", DeferredJobRegistry(queue=queue)),  # Always flush deferred
+                ("scheduled", ScheduledJobRegistry(queue=queue)),  # Always flush scheduled
+                ("canceled", CanceledJobRegistry(queue=queue))  # Always flush canceled
             ]
+
+            # Conditionally add failed and finished registries
+            if request.include_failed:
+                registries.append(("failed", FailedJobRegistry(queue=queue)))
+            if request.include_completed:
+                registries.append(("finished", FinishedJobRegistry(queue=queue)))
 
             for registry_name, registry in registries:
                 job_ids = list(registry.get_job_ids())  # Convert to list to avoid iterator issues
@@ -555,17 +632,30 @@ async def flush_all_jobs(
 
                 for job_id in job_ids:
                     try:
-                        # Try to fetch and delete the job
+                        # Try to fetch the job
                         job = Job.fetch(job_id, connection=redis_conn)
 
-                        # Cancel if running, then delete
+                        # Handle running jobs differently to avoid worker deadlock
                         if job.is_started:
+                            # Send stop command to worker instead of canceling/deleting immediately
+                            # This lets the worker clean up gracefully and prevents deadlock
                             try:
-                                job.cancel()
-                                logger.info(f"Cancelled running job {job_id}")
-                            except Exception as cancel_error:
-                                logger.warning(f"Could not cancel job {job_id}: {cancel_error}")
+                                from rq.command import send_stop_job_command
+                                send_stop_job_command(redis_conn, job_id)
+                                logger.info(f"Sent stop command to worker for job {job_id}")
+                                # Don't delete yet - let worker move it to canceled/failed registry
+                                # It will be cleaned up on next flush or by worker cleanup
+                                continue
+                            except Exception as stop_error:
+                                logger.warning(f"Could not send stop command to job {job_id}: {stop_error}")
+                                # If stop fails, try to cancel it (may already be finishing)
+                                try:
+                                    job.cancel()
+                                    logger.info(f"Cancelled job {job_id} after stop failed")
+                                except Exception as cancel_error:
+                                    logger.warning(f"Could not cancel job {job_id}: {cancel_error}")
 
+                        # For non-running jobs, safe to delete immediately
                         job.delete()
                         total_removed += 1
 
@@ -578,11 +668,50 @@ async def flush_all_jobs(
                         except Exception as reg_error:
                             logger.error(f"Could not remove {job_id} from registry: {reg_error}")
 
-        logger.info(f"Flushed {total_removed} jobs from all queues")
+        # Also clean up audio streams and consumer locks
+        deleted_keys = 0
+
+        # Get async Redis connection for scanning
+        from advanced_omi_backend.controllers.queue_controller import REDIS_URL
+        async_redis = await aioredis.from_url(REDIS_URL)
+
+        try:
+            # Delete audio streams
+            cursor = 0
+            while True:
+                cursor, keys = await async_redis.scan(cursor, match="audio:*", count=1000)
+                if keys:
+                    await async_redis.delete(*keys)
+                    deleted_keys += len(keys)
+                if cursor == 0:
+                    break
+
+            # Delete consumer locks
+            cursor = 0
+            while True:
+                cursor, keys = await async_redis.scan(cursor, match="consumer:*", count=1000)
+                if keys:
+                    await async_redis.delete(*keys)
+                    deleted_keys += len(keys)
+                if cursor == 0:
+                    break
+        finally:
+            await async_redis.close()
+
+        preserved = []
+        if not request.include_failed:
+            preserved.append("failed jobs")
+        if not request.include_completed:
+            preserved.append("completed jobs")
+
+        preserved_msg = f" (preserved {', '.join(preserved)})" if preserved else ""
+        logger.info(f"Flushed {total_removed} jobs and {deleted_keys} Redis keys from all queues{preserved_msg}")
 
         return {
             "total_removed": total_removed,
-            "message": "All jobs have been flushed"
+            "deleted_keys": deleted_keys,
+            "preserved": preserved,
+            "message": f"Flushed {total_removed} jobs{preserved_msg}"
         }
 
     except Exception as e:

@@ -1,32 +1,52 @@
 import axios from 'axios'
+import { getStorageKey } from '../utils/storage'
 
 // Get backend URL from environment or auto-detect based on current location
 const getBackendUrl = () => {
-  // If explicitly set in environment, use that
+  const { protocol, hostname, port } = window.location
+  console.log('Protocol:', protocol)
+  console.log('Hostname:', hostname)
+  console.log('Port:', port)
+
+  const isStandardPort = (protocol === 'https:' && (port === '' || port === '443')) ||
+                         (protocol === 'http:' && (port === '' || port === '80'))
+
+  // Check if we have a base path (Caddy path-based routing)
+  const basePath = import.meta.env.BASE_URL
+  console.log('Base path from Vite:', basePath)
+
+  if (isStandardPort && basePath && basePath !== '/') {
+    // We're using Caddy path-based routing - use the base path
+    console.log('Using Caddy path-based routing with base path')
+    return basePath.replace(/\/$/, '')
+  }
+
+  // If explicitly set in environment, use that (for direct backend access)
   if (import.meta.env.VITE_BACKEND_URL !== undefined && import.meta.env.VITE_BACKEND_URL !== '') {
+    console.log('Using explicit VITE_BACKEND_URL')
     return import.meta.env.VITE_BACKEND_URL
   }
-  
-  // If accessed through proxy (standard ports), use relative URLs
-  const { protocol, hostname, port } = window.location
-  const isStandardPort = (protocol === 'https:' && (port === '' || port === '443')) || 
-                         (protocol === 'http:' && (port === '' || port === '80'))
-  
+
   if (isStandardPort) {
-    // We're being accessed through nginx proxy or Kubernetes Ingress, use same origin
-    return ''  // Empty string means use relative URLs (same origin)
+    // We're being accessed through nginx proxy or standard proxy
+    console.log('Using standard proxy - relative URLs')
+    return ''
   }
-  
+
   // Development mode - direct access to dev server
   if (port === '5173') {
+    console.log('Development mode - using localhost:8000')
     return 'http://localhost:8000'
   }
-  
+
   // Fallback
+  console.log('Fallback - using hostname:8000')
   return `${protocol}//${hostname}:8000`
 }
 
 const BACKEND_URL = getBackendUrl()
+console.log('VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL)
+
 console.log('🌐 API: Backend URL configured as:', BACKEND_URL || 'Same origin (relative URLs)')
 
 // Export BACKEND_URL for use in other components
@@ -39,7 +59,7 @@ export const api = axios.create({
 
 // Add request interceptor to include auth token
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem(getStorageKey('token'))
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -54,7 +74,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token expired or invalid, redirect to login
       console.warn('🔐 API: 401 Unauthorized - clearing token and redirecting to login')
-      localStorage.removeItem('token')
+      localStorage.removeItem(getStorageKey('token'))
       window.location.href = '/login'
     } else if (error.code === 'ECONNABORTED') {
       // Request timeout - don't logout, just log it
@@ -69,11 +89,19 @@ api.interceptors.response.use(
 
 // API endpoints
 export const authApi = {
-  login: (email: string, password: string) => {
+  login: async (email: string, password: string) => {
     const formData = new FormData()
     formData.append('username', email)
     formData.append('password', password)
-    return api.post('/auth/jwt/login', formData)
+    // Login with JWT for API calls
+    const jwtResponse = await api.post('/auth/jwt/login', formData)
+    // Also try to set cookie for audio file access (may fail cross-origin, that's ok)
+    try {
+      await api.post('/auth/cookie/login', formData)
+    } catch {
+      // Cookie auth may fail cross-origin, audio playback will use token fallback
+    }
+    return jwtResponse
   },
   getMe: () => api.get('/users/me'),
 }
@@ -97,15 +125,16 @@ export const conversationsApi = {
 
 export const memoriesApi = {
   getAll: (userId?: string) => api.get('/api/memories', { params: userId ? { user_id: userId } : {} }),
+  getById: (id: string, userId?: string) => api.get(`/api/memories/${id}`, { params: userId ? { user_id: userId } : {} }),
   getUnfiltered: (userId?: string) => api.get('/api/memories/unfiltered', { params: userId ? { user_id: userId } : {} }),
-  search: (query: string, userId?: string, limit: number = 20, scoreThreshold?: number) => 
-    api.get('/api/memories/search', { 
-      params: { 
-        query, 
-        ...(userId && { user_id: userId }), 
+  search: (query: string, userId?: string, limit: number = 20, scoreThreshold?: number) =>
+    api.get('/api/memories/search', {
+      params: {
+        query,
+        ...(userId && { user_id: userId }),
         limit,
         ...(scoreThreshold !== undefined && { score_threshold: scoreThreshold / 100 }) // Convert percentage to decimal
-      } 
+      }
     }),
   delete: (id: string) => api.delete(`/api/memories/${id}`),
   deleteAll: () => api.delete('/api/admin/memory/delete-all'),
@@ -130,15 +159,19 @@ export const systemApi = {
   
   // Memory Configuration Management
   getMemoryConfigRaw: () => api.get('/api/admin/memory/config/raw'),
-  updateMemoryConfigRaw: (configYaml: string) => 
+  updateMemoryConfigRaw: (configYaml: string) =>
     api.post('/api/admin/memory/config/raw', configYaml, {
       headers: { 'Content-Type': 'text/plain' }
     }),
-  validateMemoryConfig: (configYaml: string) => 
+  validateMemoryConfig: (configYaml: string) =>
     api.post('/api/admin/memory/config/validate', configYaml, {
       headers: { 'Content-Type': 'text/plain' }
     }),
   reloadMemoryConfig: () => api.post('/api/admin/memory/config/reload'),
+
+  // Memory Provider Management
+  getMemoryProvider: () => api.get('/api/admin/memory/provider'),
+  setMemoryProvider: (provider: string) => api.post('/api/admin/memory/provider', { provider }),
 }
 
 export const queueApi = {
@@ -156,6 +189,12 @@ export const queueApi = {
   // Cleanup operations
   cleanupStuckWorkers: () => api.post('/api/streaming/cleanup'),
   cleanupOldSessions: (maxAgeSeconds: number = 3600) => api.post(`/api/streaming/cleanup-sessions?max_age_seconds=${maxAgeSeconds}`),
+
+  // Job flush operations
+  flushJobs: (flushAll: boolean, body: any) => {
+    const endpoint = flushAll ? '/api/queue/flush-all' : '/api/queue/flush'
+    return api.post(endpoint, body)
+  },
 
   // Legacy endpoints - kept for backward compatibility but not used in Queue page
   // getJobs: (params: URLSearchParams) => api.get(`/api/queue/jobs?${params}`),
@@ -209,7 +248,7 @@ export const chatApi = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${localStorage.getItem(getStorageKey('token'))}`
       },
       body: JSON.stringify(requestBody)
     })

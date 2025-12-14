@@ -28,7 +28,8 @@ RUN mkdir -p src/simple_speaker_recognition
 COPY src/simple_speaker_recognition/__init__.py src/simple_speaker_recognition/
 
 # Install dependencies and package
-RUN uv sync --no-dev --extra ${PYTORCH_CUDA_VERSION}
+RUN uv sync --no-dev --extra ${PYTORCH_CUDA_VERSION} && \
+    uv cache clean
 
 # Create directories
 RUN mkdir -p /app/audio_chunks /app/debug /app/data /models

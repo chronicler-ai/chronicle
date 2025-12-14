@@ -52,8 +52,9 @@ def analyze_speech(transcript_data: dict) -> dict:
     Analyze transcript for meaningful speech to determine if conversation should be created.
 
     Uses configurable thresholds from environment:
-    - SPEECH_DETECTION_MIN_WORDS (default: 5)
-    - SPEECH_DETECTION_MIN_CONFIDENCE (default: 0.5)
+    - SPEECH_DETECTION_MIN_WORDS (default: 10)
+    - SPEECH_DETECTION_MIN_CONFIDENCE (default: 0.7)
+    - SPEECH_DETECTION_MIN_DURATION (default: 10.0)
 
     Args:
         transcript_data: Dictionary with:
@@ -98,6 +99,16 @@ def analyze_speech(transcript_data: dict) -> dict:
             speech_start = valid_words[0].get("start", 0)
             speech_end = valid_words[-1].get("end", 0)
             speech_duration = speech_end - speech_start
+
+            # Check minimum duration threshold
+            min_duration = settings.get("min_duration", 10.0)
+            if speech_duration < min_duration:
+                return {
+                    "has_speech": False,
+                    "reason": f"Speech too short ({speech_duration:.1f}s < {min_duration}s)",
+                    "word_count": len(valid_words),
+                    "duration": speech_duration,
+                }
 
             return {
                 "has_speech": True,
@@ -387,93 +398,6 @@ async def generate_summary_with_speakers(segments: list) -> str:
 # Conversation Job Helpers
 # ============================================================================
 
-
-async def link_job_metadata_to_conversation(
-    conversation_id: str, speech_job_id: Optional[str], current_job
-) -> None:
-    """
-    Link job metadata to conversation for Queue UI tracking.
-
-    Updates metadata for current job and optionally parent jobs (speech detection, speaker check).
-    Uses "first conversation wins" pattern - only links if conversation_id not already set.
-
-    Args:
-        conversation_id: Conversation ID to link
-        speech_job_id: Optional parent speech detection job ID
-        current_job: Current RQ job instance (must not be None)
-    """
-    from advanced_omi_backend.controllers.queue_controller import redis_conn
-
-    # Update current job metadata
-    if not current_job.meta:
-        current_job.meta = {}
-    current_job.meta["conversation_id"] = conversation_id
-    current_job.save_meta()
-    logger.info(f"🔗 Linked job {current_job.id[:12]} to conversation {conversation_id[:12]}")
-
-    # Update parent jobs if provided
-    if not speech_job_id:
-        return
-
-    _link_parent_job(speech_job_id, conversation_id, redis_conn)
-
-
-def _link_parent_job(job_id: str, conversation_id: str, redis_conn) -> None:
-    """
-    Link a parent job to conversation, with cascading to speaker check job.
-
-    Helper function to reduce nesting in link_job_metadata_to_conversation.
-    """
-    from rq.job import Job
-
-    try:
-        job = Job.fetch(job_id, connection=redis_conn)
-    except Exception as e:
-        logger.warning(f"⚠️ Failed to fetch job {job_id[:12]}: {e}")
-        return
-
-    if not job.meta:
-        logger.debug(f"Job {job_id[:12]} has no metadata, skipping")
-        return
-
-    # Check if already linked (first conversation wins)
-    existing_conv_id = job.meta.get("conversation_id")
-    if existing_conv_id:
-        logger.info(f"⏭️ Job {job_id[:12]} already linked to {existing_conv_id[:12]}, skipping")
-        return
-
-    # Link this job
-    job.meta["conversation_id"] = conversation_id
-    job.meta.pop("session_level", None)  # Remove session-level flag
-    job.save_meta()
-    logger.info(f"🔗 Linked job {job_id[:12]} to conversation {conversation_id[:12]}")
-
-    # Cascade to speaker check job if present
-    speaker_check_job_id = job.meta.get("speaker_check_job_id")
-    if speaker_check_job_id:
-        _link_parent_job(speaker_check_job_id, conversation_id, redis_conn)
-
-
-async def signal_conversation_file_rotation(
-    session_id: str, conversation_id: str, redis_client
-) -> None:
-    """
-    Signal audio persistence job to rotate to new conversation file.
-
-    Sets Redis key that audio_streaming_persistence_job watches to detect
-    when a new conversation starts and rotate the output file accordingly.
-
-    Args:
-        session_id: Session ID
-        conversation_id: Conversation ID to rotate to
-        redis_client: Redis client instance
-    """
-    # Signal audio persistence job to rotate to this conversation's file
-    rotation_signal_key = f"conversation:current:{session_id}"
-    await redis_client.set(rotation_signal_key, conversation_id, ex=86400)  # 24 hour TTL
-    logger.info(
-        f"🔄 Signaled audio persistence to rotate file for conversation {conversation_id[:12]}"
-    )
 
 
 def extract_speakers_from_segments(segments: List[Dict[str, Any]]) -> List[str]:

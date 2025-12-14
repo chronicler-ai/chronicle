@@ -22,7 +22,7 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 
 from advanced_omi_backend.database import get_database
 from advanced_omi_backend.llm_client import get_llm_client
-from advanced_omi_backend.memory import get_memory_service
+from advanced_omi_backend.services.memory import get_memory_service
 from advanced_omi_backend.users import User
 
 logger = logging.getLogger(__name__)

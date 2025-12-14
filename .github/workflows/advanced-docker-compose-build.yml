@@ -106,6 +106,24 @@ jobs:
             echo ".env not found; continuing"
           fi
 
+      - name: Free Disk Space
+        run: |
+          echo "Freeing disk space..."
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/share/swift
+          docker system prune -a -f
+          df -h
+
+      - name: Initialize OpenMemory cache
+        run: |
+          echo "Initializing OpenMemory cache..."
+          cd ../../extras/openmemory-mcp
+          chmod +x init-cache.sh
+          ./init-cache.sh
+
       - name: Determine version
         id: version
         run: |
@@ -116,6 +134,7 @@ jobs:
           else
             VERSION="sha-${GITHUB_SHA::7}"
           fi
+          
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Build, tag, and push services sequentially with version
@@ -177,6 +196,9 @@ jobs:
             docker image rm -f "$target_image" || true
             docker image rm -f "$latest_image" || true
             echo "::endgroup::"
+            
+            # Aggressive cleanup to save space
+            docker system prune -af || true
           done
           
           # Build and push parakeet-asr with CUDA variants (cu121, cu126, cu128)
@@ -205,6 +227,9 @@ jobs:
               docker image rm -f "$target_image" || true
               docker image rm -f "$latest_image" || true
             fi
+            
+            # Aggressive cleanup to save space
+            docker system prune -af || true
           done
           cd - > /dev/null
           echo "::endgroup::"
@@ -237,6 +262,9 @@ jobs:
               docker image rm -f "$target_image" || true
               docker image rm -f "$latest_image" || true
             fi
+            
+            # Aggressive cleanup to save space
+            docker system prune -af || true
           done
           cd - > /dev/null
           echo "::endgroup::"

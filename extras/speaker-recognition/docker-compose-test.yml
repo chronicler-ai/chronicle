@@ -36,4 +36,7 @@ services:
       timeout: 10s
       retries: 3
 
-
+# Use default bridge network for test isolation (no external network dependency)
+networks:
+  default:
+    driver: bridge

@@ -56,8 +56,12 @@ fi
 print_info "Speaker Recognition Integration Test Runner"
 print_info "=========================================="
 
-# Load environment variables (CI or local) - BEFORE checking them
+# Load environment variables (CI or local)
 if [ -f ".env" ]; then
+print_info ".env file exists: $([ -f .env ] && echo 'yes' || echo 'no')"
+
+# Load environment variables (CI or local)
+if [ -f ".env" ] && [ -z "${HF_TOKEN:-}" ]; then
     print_info "Loading environment variables from .env..."
     set -a
     source .env
@@ -113,6 +117,12 @@ print_info "Environment configuration:"
 print_info "  HF_TOKEN length: ${#HF_TOKEN}"
 print_info "  DEEPGRAM_API_KEY length: ${#DEEPGRAM_API_KEY}"
 
+# Export variables early so docker compose can use them
+export HF_TOKEN
+export DEEPGRAM_API_KEY
+export SIMILARITY_THRESHOLD
+export COMPUTE_MODE
+
 # Install dependencies with uv
 print_info "Installing dependencies with uv..."
 uv sync --extra cpu --group test
@@ -130,10 +140,6 @@ print_info "Disabling BuildKit for integration tests (DOCKER_BUILDKIT=0)"
 
 # Set environment variables for the test
 export DOCKER_BUILDKIT=0
-
-# Export environment variables for test
-export HF_TOKEN="$HF_TOKEN"
-export DEEPGRAM_API_KEY="$DEEPGRAM_API_KEY"
 
 # Run the integration test with timeout (speaker recognition models need time)
 print_info "Starting speaker recognition test (timeout: 30 minutes)..."

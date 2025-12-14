@@ -4,8 +4,10 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import Layout from './components/layout/Layout'
 import LoginPage from './pages/LoginPage'
 import Chat from './pages/Chat'
-import Conversations from './pages/Conversations'
-import Memories from './pages/Memories'
+import ConversationsRouter from './pages/ConversationsRouter'
+import MemoriesRouter from './pages/MemoriesRouter'
+import MemoryDetail from './pages/MemoryDetail'
+import TimelineRouter from './pages/TimelineRouter'
 import Users from './pages/Users'
 import System from './pages/System'
 import Upload from './pages/Upload'
@@ -16,12 +18,15 @@ import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary'
 
 function App() {
   console.log('🚀 Full App restored with working login!')
-  
+
+  // Get base path from Vite config (e.g., "/prod/" for path-based routing)
+  const basename = import.meta.env.BASE_URL
+
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
-          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <Router basename={basename} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/" element={
@@ -31,7 +36,7 @@ function App() {
               }>
                 <Route index element={
                   <PageErrorBoundary>
-                    <Conversations />
+                    <ConversationsRouter />
                   </PageErrorBoundary>
                 } />
                 <Route path="live-record" element={
@@ -46,12 +51,22 @@ function App() {
                 } />
                 <Route path="conversations" element={
                   <PageErrorBoundary>
-                    <Conversations />
+                    <ConversationsRouter />
+                  </PageErrorBoundary>
+                } />
+                <Route path="memories/:id" element={
+                  <PageErrorBoundary>
+                    <MemoryDetail />
                   </PageErrorBoundary>
                 } />
                 <Route path="memories" element={
                   <PageErrorBoundary>
-                    <Memories />
+                    <MemoriesRouter />
+                  </PageErrorBoundary>
+                } />
+                <Route path="timeline" element={
+                  <PageErrorBoundary>
+                    <TimelineRouter />
                   </PageErrorBoundary>
                 } />
                 <Route path="users" element={

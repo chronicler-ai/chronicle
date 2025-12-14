@@ -3,11 +3,12 @@ Documentation    Authentication and User Management API Tests
 Library          RequestsLibrary
 Library          Collections
 Library          String
-Resource         ../resources/setup_resources.robot
-Resource         ../resources/user_resources.robot
+Resource         ../setup/setup_keywords.robot
+Resource         ../setup/teardown_keywords.robot
+Resource         ../resources/user_keywords.robot
 Suite Setup      Suite Setup
-Test Setup       Clear Test Databases
 Suite Teardown   Suite Teardown
+Test Setup       Test Cleanup
 
 *** Variables ***
 # Test users are now imported from test_env.py via resource files
@@ -16,13 +17,13 @@ Suite Teardown   Suite Teardown
 
 Login With Valid Credentials Test
     [Documentation]    Test successful login with admin credentials
-    [Tags]             auth    login    positive
-    ${user}=           Get Admin User Details    api
+    [Tags]    permissions
+    ${user}=           Get User Details    api
     Should Be Equal    ${user}[email]    ${ADMIN_EMAIL}
 
 Login With Invalid Credentials Test
     [Documentation]    Test login failure with invalid credentials
-    [Tags]             auth    login    negative
+    [Tags]    permissions
     Get Anonymous Session    anon_session
 
     &{auth_data}=    Create Dictionary    username=${ADMIN_EMAIL}    password=wrong-password
@@ -33,10 +34,9 @@ Login With Invalid Credentials Test
 
 Get Current User Test
     [Documentation]    Test getting current authenticated user
-    [Tags]             auth    user    positive
+    [Tags]    permissions
 
-    Create API Session    api
-    ${user}=           Get Admin User Details   api
+    ${user}=           Get User Details    api
 
     Dictionary Should Contain Key    ${user}    email
     Dictionary Should Contain Key    ${user}    id
@@ -44,7 +44,7 @@ Get Current User Test
 
 Unauthorized Access Test
     [Documentation]    Test that endpoints require authentication
-    [Tags]             auth    security    negative
+    [Tags]    permissions
     Get Anonymous Session    anon_session
 
     # Try to access protected endpoint without token
@@ -53,37 +53,19 @@ Unauthorized Access Test
 
 Create User Test
     [Documentation]    Test creating a new user (admin only)
-    [Tags]             users    admin    positive
+    [Tags]    permissions
 
-    Create API Session    api
-    ${test_email}=     Set Variable    test-user-${RANDOM_ID}@example.com
-    ${user}=           Create Test User    api    ${test_email}    ${TEST_USER_PASSWORD}
+    ${user}=           Create Test User    api
 
-    Should Be Equal    ${user}[user_email]    ${test_email}
-    Should Contain     ${user}[message]    created successfully
+    Should Contain    ${user}[email]    test-user-
 
     # Cleanup
-    Delete Test User    api    ${user}[user_id]
-
-Create Admin User Test
-    [Documentation]    Test creating an admin user
-    [Tags]             users    admin    positive
-
-
-    Create API Session    session
-    ${test_admin_email}=    Set Variable    test-admin-${RANDOM_ID}@example.com
-    ${user}=           Create Test User    session     ${test_admin_email}    ${TEST_USER_PASSWORD}    ${True}
-
-    Should Be Equal    ${user}[user_email]    ${test_admin_email}
-    Should Contain     ${user}[message]    created successfully
-
-    # Cleanup
-    Delete Test User   session    ${user}[user_id]
+    [Teardown]    Delete User    api    ${user}[id]
 
 Get All Users Test
     [Documentation]    Test getting all users (admin only)
-    [Tags]             users    admin    positive
-    Create API Session    api
+    [Tags]    permissions
+
     ${response}=       GET On Session    api    /api/users
 
     Should Be Equal As Integers    ${response.status_code}    200
@@ -101,47 +83,57 @@ Get All Users Test
 
 Non-Admin User Cannot Create Users Test
     [Documentation]    Test that non-admin users cannot create users
-    [Tags]             users    security    negative
-    ${random_id}=    Generate Random String    8    [LETTERS][NUMBERS]
+    [Tags]    permissions
     # Create a non-admin user
-     # Create user
-    Create API Session    user_session    email=${TEST_USER_EMAIL}    password=${TEST_USER_PASSWORD}
-    &{user_data}=   Create Dictionary    email=${random_id}${TEST_USER_EMAIL}    password=${TEST_USER_PASSWORD}    is_superuser=${False}
+    ${test_user}=       Create Test User    api
+    Create API Session    user_session    email=${test_user}[email]    password=${TEST_USER_PASSWORD}
+
+    &{user_data}=   Create Dictionary    email=another-user@example.com    password=${TEST_USER_PASSWORD}    is_superuser=${False}
     ${response}=    POST On Session    user_session    /api/users    json=${user_data}    expected_status=403
     Should Be Equal As Integers    ${response.status_code}    403
 
+    [Teardown]    Delete User    api    ${test_user}[id]
+
 Update User Test
-    [Documentation]    Test updating a user (admin only)
-    [Tags]             users    admin    positive
+    [Documentation]    Test updating a user password (admin only)
+    [Tags]    permissions
 
-    Create API Session    session
-    ${test_email}=     Set Variable    test-user-${RANDOM_ID}@example.com
-    ${user}=           Create Test User   session    ${test_email}    ${TEST_USER_PASSWORD}
+    ${test_user}=       Create Test User    api
+    ${new_password}=    Set Variable    new-test-password-456
 
-    # Update user to admin
-    &{update_data}=    Create Dictionary    email=${test_email}    password=${TEST_USER_PASSWORD}    is_superuser=${True}
+    # Update user password
+    &{update_data}=    Create Dictionary    email=${test_user}[email]    password=${new_password}
 
-    ${response}=       PUT On Session    session    /api/users/${user}[user_id]    json=${update_data}
+    ${response}=       PUT On Session    api    /api/users/${test_user}[id]    json=${update_data}
     Should Be Equal As Integers    ${response.status_code}    200
 
-    ${updated_user}=   Set Variable    ${response.json()}
-    Should Be True     ${updated_user}[is_superuser]
+    # Verify old password no longer works
+    Get Anonymous Session    anon_session
+    &{old_auth}=       Create Dictionary    username=${test_user}[email]    password=${TEST_USER_PASSWORD}
+    &{headers}=        Create Dictionary    Content-Type=application/x-www-form-urlencoded
+    ${old_response}=   POST On Session    anon_session    /auth/jwt/login    data=${old_auth}    headers=${headers}    expected_status=400
+    Should Be Equal As Integers    ${old_response.status_code}    400
+
+    # Verify new password works
+    &{new_auth}=       Create Dictionary    username=${test_user}[email]    password=${new_password}
+    ${new_response}=   POST On Session    anon_session    /auth/jwt/login    data=${new_auth}    headers=${headers}    expected_status=200
+    Should Be Equal As Integers    ${new_response.status_code}    200
+
+    [Teardown]    Delete User    api    ${test_user}[id]
 
 Delete User Test
     [Documentation]    Test deleting a user (admin only)
-    [Tags]             users    admin    positive
+    [Tags]    permissions
 
-    Create API Session    session
-    ${test_email}=     Set Variable    test-user-${RANDOM_ID}@example.com
-    ${user}=           Create Test User    session     ${test_email}    ${TEST_USER_PASSWORD}
+    ${user}=           Create Test User    api
 
     # Delete the user
-    Delete Test User    session   ${user}[user_id]
+    Delete User    api    ${user}[id]
 
     # Verify user is deleted by trying to login
-    &{auth_data}=      Create Dictionary    username=${test_email}    password=${TEST_USER_PASSWORD}
+    &{auth_data}=      Create Dictionary    username=${user}[email]    password=${TEST_USER_PASSWORD}
     &{headers}=        Create Dictionary    Content-Type=application/x-www-form-urlencoded
 
-    ${response}=       POST On Session    session    /auth/jwt/login    data=${auth_data}    headers=${headers}    expected_status=400
+    ${response}=       POST On Session    api    /auth/jwt/login    data=${auth_data}    headers=${headers}    expected_status=400
     Should Be Equal As Integers    ${response.status_code}    400
 

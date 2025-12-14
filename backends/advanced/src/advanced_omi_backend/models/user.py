@@ -33,19 +33,16 @@ class UserUpdate(BaseUserUpdate):
     display_name: Optional[str] = None
     is_superuser: Optional[bool] = None
 
+    def create_update_dict(self):
+        """Create update dictionary for regular user operations."""
+        update_dict = super().create_update_dict()
+        if self.display_name is not None:
+            update_dict["display_name"] = self.display_name
+        return update_dict
+
     def create_update_dict_superuser(self):
         """Create update dictionary for superuser operations."""
-        update_dict = {}
-        if self.email is not None:
-            update_dict["email"] = self.email
-        if self.password is not None:
-            update_dict["password"] = self.password
-        if self.is_active is not None:
-            update_dict["is_active"] = self.is_active
-        if self.is_verified is not None:
-            update_dict["is_verified"] = self.is_verified
-        if self.is_superuser is not None:
-            update_dict["is_superuser"] = self.is_superuser
+        update_dict = super().create_update_dict_superuser()
         if self.display_name is not None:
             update_dict["display_name"] = self.display_name
         return update_dict

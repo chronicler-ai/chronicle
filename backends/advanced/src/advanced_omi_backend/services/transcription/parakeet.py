@@ -17,7 +17,7 @@ import websockets
 from easy_audio_interfaces.audio_interfaces import AudioChunk
 from easy_audio_interfaces.filesystem import LocalFileSink
 
-from advanced_omi_backend.models.transcription import (
+from .base import (
     BatchTranscriptionProvider,
     StreamingTranscriptionProvider,
 )

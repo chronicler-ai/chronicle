@@ -7,7 +7,7 @@ Handles metrics, auth config, and other system utilities.
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Body, Depends, Request
 
 from advanced_omi_backend.auth import current_active_user, current_superuser
 from advanced_omi_backend.controllers import system_controller, session_controller, queue_controller
@@ -28,12 +28,6 @@ async def get_current_metrics(current_user: User = Depends(current_superuser)):
 async def get_auth_config():
     """Get authentication configuration for frontend."""
     return await system_controller.get_auth_config()
-
-
-@router.get("/processor/status")
-async def get_processor_status(current_user: User = Depends(current_superuser)):
-    """Get processor queue status and health. Admin only."""
-    return await system_controller.get_processor_status()
 
 
 @router.get("/diarization-settings")
@@ -88,7 +82,7 @@ async def get_memory_config_raw(current_user: User = Depends(current_superuser))
 
 @router.post("/admin/memory/config/raw")
 async def update_memory_config_raw(
-    config_yaml: str,
+    config_yaml: str = Body(..., embed=True),
     current_user: User = Depends(current_superuser)
 ):
     """Update memory configuration YAML and hot reload. Admin only."""
@@ -97,7 +91,7 @@ async def update_memory_config_raw(
 
 @router.post("/admin/memory/config/validate")
 async def validate_memory_config(
-    config_yaml: str,
+    config_yaml: str = Body(..., embed=True),
     current_user: User = Depends(current_superuser)
 ):
     """Validate memory configuration YAML syntax. Admin only."""
@@ -132,3 +126,20 @@ async def cleanup_stuck_stream_workers(request: Request, current_user: User = De
 async def cleanup_old_sessions(request: Request, max_age_seconds: int = 3600, current_user: User = Depends(current_superuser)):
     """Clean up old session tracking metadata. Admin only."""
     return await session_controller.cleanup_old_sessions(request, max_age_seconds)
+
+
+# Memory Provider Configuration Endpoints
+
+@router.get("/admin/memory/provider")
+async def get_memory_provider(current_user: User = Depends(current_superuser)):
+    """Get current memory provider configuration. Admin only."""
+    return await system_controller.get_memory_provider()
+
+
+@router.post("/admin/memory/provider")
+async def set_memory_provider(
+    provider: str = Body(..., embed=True),
+    current_user: User = Depends(current_superuser)
+):
+    """Set memory provider and restart backend services. Admin only."""
+    return await system_controller.set_memory_provider(provider)

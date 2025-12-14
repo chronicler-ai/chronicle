@@ -3,8 +3,10 @@
 import logging
 import os
 import re
+from datetime import datetime, timedelta
 from typing import Literal, Optional, overload
 
+import jwt
 from beanie import PydanticObjectId
 from dotenv import load_dotenv
 from fastapi import Depends, Request
@@ -21,6 +23,9 @@ from advanced_omi_backend.users import User, UserCreate, get_user_db
 logger = logging.getLogger(__name__)
 
 load_dotenv()
+
+# JWT configuration
+JWT_LIFETIME_SECONDS = 86400  # 24 hours
 
 
 @overload
@@ -82,7 +87,7 @@ async def get_user_manager(user_db=Depends(get_user_db)):
 
 # Transport configurations
 cookie_transport = CookieTransport(
-    cookie_max_age=86400,  # 24 hours (matches JWT lifetime)
+    cookie_max_age=JWT_LIFETIME_SECONDS,  # Matches JWT lifetime
     cookie_secure=COOKIE_SECURE,  # Set to False in development if not using HTTPS
     cookie_httponly=True,
     cookie_samesite="lax",
@@ -94,8 +99,40 @@ bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
 def get_jwt_strategy() -> JWTStrategy:
     """Get JWT strategy for token generation and validation."""
     return JWTStrategy(
-        secret=SECRET_KEY, lifetime_seconds=86400
-    )  # 24 hours for device compatibility
+        secret=SECRET_KEY, lifetime_seconds=JWT_LIFETIME_SECONDS
+    )
+
+
+def generate_jwt_for_user(user_id: str, user_email: str) -> str:
+    """Generate a JWT token for a user to authenticate with external services.
+
+    This function creates a JWT token that can be used to authenticate with
+    services that share the same AUTH_SECRET_KEY, such as Mycelia.
+
+    Args:
+        user_id: User's unique identifier (MongoDB ObjectId as string)
+        user_email: User's email address
+
+    Returns:
+        JWT token string valid for 24 hours
+
+    Example:
+        >>> token = generate_jwt_for_user("507f1f77bcf86cd799439011", "user@example.com")
+        >>> # Use token to call Mycelia API
+    """
+    # Create JWT payload matching Friend-Lite's standard format
+    payload = {
+        "sub": user_id,  # Subject = user ID
+        "email": user_email,
+        "iss": "friend-lite",  # Issuer
+        "aud": "friend-lite",  # Audience
+        "exp": datetime.utcnow() + timedelta(seconds=JWT_LIFETIME_SECONDS),
+        "iat": datetime.utcnow(),  # Issued at
+    }
+
+    # Sign the token with the same secret key
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return token
 
 
 # Authentication backends
@@ -119,7 +156,36 @@ fastapi_users = FastAPIUsers[User, PydanticObjectId](
 
 # User dependencies for protecting endpoints
 current_active_user = fastapi_users.current_user(active=True)
+current_active_user_optional = fastapi_users.current_user(active=True, optional=True)
 current_superuser = fastapi_users.current_user(active=True, superuser=True)
+
+
+async def get_user_from_token_param(token: str) -> Optional[User]:
+    """
+    Get user from JWT token string (for query parameter authentication).
+
+    This is useful for endpoints that need to support token-based auth via query params,
+    such as HTML audio elements that can't set custom headers.
+
+    Args:
+        token: JWT token string
+
+    Returns:
+        User object if token is valid and user is active, None otherwise
+    """
+    if not token:
+        return None
+    try:
+        strategy = get_jwt_strategy()
+        user_db_gen = get_user_db()
+        user_db = await user_db_gen.__anext__()
+        user_manager = UserManager(user_db)
+        user = await strategy.read_token(token, user_manager)
+        if user and user.is_active:
+            return user
+    except Exception:
+        pass
+    return None
 
 
 def get_accessible_user_ids(user: User) -> list[str] | None:

@@ -10,7 +10,7 @@ import logging
 import os
 from typing import Optional
 
-from advanced_omi_backend.models.transcription import BaseTranscriptionProvider
+from .base import BaseTranscriptionProvider
 from advanced_omi_backend.services.transcription.deepgram import (
     DeepgramProvider,
     DeepgramStreamingProvider,

@@ -7,7 +7,7 @@ import time
 
 import redis.asyncio as redis
 
-from advanced_omi_backend.models.transcription import TranscriptionProvider
+from advanced_omi_backend.services.transcription.base import TranscriptionProvider
 
 logger = logging.getLogger(__name__)
 

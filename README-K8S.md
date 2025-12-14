@@ -266,14 +266,19 @@ friend-lite/
 
 1. **Clone Repository**
    ```bash
-   # Clone Friend-Lite repository
-   git clone https://github.com/yourusername/friend-lite.git
+   # Clone Friend-Lite repository with submodules
+   git clone --recursive https://github.com/yourusername/friend-lite.git
    cd friend-lite
-   
+
+   # If you already cloned without --recursive, initialize submodules:
+   # git submodule update --init --recursive
+
    # Verify template files are present
    ls -la skaffold.env.template
    ls -la backends/advanced/.env.template
    ```
+
+   > **Note:** The `--recursive` flag downloads the optional Mycelia submodule (an alternative memory backend with timeline visualization). Most deployments use the default Friend-Lite memory system and don't need Mycelia.
 
 2. **Install Required Tools**
    

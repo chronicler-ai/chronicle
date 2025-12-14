@@ -13,7 +13,7 @@ from typing import Dict, Optional
 import httpx
 import websockets
 
-from advanced_omi_backend.models.transcription import (
+from .base import (
     BatchTranscriptionProvider,
     StreamingTranscriptionProvider,
 )

@@ -30,9 +30,9 @@ DEFAULT_DIARIZATION_SETTINGS = {
 
 # Default speech detection settings
 DEFAULT_SPEECH_DETECTION_SETTINGS = {
-    "min_words": 5,               # Minimum words to create conversation
-    "min_confidence": 0.5,        # Word confidence threshold (unified)
-    "min_duration": 2.0,          # Minimum speech duration (seconds)
+    "min_words": 10,              # Minimum words to create conversation (increased from 5)
+    "min_confidence": 0.7,        # Word confidence threshold (increased from 0.5)
+    "min_duration": 10.0,         # Minimum speech duration in seconds (increased from 2.0)
 }
 
 # Default conversation stop settings
@@ -137,6 +137,7 @@ def get_speech_detection_settings():
     return {
         "min_words": int(os.getenv("SPEECH_DETECTION_MIN_WORDS", DEFAULT_SPEECH_DETECTION_SETTINGS["min_words"])),
         "min_confidence": float(os.getenv("SPEECH_DETECTION_MIN_CONFIDENCE", DEFAULT_SPEECH_DETECTION_SETTINGS["min_confidence"])),
+        "min_duration": float(os.getenv("SPEECH_DETECTION_MIN_DURATION", DEFAULT_SPEECH_DETECTION_SETTINGS["min_duration"])),
     }
 
 

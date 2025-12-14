@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Settings, RefreshCw, CheckCircle, XCircle, AlertCircle, Activity, Users, Database, Server, Volume2, Mic } from 'lucide-react'
+import { Settings, RefreshCw, CheckCircle, XCircle, AlertCircle, Activity, Users, Database, Server, Volume2, Mic, Brain } from 'lucide-react'
 import { systemApi, speakerApi } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 import MemorySettings from '../components/MemorySettings'
@@ -64,6 +64,11 @@ export default function System() {
     max_speakers: 6
   })
   const [diarizationLoading, setDiarizationLoading] = useState(false)
+  const [currentProvider, setCurrentProvider] = useState<string>('')
+  const [availableProviders, setAvailableProviders] = useState<string[]>([])
+  const [selectedProvider, setSelectedProvider] = useState<string>('')
+  const [providerLoading, setProviderLoading] = useState(false)
+  const [providerMessage, setProviderMessage] = useState('')
 
   const { isAdmin } = useAuth()
 
@@ -120,6 +125,46 @@ export default function System() {
     }
   }
 
+  const loadMemoryProvider = async () => {
+    try {
+      setProviderLoading(true)
+      const response = await systemApi.getMemoryProvider()
+      if (response.data.status === 'success') {
+        setCurrentProvider(response.data.current_provider)
+        setAvailableProviders(response.data.available_providers)
+        setSelectedProvider(response.data.current_provider)
+      }
+    } catch (err: any) {
+      console.error('Failed to load memory provider:', err)
+    } finally {
+      setProviderLoading(false)
+    }
+  }
+
+  const saveMemoryProvider = async () => {
+    if (selectedProvider === currentProvider) {
+      setProviderMessage('Provider is already set to ' + selectedProvider)
+      setTimeout(() => setProviderMessage(''), 3000)
+      return
+    }
+
+    try {
+      setProviderLoading(true)
+      setProviderMessage('')
+      const response = await systemApi.setMemoryProvider(selectedProvider)
+      if (response.data.status === 'success') {
+        setCurrentProvider(selectedProvider)
+        setProviderMessage('✅ ' + response.data.message)
+      } else {
+        setProviderMessage('❌ Failed to update provider')
+      }
+    } catch (err: any) {
+      setProviderMessage('❌ Error: ' + (err.response?.data?.error || err.message))
+    } finally {
+      setProviderLoading(false)
+    }
+  }
+
   const saveDiarizationSettings = async () => {
     try {
       setDiarizationLoading(true)
@@ -139,6 +184,7 @@ export default function System() {
   useEffect(() => {
     loadSystemData()
     loadDiarizationSettings()
+    loadMemoryProvider()
   }, [isAdmin])
 
   const getStatusIcon = (healthy: boolean) => {
@@ -285,6 +331,61 @@ export default function System() {
                   </div>
                 </div>
               ))}
+
+              {/* Memory Provider Selector */}
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                <div className="flex items-center space-x-3 mb-3">
+                  <Brain className="h-5 w-5 text-blue-600" />
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    Memory Provider
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {/* Current Provider Display */}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Current:</span>
+                    <span className="font-semibold text-blue-600 dark:text-blue-400">
+                      {currentProvider || 'Loading...'}
+                    </span>
+                  </div>
+
+                  {/* Provider Selector */}
+                  <div className="space-y-2">
+                    <select
+                      value={selectedProvider}
+                      onChange={(e) => setSelectedProvider(e.target.value)}
+                      disabled={providerLoading || availableProviders.length === 0}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {availableProviders.map((provider) => (
+                        <option key={provider} value={provider}>
+                          {provider === 'friend_lite' && 'Friend-Lite (Sophisticated)'}
+                          {provider === 'openmemory_mcp' && 'OpenMemory MCP (Cross-client)'}
+                          {provider === 'mycelia' && 'Mycelia (Advanced)'}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={saveMemoryProvider}
+                      disabled={providerLoading || selectedProvider === currentProvider}
+                      className="w-full px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {providerLoading ? 'Saving...' : selectedProvider === currentProvider ? 'No Changes' : 'Update Provider'}
+                    </button>
+                  </div>
+
+                  {/* Status Message */}
+                  {providerMessage && (
+                    <div className={`p-2 rounded-md text-xs ${
+                      providerMessage.startsWith('✅')
+                        ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                        : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300'
+                    }`}>
+                      {providerMessage}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}

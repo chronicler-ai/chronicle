@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Brain, Search, RefreshCw, Trash2, Calendar, Tag, X, Target } from 'lucide-react'
 import { memoriesApi, systemApi } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -18,24 +19,25 @@ interface Memory {
 }
 
 export default function Memories() {
+  const navigate = useNavigate()
   const [memories, setMemories] = useState<Memory[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showUnfiltered, setShowUnfiltered] = useState(false)
   const [totalCount, setTotalCount] = useState<number | null>(null)
-  
+
   // Semantic search state
   const [semanticResults, setSemanticResults] = useState<Memory[]>([])
   const [isSemanticFilterActive, setIsSemanticFilterActive] = useState(false)
   const [semanticQuery, setSemanticQuery] = useState('')
   const [semanticLoading, setSemanticLoading] = useState(false)
   const [relevanceThreshold, setRelevanceThreshold] = useState(0) // 0-100 percentage
-  
+
   // System configuration state
   const [memoryProviderSupportsThreshold, setMemoryProviderSupportsThreshold] = useState(false)
   const [memoryProvider, setMemoryProvider] = useState<string>('')
-  
+
   const { user } = useAuth()
 
   const loadSystemConfig = async () => {
@@ -59,24 +61,24 @@ export default function Memories() {
 
     try {
       setLoading(true)
-      const response = showUnfiltered 
+      const response = showUnfiltered
         ? await memoriesApi.getUnfiltered(user.id)
         : await memoriesApi.getAll(user.id)
-      
+
       console.log('🧠 Memories API response:', response.data)
-      
+
       // Handle the API response structure
       const memoriesData = response.data.memories || response.data || []
       const totalCount = response.data.total_count
       console.log('🧠 Processed memories data:', memoriesData)
       console.log('🧠 Total count:', totalCount)
-      
+
       // Log first few memories to inspect structure
       if (memoriesData.length > 0) {
         console.log('🧠 First memory object:', memoriesData[0])
         console.log('🧠 Memory fields:', Object.keys(memoriesData[0]))
       }
-      
+
       setMemories(Array.isArray(memoriesData) ? memoriesData : [])
       // Store total count in state for display
       setTotalCount(totalCount)
@@ -100,25 +102,25 @@ export default function Memories() {
   // Semantic search handlers
   const handleSemanticSearch = async () => {
     if (!searchQuery.trim() || !user?.id) return
-    
+
     try {
       setSemanticLoading(true)
-      
+
       // Use current threshold for server-side filtering if memory provider supports it
-      const thresholdToUse = memoryProviderSupportsThreshold 
-        ? relevanceThreshold 
+      const thresholdToUse = memoryProviderSupportsThreshold
+        ? relevanceThreshold
         : undefined
-      
+
       const response = await memoriesApi.search(
-        searchQuery.trim(), 
-        user.id, 
-        50, 
+        searchQuery.trim(),
+        user.id,
+        50,
         thresholdToUse
       )
-      
+
       console.log('🔍 Search response:', response.data)
       console.log('🎯 Used threshold:', thresholdToUse)
-      
+
       setSemanticResults(response.data.results || [])
       setSemanticQuery(searchQuery.trim())
       setIsSemanticFilterActive(true)
@@ -156,7 +158,7 @@ export default function Memories() {
 
   // Update filtering logic with client-side threshold filtering after search
   const currentMemories = isSemanticFilterActive ? semanticResults : memories
-  
+
   // Apply relevance threshold filter (client-side for all providers after search)
   const thresholdFilteredMemories = isSemanticFilterActive && relevanceThreshold > 0
     ? currentMemories.filter(memory => {
@@ -165,7 +167,7 @@ export default function Memories() {
         return relevancePercentage >= relevanceThreshold
       })
     : currentMemories
-  
+
   // Apply text search filter
   const filteredMemories = thresholdFilteredMemories.filter(memory =>
     memory.memory.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -175,7 +177,7 @@ export default function Memories() {
   const formatDate = (dateInput: string | number) => {
     // Handle both timestamp numbers and date strings
     let date: Date
-    
+
     if (typeof dateInput === 'number') {
       // Unix timestamp - multiply by 1000 if needed
       date = dateInput > 1e10 ? new Date(dateInput) : new Date(dateInput * 1000)
@@ -192,20 +194,20 @@ export default function Memories() {
     } else {
       date = new Date(dateInput)
     }
-    
+
     // Check if date is valid
     if (isNaN(date.getTime())) {
       console.warn('Invalid date:', dateInput)
       return 'Invalid Date'
     }
-    
+
     return date.toLocaleString()
   }
 
   const getCategoryColor = (category: string) => {
     const colors = {
       'personal': 'bg-blue-100 text-blue-800',
-      'work': 'bg-green-100 text-green-800', 
+      'work': 'bg-green-100 text-green-800',
       'health': 'bg-red-100 text-red-800',
       'entertainment': 'bg-purple-100 text-purple-800',
       'education': 'bg-yellow-100 text-yellow-800',
@@ -218,7 +220,7 @@ export default function Memories() {
   const renderMemoryText = (content: string) => {
     // Handle multi-line content (bullet points from backend normalization)
     const lines = content.split('\n').filter(line => line.trim())
-    
+
     if (lines.length > 1) {
       return (
         <div className="space-y-1">
@@ -230,7 +232,7 @@ export default function Memories() {
         </div>
       )
     }
-    
+
     // Single line content
     return (
       <p className="text-gray-900 dark:text-gray-100 leading-relaxed">
@@ -298,7 +300,7 @@ export default function Memories() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search memories..."
                 className="w-full pl-10 pr-32 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                onKeyPress={(e) => e.key === 'Enter' && handleSemanticSearch()}
+                onKeyDown={(e) => e.key === 'Enter' && handleSemanticSearch()}
               />
               <button
                 onClick={handleSemanticSearch}
@@ -349,11 +351,11 @@ export default function Memories() {
                 </div>
                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                   {isSemanticFilterActive ? (
-                    relevanceThreshold > 0 ? 
+                    relevanceThreshold > 0 ?
                       `Filtering loaded results: showing memories with ≥ ${relevanceThreshold}% relevance` :
                       'Showing all loaded results'
                   ) : (
-                    relevanceThreshold > 0 ? 
+                    relevanceThreshold > 0 ?
                       `Next search will filter server-side: memories with ≥ ${relevanceThreshold}% relevance` :
                       'Next search will return all results (no server-side filtering)'
                   )}
@@ -468,63 +470,85 @@ export default function Memories() {
             {filteredMemories.map((memory) => (
               <div
                 key={memory.id}
-                className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 border border-gray-200 dark:border-gray-600"
+                className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-colors group"
               >
-                {/* Memory Header */}
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                      <Calendar className="h-4 w-4" />
-                      <span>{formatDate(memory.created_at)}</span>
-                    </div>
-                    {memory.category && (
-                      <div className="flex items-center space-x-2">
-                        <Tag className="h-4 w-4 text-gray-400" />
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(memory.category)}`}>
-                          {memory.category}
+                {/* Clickable Memory Content Area */}
+                <div
+                  onClick={() => navigate(`/memories/${memory.id}`)}
+                  className="p-6 cursor-pointer"
+                >
+                  {/* Memory Header */}
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                        <Calendar className="h-4 w-4" />
+                        <span>{formatDate(memory.created_at)}</span>
+                      </div>
+                      {memory.category && (
+                        <div className="flex items-center space-x-2">
+                          <Tag className="h-4 w-4 text-gray-400" />
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(memory.category)}`}>
+                            {memory.category}
+                          </span>
+                        </div>
+                      )}
+                      {memory.score != null && isSemanticFilterActive && (
+                        <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                          <Target className="h-3 w-3" />
+                          <span>Relevance: {(memory.score * 100).toFixed(1)}%</span>
+                        </div>
+                      )}
+                      {memory.score != null && !isSemanticFilterActive && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          Score: {memory.score.toFixed(3)}
                         </span>
-                      </div>
-                    )}
-                    {memory.score != null && isSemanticFilterActive && (
-                      <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-                        <Target className="h-3 w-3" />
-                        <span>Relevance: {(memory.score * 100).toFixed(1)}%</span>
-                      </div>
-                    )}
-                    {memory.score != null && !isSemanticFilterActive && (
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Score: {memory.score.toFixed(3)}
-                      </span>
-                    )}
+                      )}
+                    </div>
                   </div>
-                  
+
+                  {/* Memory Title (if available) */}
+                  {memory.metadata?.name && (
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                      {memory.metadata.name}
+                    </h3>
+                  )}
+
+                  {/* Memory Content */}
+                  <div className="prose prose-sm max-w-none group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    {renderMemoryContent(memory)}
+                  </div>
+
+                  {/* Metadata */}
+                  {memory.metadata && (
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                      <details className="text-sm">
+                        <summary className="cursor-pointer text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
+                          View metadata
+                        </summary>
+                        <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-x-auto">
+                          {JSON.stringify(memory.metadata, null, 2)}
+                        </pre>
+                      </details>
+                    </div>
+                  )}
+                </div>
+
+                {/* Delete Button - Outside clickable area */}
+                <div className="px-6 pb-4">
                   <button
-                    onClick={() => handleDeleteMemory(memory.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeleteMemory(memory.id)
+                    }}
+                    className="w-full p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors border border-red-200 dark:border-red-800 hover:border-red-400 dark:hover:border-red-600"
                     title="Delete memory"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <div className="flex items-center justify-center space-x-2">
+                      <Trash2 className="h-4 w-4" />
+                      <span className="text-sm">Delete Memory</span>
+                    </div>
                   </button>
                 </div>
-
-                {/* Memory Content */}
-                <div className="prose prose-sm max-w-none">
-                  {renderMemoryContent(memory)}
-                </div>
-
-                {/* Metadata */}
-                {memory.metadata && (
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                    <details className="text-sm">
-                      <summary className="cursor-pointer text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
-                        View metadata
-                      </summary>
-                      <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-x-auto">
-                        {JSON.stringify(memory.metadata, null, 2)}
-                      </pre>
-                    </details>
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -550,7 +574,7 @@ export default function Memories() {
                 `No semantic matches found for "${semanticQuery}"`
               )
             ) : (
-              searchQuery 
+              searchQuery
                 ? `No memories found matching "${searchQuery}"`
                 : `No memories found`
             )}

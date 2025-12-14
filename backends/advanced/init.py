@@ -227,7 +227,7 @@ class FriendLiteSetup:
             else:
                 api_key = self.prompt_value("OpenAI API key (leave empty to skip)", "")
 
-            model = self.prompt_value("OpenAI model", "gpt-4o-mini")
+            model = self.prompt_value("OpenAI model", "gpt-5-mini")
             base_url = self.prompt_value("OpenAI base URL (for proxies/compatible APIs)", "https://api.openai.com/v1")
 
             if api_key:

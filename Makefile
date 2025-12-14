@@ -19,7 +19,7 @@ export $(shell sed 's/=.*//' config.env | grep -v '^\s*$$' | grep -v '^\s*\#')
 SCRIPTS_DIR := scripts
 K8S_SCRIPTS_DIR := $(SCRIPTS_DIR)/k8s
 
-.PHONY: help menu setup-k8s setup-infrastructure setup-rbac setup-storage-pvc config config-docker config-k8s config-all clean deploy deploy-docker deploy-k8s deploy-k8s-full deploy-infrastructure deploy-apps check-infrastructure check-apps build-backend up-backend down-backend k8s-status k8s-cleanup k8s-purge audio-manage test-robot test-robot-integration test-robot-unit test-robot-endpoints test-robot-specific test-robot-clean
+.PHONY: help menu setup-k8s setup-infrastructure setup-rbac setup-storage-pvc config config-docker config-k8s config-all clean deploy deploy-docker deploy-k8s deploy-k8s-full deploy-infrastructure deploy-apps check-infrastructure check-apps build-backend up-backend down-backend k8s-status k8s-cleanup k8s-purge audio-manage mycelia-sync-status mycelia-sync-all mycelia-sync-user mycelia-check-orphans mycelia-reassign-orphans test-robot test-robot-integration test-robot-unit test-robot-endpoints test-robot-specific test-robot-clean
 
 # Default target
 .DEFAULT_GOAL := menu
@@ -29,6 +29,7 @@ menu: ## Show interactive menu (default)
 	@echo "================================"
 	@echo
 	@echo "📋 Quick Actions:"
+	@echo "  setup-dev          🛠️  Setup development environment (git hooks, pre-commit)"
 	@echo "  setup-k8s          🏗️  Complete Kubernetes setup (registry + infrastructure + RBAC)"
 	@echo "  config             📝 Generate all configuration files"
 	@echo "  deploy             🚀 Deploy using configured mode ($(DEPLOYMENT_MODE))"
@@ -55,6 +56,13 @@ menu: ## Show interactive menu (default)
 	@echo "  check-infrastructure 🔍 Check infrastructure services"
 	@echo "  check-apps         🔍 Check application services"
 	@echo "  clean              🧹 Clean up generated files"
+	@echo
+	@echo "🔄 Mycelia Sync:"
+	@echo "  mycelia-sync-status      📊 Show Mycelia OAuth sync status"
+	@echo "  mycelia-sync-all         🔄 Sync all Friend-Lite users to Mycelia"
+	@echo "  mycelia-sync-user        👤 Sync specific user (EMAIL=user@example.com)"
+	@echo "  mycelia-check-orphans    🔍 Find orphaned Mycelia objects"
+	@echo "  mycelia-reassign-orphans ♻️  Reassign orphans (EMAIL=admin@example.com)"
 	@echo
 	@echo "Current configuration:"
 	@echo "  DOMAIN: $(DOMAIN)"
@@ -100,6 +108,13 @@ help: ## Show detailed help for all targets
 	@echo "🎵 AUDIO MANAGEMENT:"
 	@echo "  audio-manage       Interactive audio file management"
 	@echo
+	@echo "🔄 MYCELIA SYNC:"
+	@echo "  mycelia-sync-status Show Mycelia OAuth sync status for all users"
+	@echo "  mycelia-sync-all   Sync all Friend-Lite users to Mycelia OAuth"
+	@echo "  mycelia-sync-user  Sync specific user (EMAIL=user@example.com)"
+	@echo "  mycelia-check-orphans Find Mycelia objects without Friend-Lite owner"
+	@echo "  mycelia-reassign-orphans Reassign orphaned objects (EMAIL=admin@example.com)"
+	@echo
 	@echo "🧪 ROBOT FRAMEWORK TESTING:"
 	@echo "  test-robot         Run all Robot Framework tests"
 	@echo "  test-robot-integration Run integration tests only"
@@ -113,6 +128,29 @@ help: ## Show detailed help for all targets
 	@echo
 	@echo "🧹 CLEANUP:"
 	@echo "  clean              Clean up generated configuration files"
+
+# ========================================
+# DEVELOPMENT SETUP
+# ========================================
+
+setup-dev: ## Setup development environment (git hooks, pre-commit)
+	@echo "🛠️  Setting up development environment..."
+	@echo ""
+	@echo "📦 Installing pre-commit..."
+	@pip install pre-commit 2>/dev/null || pip3 install pre-commit
+	@echo ""
+	@echo "🔧 Installing git hooks..."
+	@pre-commit install --hook-type pre-push
+	@pre-commit install --hook-type pre-commit
+	@echo ""
+	@echo "✅ Development environment setup complete!"
+	@echo ""
+	@echo "💡 Hooks installed:"
+	@echo "  • Robot Framework tests run before push"
+	@echo "  • Black/isort format Python code on commit"
+	@echo "  • Code quality checks on commit"
+	@echo ""
+	@echo "⚙️  To skip hooks: git push --no-verify / git commit --no-verify"
 
 # ========================================
 # KUBERNETES SETUP
@@ -308,6 +346,42 @@ k8s-purge: ## Purge unused images (registry + container)
 audio-manage: ## Interactive audio file management
 	@echo "🎵 Starting audio file management..."
 	@$(SCRIPTS_DIR)/manage-audio-files.sh
+
+# ========================================
+# MYCELIA SYNC
+# ========================================
+
+mycelia-sync-status: ## Show Mycelia OAuth sync status for all users
+	@echo "📊 Checking Mycelia OAuth sync status..."
+	@cd backends/advanced && uv run python scripts/sync_friendlite_mycelia.py --status
+
+mycelia-sync-all: ## Sync all Friend-Lite users to Mycelia OAuth
+	@echo "🔄 Syncing all Friend-Lite users to Mycelia OAuth..."
+	@echo "⚠️  This will create OAuth credentials for users without them"
+	@read -p "Continue? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	@cd backends/advanced && uv run python scripts/sync_friendlite_mycelia.py --sync-all
+
+mycelia-sync-user: ## Sync specific user to Mycelia OAuth (usage: make mycelia-sync-user EMAIL=user@example.com)
+	@echo "👤 Syncing specific user to Mycelia OAuth..."
+	@if [ -z "$(EMAIL)" ]; then \
+		echo "❌ EMAIL parameter is required. Usage: make mycelia-sync-user EMAIL=user@example.com"; \
+		exit 1; \
+	fi
+	@cd backends/advanced && uv run python scripts/sync_friendlite_mycelia.py --email $(EMAIL)
+
+mycelia-check-orphans: ## Find Mycelia objects without Friend-Lite owner
+	@echo "🔍 Checking for orphaned Mycelia objects..."
+	@cd backends/advanced && uv run python scripts/sync_friendlite_mycelia.py --check-orphans
+
+mycelia-reassign-orphans: ## Reassign orphaned objects to user (usage: make mycelia-reassign-orphans EMAIL=admin@example.com)
+	@echo "♻️  Reassigning orphaned Mycelia objects..."
+	@if [ -z "$(EMAIL)" ]; then \
+		echo "❌ EMAIL parameter is required. Usage: make mycelia-reassign-orphans EMAIL=admin@example.com"; \
+		exit 1; \
+	fi
+	@echo "⚠️  This will reassign all orphaned objects to: $(EMAIL)"
+	@read -p "Continue? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	@cd backends/advanced && uv run python scripts/sync_friendlite_mycelia.py --reassign-orphans --target-email $(EMAIL)
 
 # ========================================
 # TESTING TARGETS

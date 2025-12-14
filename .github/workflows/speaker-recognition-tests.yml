@@ -32,7 +32,25 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
+    - name: Verify required secrets
+      env:
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+      run: |
+        echo "Verifying required secrets..."
+        if [ -z "$HF_TOKEN" ]; then
+          echo "❌ ERROR: HF_TOKEN secret is not set"
+          exit 1
+        fi
+        if [ -z "$DEEPGRAM_API_KEY" ]; then
+          echo "❌ ERROR: DEEPGRAM_API_KEY secret is not set"
+          exit 1
+        fi
+        echo "✓ HF_TOKEN is set (length: ${#HF_TOKEN})"
+        echo "✓ DEEPGRAM_API_KEY is set (length: ${#DEEPGRAM_API_KEY})"
+        echo "✓ All required secrets verified"
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       

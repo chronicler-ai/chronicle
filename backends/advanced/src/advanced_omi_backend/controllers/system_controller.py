@@ -55,47 +55,6 @@ async def get_auth_config():
     }
 
 
-async def get_processor_status():
-    """Get RQ worker and queue status."""
-    try:
-        # Get RQ queue health (new architecture)
-        from advanced_omi_backend.controllers.queue_controller import get_queue_health
-        queue_health = get_queue_health()
-
-        status = {
-            "architecture": "rq_workers",  # New RQ-based architecture
-            "timestamp": int(time.time()),
-            "workers": {
-                "total": queue_health.get("total_workers", 0),
-                "active": queue_health.get("active_workers", 0),
-                "idle": queue_health.get("idle_workers", 0),
-                "details": queue_health.get("workers", [])
-            },
-            "queues": {
-                "transcription": queue_health.get("queues", {}).get("transcription", {}),
-                "memory": queue_health.get("queues", {}).get("memory", {}),
-                "default": queue_health.get("queues", {}).get("default", {})
-            }
-        }
-
-        # Get task manager status if available
-        try:
-            task_manager = get_task_manager()
-            if task_manager:
-                task_status = task_manager.get_health_status()
-                status["task_manager"] = task_status
-        except Exception as e:
-            status["task_manager"] = {"error": str(e)}
-
-        return status
-
-    except Exception as e:
-        logger.error(f"Error getting processor status: {e}", exc_info=True)
-        return JSONResponse(
-            status_code=500, content={"error": f"Failed to get processor status: {str(e)}"}
-        )
-
-
 # Audio file processing functions moved to audio_controller.py
 
 
@@ -483,26 +442,120 @@ async def reload_memory_config():
 async def delete_all_user_memories(user: User):
     """Delete all memories for the current user."""
     try:
-        from advanced_omi_backend.memory import get_memory_service
-        
+        from advanced_omi_backend.services.memory import get_memory_service
+
         memory_service = get_memory_service()
-        
+
         # Delete all memories for the user
         deleted_count = await memory_service.delete_all_user_memories(user.user_id)
-        
+
         logger.info(f"Deleted {deleted_count} memories for user {user.user_id}")
-        
+
         return {
             "message": f"Successfully deleted {deleted_count} memories",
             "deleted_count": deleted_count,
             "user_id": user.user_id,
             "status": "success"
         }
-        
+
     except Exception as e:
         logger.error(f"Error deleting all memories for user {user.user_id}: {e}")
         return JSONResponse(
             status_code=500, content={"error": f"Failed to delete memories: {str(e)}"}
+        )
+
+
+# Memory Provider Configuration Functions
+
+async def get_memory_provider():
+    """Get current memory provider configuration."""
+    try:
+        current_provider = os.getenv("MEMORY_PROVIDER", "friend_lite").lower()
+
+        # Get available providers
+        available_providers = ["friend_lite", "openmemory_mcp", "mycelia"]
+
+        return {
+            "current_provider": current_provider,
+            "available_providers": available_providers,
+            "status": "success"
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting memory provider: {e}")
+        return JSONResponse(
+            status_code=500, content={"error": f"Failed to get memory provider: {str(e)}"}
+        )
+
+
+async def set_memory_provider(provider: str):
+    """Set memory provider and update .env file."""
+    try:
+        # Validate provider
+        provider = provider.lower().strip()
+        valid_providers = ["friend_lite", "openmemory_mcp", "mycelia"]
+
+        if provider not in valid_providers:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Invalid provider '{provider}'. Valid providers: {', '.join(valid_providers)}"}
+            )
+
+        # Path to .env file (assuming we're running from backends/advanced/)
+        env_path = os.path.join(os.getcwd(), ".env")
+
+        if not os.path.exists(env_path):
+            return JSONResponse(
+                status_code=404,
+                content={"error": f".env file not found at {env_path}"}
+            )
+
+        # Read current .env file
+        with open(env_path, 'r') as file:
+            lines = file.readlines()
+
+        # Update or add MEMORY_PROVIDER line
+        provider_found = False
+        updated_lines = []
+
+        for line in lines:
+            if line.strip().startswith("MEMORY_PROVIDER="):
+                updated_lines.append(f"MEMORY_PROVIDER={provider}\n")
+                provider_found = True
+            else:
+                updated_lines.append(line)
+
+        # If MEMORY_PROVIDER wasn't found, add it
+        if not provider_found:
+            updated_lines.append(f"\n# Memory Provider Configuration\nMEMORY_PROVIDER={provider}\n")
+
+        # Create backup
+        backup_path = f"{env_path}.bak"
+        shutil.copy2(env_path, backup_path)
+        logger.info(f"Created .env backup at {backup_path}")
+
+        # Write updated .env file
+        with open(env_path, 'w') as file:
+            file.writelines(updated_lines)
+
+        # Update environment variable for current process
+        os.environ["MEMORY_PROVIDER"] = provider
+
+        logger.info(f"Updated MEMORY_PROVIDER to '{provider}' in .env file")
+
+        return {
+            "message": f"Memory provider updated to '{provider}'. Please restart the backend service for changes to take effect.",
+            "provider": provider,
+            "env_path": env_path,
+            "backup_created": True,
+            "requires_restart": True,
+            "status": "success"
+        }
+
+    except Exception as e:
+        logger.error(f"Error setting memory provider: {e}")
+        return JSONResponse(
+            status_code=500, content={"error": f"Failed to set memory provider: {str(e)}"}
         )
 
 
