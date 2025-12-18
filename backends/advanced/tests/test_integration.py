@@ -109,7 +109,7 @@ tests_dir = Path(__file__).parent
 # Test constants
 BACKEND_URL = "http://localhost:8001"  # Test backend port
 TEST_AUDIO_PATH = tests_dir.parent.parent.parent / "extras/test-audios/DIY Experts Glass Blowing_16khz_mono_4min.wav"
-TEST_AUDIO_PATH_OFFLINE = tests_dir / "assets" / "test_clip_10s.wav"  # Shorter clip for offline testing
+TEST_AUDIO_PATH_PARAKEET = tests_dir / "assets" / "test_clip_10s.wav"  # Shorter clip for parakeet testing
 MAX_STARTUP_WAIT = 60  # seconds
 PROCESSING_TIMEOUT = 300  # seconds for audio processing (5 minutes)
 
@@ -715,8 +715,8 @@ class IntegrationTestRunner:
         
     def upload_test_audio(self):
         """Upload test audio file and monitor processing."""
-        # Use different audio file for offline provider
-        audio_path = TEST_AUDIO_PATH_OFFLINE if self.provider == "offline" else TEST_AUDIO_PATH
+        # Use different audio file for parakeet provider (shorter for faster testing)
+        audio_path = TEST_AUDIO_PATH_PARAKEET if self.provider == "parakeet" else TEST_AUDIO_PATH
         
         logger.info(f"📤 Uploading test audio: {audio_path.name}")
         
@@ -1425,21 +1425,21 @@ def test_full_pipeline_integration(test_runner):
         phase_times['service_startup'] = time.time() - phase_start
         logger.info(f"✅ Service startup completed in {phase_times['service_startup']:.2f}s")
         
-        # Phase 2b: ASR service startup (offline only)
+        # Phase 2b: ASR service startup (parakeet only)
         phase_start = time.time()
         logger.info(f"🎤 Phase 2b: Starting ASR services ({TRANSCRIPTION_PROVIDER} provider)...")
         test_runner.start_asr_services()
         phase_times['asr_startup'] = time.time() - phase_start
         logger.info(f"✅ ASR service startup completed in {phase_times['asr_startup']:.2f}s")
-        
+
         # Phase 3: Wait for services
         phase_start = time.time()
         logger.info("⏳ Phase 3: Waiting for services to be ready...")
         test_runner.wait_for_services()
         phase_times['service_readiness'] = time.time() - phase_start
         logger.info(f"✅ Service readiness check completed in {phase_times['service_readiness']:.2f}s")
-        
-        # Phase 3b: Wait for ASR services (offline only)
+
+        # Phase 3b: Wait for ASR services (parakeet only)
         phase_start = time.time()
         logger.info("⏳ Phase 3b: Waiting for ASR services to be ready...")
         test_runner.wait_for_asr_ready()

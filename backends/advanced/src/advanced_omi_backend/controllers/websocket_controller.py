@@ -304,13 +304,13 @@ async def _initialize_streaming_session(
 
     # Determine transcription provider from environment
     transcription_provider = os.getenv("TRANSCRIPTION_PROVIDER", "").lower()
-    if transcription_provider in ["offline", "parakeet"]:
+    if transcription_provider == "parakeet":
         provider = "parakeet"
     elif transcription_provider == "deepgram":
         provider = "deepgram"
     else:
         # Auto-detect: prefer Parakeet if URL is set, otherwise Deepgram
-        parakeet_url = os.getenv("PARAKEET_ASR_URL") or os.getenv("OFFLINE_ASR_TCP_URI")
+        parakeet_url = os.getenv("PARAKEET_ASR_URL")
         deepgram_key = os.getenv("DEEPGRAM_API_KEY")
         if parakeet_url:
             provider = "parakeet"

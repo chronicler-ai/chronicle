@@ -41,10 +41,10 @@ python client.py --host localhost --port 8765 --microphone
 ```
 
 ### Integration with Chronicle
-Set the offline ASR URI in your Chronicle backend:
+Set the Parakeet ASR URL in your Chronicle backend:
 ```bash
 # In your .env file
-OFFLINE_ASR_TCP_URI=tcp://localhost:8765
+PARAKEET_ASR_URL=http://localhost:8765
 ```
 
 ## Verify Setup

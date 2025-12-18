@@ -30,6 +30,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile_Parakeet
+      args:
+        PYTORCH_CUDA_VERSION: ${PYTORCH_CUDA_VERSION:-cu126}
     image: parakeet-asr:test
     ports:
       - "8767:8765"  # Different test port for parakeet

@@ -101,9 +101,23 @@ uv run --with-requirements setup-requirements.txt python services.py start --all
 # Start only specific services
 uv run --with-requirements setup-requirements.txt python services.py start backend speaker-recognition
 
+# Restart all services
+uv run --with-requirements setup-requirements.txt python services.py restart --all
+
+# Restart specific services
+uv run --with-requirements setup-requirements.txt python services.py restart backend
+
 # Stop all services
 uv run --with-requirements setup-requirements.txt python services.py stop --all
 ```
+
+**Convenience Scripts:**
+```bash
+./start.sh    # Quick start all configured services
+./restart.sh  # Quick restart all configured services
+```
+
+**Important:** Use `restart` for configuration changes (.env updates). For code changes, use `stop` + `start --build` to rebuild images.
 
 ---
 
@@ -128,7 +142,7 @@ If you encounter port conflicts:
 1. **Check running services**: `uv run --with-requirements setup-requirements.txt python services.py status`
 2. **Stop conflicting services**: `uv run --with-requirements setup-requirements.txt python services.py stop --all`
 3. **Change ports in .env files** if needed
-4. **Restart services**: `uv run --with-requirements setup-requirements.txt python services.py start --all`
+4. **Restart services**: `uv run --with-requirements setup-requirements.txt python services.py restart --all` or `./restart.sh`
 
 ---
 

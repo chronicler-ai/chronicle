@@ -191,7 +191,7 @@ class ChronicleSetup:
                 self.console.print("[yellow][WARNING][/yellow] No API key provided - transcription will not work")
 
         elif choice == "3":
-            self.config["TRANSCRIPTION_PROVIDER"] = "offline"
+            self.config["TRANSCRIPTION_PROVIDER"] = "parakeet"
             self.console.print("[blue][INFO][/blue] Offline Parakeet ASR selected")
             parakeet_url = self.prompt_value("Parakeet ASR URL", "http://host.docker.internal:8767")
             self.config["PARAKEET_ASR_URL"] = parakeet_url

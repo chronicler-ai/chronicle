@@ -199,7 +199,7 @@ jobs:
           cd ../../extras/asr-services
           for cuda_variant in cu121 cu126 cu128; do
             echo "Building parakeet-asr-${cuda_variant}"
-            export CUDA_VERSION="${cuda_variant}"
+            export PYTORCH_CUDA_VERSION="${cuda_variant}"
             docker compose build parakeet-asr
             
             img_id=$(docker compose images -q parakeet-asr | head -n1)

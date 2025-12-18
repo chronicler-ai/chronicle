@@ -148,12 +148,32 @@ uv run --with-requirements setup-requirements.txt python services.py start backe
 # Check service status
 uv run --with-requirements setup-requirements.txt python services.py status
 
+# Restart all services
+uv run --with-requirements setup-requirements.txt python services.py restart --all
+
+# Restart specific services
+uv run --with-requirements setup-requirements.txt python services.py restart backend
+
 # Stop all services
 uv run --with-requirements setup-requirements.txt python services.py stop --all
 
-# Stop specific services  
+# Stop specific services
 uv run --with-requirements setup-requirements.txt python services.py stop asr-services openmemory-mcp
 ```
+
+**Convenience Scripts:**
+```bash
+# Quick start (from project root)
+./start.sh
+
+# Quick restart (from project root)
+./restart.sh
+```
+
+**Important Notes:**
+- **Restart** restarts containers without rebuilding - use for configuration changes (.env updates)
+- **For code changes**, use `stop` + `start --build` to rebuild images
+- Example: `uv run --with-requirements setup-requirements.txt python services.py stop --all && uv run --with-requirements setup-requirements.txt python services.py start --all --build`
 
 ### Manual Service Management
 You can also manage services individually:

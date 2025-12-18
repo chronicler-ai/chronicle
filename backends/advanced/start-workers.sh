@@ -62,13 +62,15 @@ start_workers() {
         AUDIO_STREAM_DEEPGRAM_WORKER_PID=""
     fi
 
-    # Only start Parakeet worker if PARAKEET_ASR_URL or OFFLINE_ASR_TCP_URI is set
-    if [ -n "$PARAKEET_ASR_URL" ] || [ -n "$OFFLINE_ASR_TCP_URI" ]; then
+
+    # Only start Parakeet worker if PARAKEET_ASR_URL is set
+    if [ -n "$PARAKEET_ASR_URL" ]; then
+
         echo "🎵 Starting audio stream Parakeet worker (1 worker for sequential processing)..."
         uv run python -m advanced_omi_backend.workers.audio_stream_parakeet_worker &
         AUDIO_STREAM_PARAKEET_WORKER_PID=$!
     else
-        echo "⏭️  Skipping Parakeet stream worker (PARAKEET_ASR_URL/OFFLINE_ASR_TCP_URI not set)"
+        echo "⏭️  Skipping Parakeet stream worker (PARAKEET_ASR_URL not set)"
         AUDIO_STREAM_PARAKEET_WORKER_PID=""
     fi
 
@@ -80,8 +82,8 @@ start_workers() {
     echo "  - RQ worker 5: PID $RQ_WORKER_5_PID (transcription, memory, default)"
     echo "  - RQ worker 6: PID $RQ_WORKER_6_PID (transcription, memory, default)"
     echo "  - Audio persistence worker: PID $AUDIO_PERSISTENCE_WORKER_PID (audio queue - file rotation)"
-    [ -n "$AUDIO_STREAM_DEEPGRAM_WORKER_PID" ] && echo "  - Deepgram stream worker: PID $AUDIO_STREAM_DEEPGRAM_WORKER_PID (real-time transcription)"
-    [ -n "$AUDIO_STREAM_PARAKEET_WORKER_PID" ] && echo "  - Parakeet stream worker: PID $AUDIO_STREAM_PARAKEET_WORKER_PID (real-time transcription)"
+    [ -n "$AUDIO_STREAM_DEEPGRAM_WORKER_PID" ] && echo "  - Audio stream Deepgram worker: PID $AUDIO_STREAM_DEEPGRAM_WORKER_PID (Redis Streams consumer)" || true
+    [ -n "$AUDIO_STREAM_PARAKEET_WORKER_PID" ] && echo "  - Audio stream Parakeet worker: PID $AUDIO_STREAM_PARAKEET_WORKER_PID (Redis Streams consumer)" || true
 }
 
 # Function to check worker registration health

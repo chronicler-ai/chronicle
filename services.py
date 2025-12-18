@@ -6,11 +6,8 @@ Start, stop, and manage configured services
 
 import argparse
 import subprocess
-import sys
 from pathlib import Path
-import os
 
-from rich import print as rprint
 from rich.console import Console
 from rich.table import Table
 from dotenv import dotenv_values
@@ -224,21 +221,44 @@ def start_services(services, build=False):
 def stop_services(services):
     """Stop specified services"""
     console.print(f"🛑 [bold]Stopping {len(services)} services...[/bold]")
-    
+
     success_count = 0
     for service_name in services:
         if service_name not in SERVICES:
             console.print(f"[red]❌ Unknown service: {service_name}[/red]")
             continue
-            
+
         console.print(f"\n🔧 Stopping {service_name}...")
         if run_compose_command(service_name, 'down'):
             console.print(f"[green]✅ {service_name} stopped[/green]")
             success_count += 1
         else:
             console.print(f"[red]❌ Failed to stop {service_name}[/red]")
-    
+
     console.print(f"\n[green]🎉 {success_count}/{len(services)} services stopped successfully[/green]")
+
+def restart_services(services):
+    """Restart specified services"""
+    console.print(f"🔄 [bold]Restarting {len(services)} services...[/bold]")
+
+    success_count = 0
+    for service_name in services:
+        if service_name not in SERVICES:
+            console.print(f"[red]❌ Unknown service: {service_name}[/red]")
+            continue
+
+        if not check_service_configured(service_name):
+            console.print(f"[yellow]⚠️  {service_name} not configured, skipping[/yellow]")
+            continue
+
+        console.print(f"\n🔧 Restarting {service_name}...")
+        if run_compose_command(service_name, 'restart'):
+            console.print(f"[green]✅ {service_name} restarted[/green]")
+            success_count += 1
+        else:
+            console.print(f"[red]❌ Failed to restart {service_name}[/red]")
+
+    console.print(f"\n[green]🎉 {success_count}/{len(services)} services restarted successfully[/green]")
 
 def show_status():
     """Show status of all services"""
@@ -275,12 +295,18 @@ def main():
     start_parser.add_argument('--all', action='store_true', help='Start all configured services')
     start_parser.add_argument('--build', action='store_true', help='Build images before starting')
     
-    # Stop command  
+    # Stop command
     stop_parser = subparsers.add_parser('stop', help='Stop services')
     stop_parser.add_argument('services', nargs='*',
                            help='Services to stop: backend, speaker-recognition, asr-services, openmemory-mcp (or use --all)')
     stop_parser.add_argument('--all', action='store_true', help='Stop all services')
-    
+
+    # Restart command
+    restart_parser = subparsers.add_parser('restart', help='Restart services')
+    restart_parser.add_argument('services', nargs='*',
+                               help='Services to restart: backend, speaker-recognition, asr-services, openmemory-mcp (or use --all)')
+    restart_parser.add_argument('--all', action='store_true', help='Restart all services')
+
     # Status command
     subparsers.add_parser('status', help='Show service status')
     
@@ -325,8 +351,25 @@ def main():
         else:
             console.print("[red]❌ No services specified. Use --all or specify service names.[/red]")
             return
-            
+
         stop_services(services)
+
+    elif args.command == 'restart':
+        if args.all:
+            services = [s for s in SERVICES.keys() if check_service_configured(s)]
+        elif args.services:
+            # Validate service names
+            invalid_services = [s for s in args.services if s not in SERVICES]
+            if invalid_services:
+                console.print(f"[red]❌ Invalid service names: {', '.join(invalid_services)}[/red]")
+                console.print(f"Available services: {', '.join(SERVICES.keys())}")
+                return
+            services = args.services
+        else:
+            console.print("[red]❌ No services specified. Use --all or specify service names.[/red]")
+            return
+
+        restart_services(services)
 
 if __name__ == "__main__":
     main()

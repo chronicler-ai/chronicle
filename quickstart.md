@@ -194,6 +194,10 @@ The wizard will ask questions - here's what to answer:
 
 **Start the services:**
 ```bash
+# Option 1: Using convenience script (recommended)
+./start.sh
+
+# Option 2: Direct command
 uv run --with-requirements setup-requirements.txt python services.py start --all --build
 ```
 
@@ -283,6 +287,11 @@ Before connecting your phone, make sure everything works:
 - **Test connection fails**: Verify you're using `https://` and correct Tailscale IP
 
 ### Service Issues
+
+**General Service Management:**
+- **Services not responding**: Try restarting with `./restart.sh` or `uv run --with-requirements setup-requirements.txt python services.py restart --all`
+- **Check service status**: Use `uv run --with-requirements setup-requirements.txt python services.py status`
+- **Stop all services**: Use `uv run --with-requirements setup-requirements.txt python services.py stop --all`
 
 **Cloud Services (Deepgram/OpenAI):**
 - **Transcription not working**: Check Deepgram API key is correct
