@@ -1,4 +1,4 @@
-# Chronicle
+# Chronicle (fork from https://github.com/chronicler-ai/chronicle)
 
 Self-hostable AI system that captures audio/video data from OMI devices and other sources to generate memories, action items, and contextual insights about your conversations and daily interactions.
 
