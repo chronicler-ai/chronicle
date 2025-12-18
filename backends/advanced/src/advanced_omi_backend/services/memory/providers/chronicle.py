@@ -290,6 +290,62 @@ class MemoryService(MemoryServiceBase):
             memory_logger.error(f"Count memories failed: {e}")
             return None
 
+    async def get_memory(self, memory_id: str, user_id: Optional[str] = None) -> Optional[MemoryEntry]:
+        """Get a specific memory by ID.
+
+        Retrieves a single memory from Qdrant by its ID and verifies user ownership.
+
+        Args:
+            memory_id: Unique identifier of the memory to retrieve
+            user_id: Optional user ID for access control
+
+        Returns:
+            MemoryEntry object if found and authorized, None otherwise
+        """
+        if not self._initialized:
+            await self.initialize()
+
+        try:
+            # Retrieve the point from Qdrant
+            points = await self.vector_store.client.retrieve(
+                collection_name=self.vector_store.collection_name,
+                ids=[memory_id],
+                with_payload=True,
+                with_vectors=False
+            )
+
+            if not points:
+                memory_logger.debug(f"Memory {memory_id} not found in vector store")
+                return None
+
+            point = points[0]
+            payload = point.payload
+
+            # Check user ownership if user_id is provided
+            if user_id:
+                memory_user_id = payload.get("metadata", {}).get("user_id")
+                if memory_user_id != user_id:
+                    memory_logger.warning(
+                        f"Access denied: Memory {memory_id} belongs to {memory_user_id}, requested by {user_id}"
+                    )
+                    return None
+
+            # Convert to MemoryEntry
+            memory_entry = MemoryEntry(
+                id=str(point.id),
+                content=payload.get("content", ""),
+                metadata=payload.get("metadata", {}),
+                created_at=payload.get("created_at"),
+                embedding=None  # Don't return embeddings for single memory retrieval
+            )
+
+            memory_logger.info(f"📖 Retrieved memory {memory_id} for user {user_id}")
+            return memory_entry
+
+        except Exception as e:
+            memory_logger.error(f"Get memory {memory_id} failed: {e}", exc_info=True)
+            return None
+
     async def delete_memory(self, memory_id: str, user_id: Optional[str] = None, user_email: Optional[str] = None) -> bool:
         """Delete a specific memory by ID.
         
@@ -428,7 +484,7 @@ class MemoryService(MemoryServiceBase):
                         "extraction_enabled": self.config.extraction_enabled,
                     },
                     embedding=embedding,
-                    created_at=str(int(time.time())),
+                    created_at=int(time.time()),
                 )
             )
         
@@ -626,7 +682,7 @@ class MemoryService(MemoryServiceBase):
                 if emb is None:
                     memory_logger.warning(f"Skipping ADD action due to missing embedding: {action_text}")
                     continue
-                    
+
                 memory_id = str(uuid.uuid4())
                 memory_entries.append(
                     MemoryEntry(
@@ -634,7 +690,7 @@ class MemoryService(MemoryServiceBase):
                         content=action_text,
                         metadata=base_metadata,
                         embedding=emb,
-                        created_at=str(int(time.time())),
+                        created_at=int(time.time()),
                     )
                 )
                 memory_logger.info(f"➕ Added new memory: {memory_id} - {action_text[:50]}...")
