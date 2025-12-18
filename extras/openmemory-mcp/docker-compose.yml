@@ -8,11 +8,9 @@ services:
       - ./data/mem0_storage:/qdrant/storage
     restart: unless-stopped
 
-  # OpenMemory MCP Server (built from local cache)
+  # OpenMemory MCP Server (official Docker image)
   openmemory-mcp:
-    build:
-      context: ./cache/mem0/openmemory/api
-      dockerfile: Dockerfile
+    image: mem0/openmemory-mcp:latest
     env_file:
       - .env
     environment:
@@ -29,8 +27,11 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    networks:
+      - default
+      - chronicle-network
 
-  # OpenMemory UI (optional - can be disabled if not needed)
+  # OpenMemory UI (starts by default with the MCP server)
   openmemory-ui:
     image: mem0/openmemory-ui:latest
     ports:
@@ -40,5 +41,10 @@ services:
       - NEXT_PUBLIC_USER_ID=openmemory
     depends_on:
       - openmemory-mcp
-    profiles:
-      - ui  # Only starts when --profile ui is used
+    restart: unless-stopped
+
+networks:
+  default:
+    name: openmemory-mcp_default
+  chronicle-network:
+    external: true

@@ -1,32 +1,52 @@
 import axios from 'axios'
+import { getStorageKey } from '../utils/storage'
 
 // Get backend URL from environment or auto-detect based on current location
 const getBackendUrl = () => {
-  // If explicitly set in environment, use that
+  const { protocol, hostname, port } = window.location
+  console.log('Protocol:', protocol)
+  console.log('Hostname:', hostname)
+  console.log('Port:', port)
+
+  const isStandardPort = (protocol === 'https:' && (port === '' || port === '443')) ||
+                         (protocol === 'http:' && (port === '' || port === '80'))
+
+  // Check if we have a base path (Caddy path-based routing)
+  const basePath = import.meta.env.BASE_URL
+  console.log('Base path from Vite:', basePath)
+
+  if (isStandardPort && basePath && basePath !== '/') {
+    // We're using Caddy path-based routing - use the base path
+    console.log('Using Caddy path-based routing with base path')
+    return basePath.replace(/\/$/, '')
+  }
+
+  // If explicitly set in environment, use that (for direct backend access)
   if (import.meta.env.VITE_BACKEND_URL !== undefined && import.meta.env.VITE_BACKEND_URL !== '') {
+    console.log('Using explicit VITE_BACKEND_URL')
     return import.meta.env.VITE_BACKEND_URL
   }
-  
-  // If accessed through proxy (standard ports), use relative URLs
-  const { protocol, hostname, port } = window.location
-  const isStandardPort = (protocol === 'https:' && (port === '' || port === '443')) || 
-                         (protocol === 'http:' && (port === '' || port === '80'))
-  
+
   if (isStandardPort) {
-    // We're being accessed through nginx proxy or Kubernetes Ingress, use same origin
-    return ''  // Empty string means use relative URLs (same origin)
+    // We're being accessed through nginx proxy or standard proxy
+    console.log('Using standard proxy - relative URLs')
+    return ''
   }
-  
+
   // Development mode - direct access to dev server
   if (port === '5173') {
+    console.log('Development mode - using localhost:8000')
     return 'http://localhost:8000'
   }
-  
+
   // Fallback
+  console.log('Fallback - using hostname:8000')
   return `${protocol}//${hostname}:8000`
 }
 
 const BACKEND_URL = getBackendUrl()
+console.log('VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL)
+
 console.log('🌐 API: Backend URL configured as:', BACKEND_URL || 'Same origin (relative URLs)')
 
 // Export BACKEND_URL for use in other components
@@ -39,7 +59,7 @@ export const api = axios.create({
 
 // Add request interceptor to include auth token
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem(getStorageKey('token'))
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -54,7 +74,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token expired or invalid, redirect to login
       console.warn('🔐 API: 401 Unauthorized - clearing token and redirecting to login')
-      localStorage.removeItem('token')
+      localStorage.removeItem(getStorageKey('token'))
       window.location.href = '/login'
     } else if (error.code === 'ECONNABORTED') {
       // Request timeout - don't logout, just log it
@@ -228,7 +248,7 @@ export const chatApi = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${localStorage.getItem(getStorageKey('token'))}`
       },
       body: JSON.stringify(requestBody)
     })

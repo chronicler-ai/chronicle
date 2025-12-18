@@ -1,4 +1,5 @@
-# Dependencies for Friend-Lite root setup orchestrator
+# Dependencies for Friend-Lite setup scripts (root wizard + all service init scripts)
 rich>=13.0.0
-python-dotenv
+python-dotenv>=1.0.0
 requests>=2.31.0
+pyyaml>=6.0.0

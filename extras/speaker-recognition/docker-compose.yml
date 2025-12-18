@@ -46,7 +46,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        PYTORCH_CUDA_VERSION: ${PYTORCH_CUDA_VERSION:-cu121}
+        PYTORCH_CUDA_VERSION: ${PYTORCH_CUDA_VERSION:-cu126}
     deploy:
       resources:
         reservations:
@@ -108,5 +108,5 @@ services:
 # Shared network for cross-project communication
 networks:
   default:
-    name: friend-network
+    name: chronicle-network
     external: true

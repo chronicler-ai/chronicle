@@ -51,9 +51,26 @@ start_workers() {
     uv run python -m advanced_omi_backend.workers.rq_worker_entry audio &
     AUDIO_PERSISTENCE_WORKER_PID=$!
 
-    echo "🎵 Starting audio stream Deepgram worker (1 worker for sequential processing)..."
-    uv run python -m advanced_omi_backend.workers.audio_stream_deepgram_worker &
-    AUDIO_STREAM_WORKER_PID=$!
+    # Start stream workers based on available configuration
+    # Only start Deepgram worker if DEEPGRAM_API_KEY is set
+    if [ -n "$DEEPGRAM_API_KEY" ]; then
+        echo "🎵 Starting audio stream Deepgram worker (1 worker for sequential processing)..."
+        uv run python -m advanced_omi_backend.workers.audio_stream_deepgram_worker &
+        AUDIO_STREAM_DEEPGRAM_WORKER_PID=$!
+    else
+        echo "⏭️  Skipping Deepgram stream worker (DEEPGRAM_API_KEY not set)"
+        AUDIO_STREAM_DEEPGRAM_WORKER_PID=""
+    fi
+
+    # Only start Parakeet worker if PARAKEET_ASR_URL or OFFLINE_ASR_TCP_URI is set
+    if [ -n "$PARAKEET_ASR_URL" ] || [ -n "$OFFLINE_ASR_TCP_URI" ]; then
+        echo "🎵 Starting audio stream Parakeet worker (1 worker for sequential processing)..."
+        uv run python -m advanced_omi_backend.workers.audio_stream_parakeet_worker &
+        AUDIO_STREAM_PARAKEET_WORKER_PID=$!
+    else
+        echo "⏭️  Skipping Parakeet stream worker (PARAKEET_ASR_URL/OFFLINE_ASR_TCP_URI not set)"
+        AUDIO_STREAM_PARAKEET_WORKER_PID=""
+    fi
 
     echo "✅ All workers started:"
     echo "  - RQ worker 1: PID $RQ_WORKER_1_PID (transcription, memory, default)"
@@ -63,7 +80,8 @@ start_workers() {
     echo "  - RQ worker 5: PID $RQ_WORKER_5_PID (transcription, memory, default)"
     echo "  - RQ worker 6: PID $RQ_WORKER_6_PID (transcription, memory, default)"
     echo "  - Audio persistence worker: PID $AUDIO_PERSISTENCE_WORKER_PID (audio queue - file rotation)"
-    echo "  - Audio stream worker: PID $AUDIO_STREAM_WORKER_PID (Redis Streams consumer - sequential processing)"
+    [ -n "$AUDIO_STREAM_DEEPGRAM_WORKER_PID" ] && echo "  - Deepgram stream worker: PID $AUDIO_STREAM_DEEPGRAM_WORKER_PID (real-time transcription)"
+    [ -n "$AUDIO_STREAM_PARAKEET_WORKER_PID" ] && echo "  - Parakeet stream worker: PID $AUDIO_STREAM_PARAKEET_WORKER_PID (real-time transcription)"
 }
 
 # Function to check worker registration health
@@ -103,7 +121,9 @@ monitor_worker_health() {
             echo "🔧 Self-healing: Restarting all workers to restore registration..."
 
             # Kill all workers
-            kill $RQ_WORKER_1_PID $RQ_WORKER_2_PID $RQ_WORKER_3_PID $RQ_WORKER_4_PID $RQ_WORKER_5_PID $RQ_WORKER_6_PID $AUDIO_PERSISTENCE_WORKER_PID $AUDIO_STREAM_WORKER_PID 2>/dev/null || true
+            kill $RQ_WORKER_1_PID $RQ_WORKER_2_PID $RQ_WORKER_3_PID $RQ_WORKER_4_PID $RQ_WORKER_5_PID $RQ_WORKER_6_PID $AUDIO_PERSISTENCE_WORKER_PID 2>/dev/null || true
+            [ -n "$AUDIO_STREAM_DEEPGRAM_WORKER_PID" ] && kill $AUDIO_STREAM_DEEPGRAM_WORKER_PID 2>/dev/null || true
+            [ -n "$AUDIO_STREAM_PARAKEET_WORKER_PID" ] && kill $AUDIO_STREAM_PARAKEET_WORKER_PID 2>/dev/null || true
             wait 2>/dev/null || true
 
             # Restart workers
@@ -128,7 +148,8 @@ shutdown() {
     kill $RQ_WORKER_5_PID 2>/dev/null || true
     kill $RQ_WORKER_6_PID 2>/dev/null || true
     kill $AUDIO_PERSISTENCE_WORKER_PID 2>/dev/null || true
-    kill $AUDIO_STREAM_WORKER_PID 2>/dev/null || true
+    [ -n "$AUDIO_STREAM_DEEPGRAM_WORKER_PID" ] && kill $AUDIO_STREAM_DEEPGRAM_WORKER_PID 2>/dev/null || true
+    [ -n "$AUDIO_STREAM_PARAKEET_WORKER_PID" ] && kill $AUDIO_STREAM_PARAKEET_WORKER_PID 2>/dev/null || true
     wait
     echo "✅ All workers stopped"
     exit 0
@@ -161,7 +182,8 @@ kill $RQ_WORKER_4_PID 2>/dev/null || true
 kill $RQ_WORKER_5_PID 2>/dev/null || true
 kill $RQ_WORKER_6_PID 2>/dev/null || true
 kill $AUDIO_PERSISTENCE_WORKER_PID 2>/dev/null || true
-kill $AUDIO_STREAM_WORKER_PID 2>/dev/null || true
+[ -n "$AUDIO_STREAM_DEEPGRAM_WORKER_PID" ] && kill $AUDIO_STREAM_DEEPGRAM_WORKER_PID 2>/dev/null || true
+[ -n "$AUDIO_STREAM_PARAKEET_WORKER_PID" ] && kill $AUDIO_STREAM_PARAKEET_WORKER_PID 2>/dev/null || true
 wait
 
 echo "🔄 All workers stopped"

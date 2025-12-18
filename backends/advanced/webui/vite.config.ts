@@ -3,10 +3,11 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  base: process.env.VITE_BASE_PATH || '/',
   server: {
     port: 5173,
     host: '0.0.0.0',
-    allowedHosts: process.env.VITE_ALLOWED_HOSTS 
+    allowedHosts: process.env.VITE_ALLOWED_HOSTS
       ? process.env.VITE_ALLOWED_HOSTS.split(' ').map(host => host.trim()).filter(host => host.length > 0)
       : [
           'localhost',

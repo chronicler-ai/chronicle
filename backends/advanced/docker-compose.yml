@@ -226,7 +226,7 @@ services:
 # Shared network for cross-project communication
 networks:
   default:
-    name: friend-network
+    name: chronicle-network
 
 volumes:
   ollama_data:

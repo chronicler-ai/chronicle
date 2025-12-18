@@ -117,13 +117,6 @@ jobs:
           docker system prune -a -f
           df -h
 
-      - name: Initialize OpenMemory cache
-        run: |
-          echo "Initializing OpenMemory cache..."
-          cd ../../extras/openmemory-mcp
-          chmod +x init-cache.sh
-          ./init-cache.sh
-
       - name: Determine version
         id: version
         run: |
@@ -151,7 +144,7 @@ jobs:
           
           # Base services (no CUDA variants, no profiles)
           base_service_specs=(
-            "friend-backend|advanced-friend-backend|docker-compose.yml|."
+            "chronicle-backend|advanced-chronicle-backend|docker-compose.yml|."
             "workers|advanced-workers|docker-compose.yml|."
             "webui|advanced-webui|docker-compose.yml|."
             "openmemory-mcp|openmemory-mcp|../../extras/openmemory-mcp/docker-compose.yml|../../extras/openmemory-mcp"

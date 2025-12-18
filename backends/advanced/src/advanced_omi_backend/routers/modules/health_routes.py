@@ -116,9 +116,15 @@ async def health_check():
 
     overall_healthy = True
     critical_services_healthy = True
-    
+
     # Get configuration once at the start
-    memory_provider = os.getenv("MEMORY_PROVIDER", "chronicle")
+    memory_provider = os.getenv("MEMORY_PROVIDER", "chronicle").lower()
+
+    # Map legacy provider names to current names
+    if memory_provider in ("friend-lite", "friend_lite"):
+        logger.debug(f"Mapping legacy provider '{memory_provider}' to 'chronicle'")
+        memory_provider = "chronicle"
+
     speaker_service_url = os.getenv("SPEAKER_SERVICE_URL")
     openmemory_mcp_url = os.getenv("OPENMEMORY_MCP_URL")
 

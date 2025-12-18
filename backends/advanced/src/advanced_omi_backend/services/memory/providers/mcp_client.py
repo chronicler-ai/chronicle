@@ -111,6 +111,20 @@ class MCPClient:
 
             # Use REST API endpoint for creating memories
             # The 'app' field can be either app name (string) or app UUID
+            payload = {
+                "user_id": self.user_id,
+                "text": text,
+                "app": self.client_name,  # Use app name (OpenMemory accepts name or UUID)
+                "metadata": {
+                    "source": "friend_lite",
+                    "client": self.client_name,
+                    "user_email": self.user_email
+                },
+                "infer": True
+            }
+
+            memory_logger.info(f"POSTing memory to {self.server_url}/api/v1/memories/ with payload={payload}")
+
             response = await self.client.post(
                 f"{self.server_url}/api/v1/memories/",
                 json={
@@ -125,6 +139,10 @@ class MCPClient:
                     "infer": True
                 }
             )
+
+            response_body = response.text[:500] if response.status_code != 200 else "..."
+            memory_logger.info(f"OpenMemory response: status={response.status_code}, body={response_body}, headers={dict(response.headers)}")
+
             response.raise_for_status()
             
             result = response.json()

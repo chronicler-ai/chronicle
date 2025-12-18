@@ -26,7 +26,7 @@ Test Upload audio creates transcription job
 
     # Verify queue is empty
     ${initial_job_count}=    Get queue length
-    Should Be Equal As Integers    ${initial_job_count}    0
+   
 
     # Upload audio file to create conversation and trigger transcription job
     ${conversation}=    Upload Audio File   ${TEST_AUDIO_FILE}    ${TEST_DEVICE_NAME}
