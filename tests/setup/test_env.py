@@ -1,25 +1,26 @@
 # Test Environment Configuration
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Load .env file from backends/advanced directory if it exists
 # This allows tests to work when run from VSCode or command line
-def load_env_file():
-    """Load environment variables from .env file if it exists."""
-    # Look for .env in backends/advanced directory
-    env_file = Path(__file__).parent.parent.parent / "backends" / "advanced" / ".env"
-    if env_file.exists():
-        with open(env_file) as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    key, value = line.split('=', 1)
-                    # Only set if not already in environment (CI takes precedence)
-                    if key not in os.environ:
-                        os.environ[key] = value
+# def load_env_file():
+#     """Load environment variables from .env file if it exists."""
+#     # Look for .env in backends/advanced directory
+#     env_file = Path(__file__).parent.parent.parent / "backends" / "advanced" / ".env"
+#     if env_file.exists():
+#         with open(env_file) as f:
+#             for line in f:
+#                 line = line.strip()
+#                 if line and not line.startswith('#') and '=' in line:
+#                     key, value = line.split('=', 1)
+#                     # Only set if not already in environment (CI takes precedence)
+#                     if key not in os.environ:
+#                         os.environ[key] = value
 
 # Load .env file (CI environment variables take precedence)
-load_env_file()
+# load_env_file()
 
 # Load .env from backends/advanced directory to get COMPOSE_PROJECT_NAME
 backend_env_path = Path(__file__).resolve().parents[2] / "backends" / "advanced" / ".env"
