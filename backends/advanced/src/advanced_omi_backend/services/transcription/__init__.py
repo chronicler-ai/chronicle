@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 def get_transcription_provider(
     provider_name: Optional[str] = None,
     mode: Optional[str] = None,
+    allow_missing_keys: bool = False,
 ) -> Optional[BaseTranscriptionProvider]:
     """
     Factory function to get the appropriate transcription provider.
@@ -35,12 +36,16 @@ def get_transcription_provider(
         provider_name: Name of the provider ('deepgram', 'parakeet').
                       If None, will auto-select based on available configuration.
         mode: Processing mode ('streaming', 'batch'). If None, defaults to 'batch'.
+        allow_missing_keys: If True, return None instead of raising error when
+                           provider is requested but API key is not configured.
+                           Enables graceful degradation mode.
 
     Returns:
         An instance of BaseTranscriptionProvider, or None if no provider is configured.
 
     Raises:
-        RuntimeError: If a specific provider is requested but not properly configured.
+        RuntimeError: If a specific provider is requested but not properly configured
+                     (only when allow_missing_keys=False).
     """
     deepgram_key = os.getenv("DEEPGRAM_API_KEY")
     parakeet_url = os.getenv("PARAKEET_ASR_URL")
@@ -55,6 +60,11 @@ def get_transcription_provider(
     # Handle specific provider requests
     if provider_name == "deepgram":
         if not deepgram_key:
+            if allow_missing_keys:
+                logger.debug(
+                    "Deepgram provider requested but DEEPGRAM_API_KEY not configured (graceful degradation mode)"
+                )
+                return None
             raise RuntimeError(
                 "Deepgram transcription provider requested but DEEPGRAM_API_KEY not configured"
             )
@@ -66,6 +76,11 @@ def get_transcription_provider(
 
     elif provider_name == "parakeet":
         if not parakeet_url:
+            if allow_missing_keys:
+                logger.debug(
+                    "Parakeet provider requested but PARAKEET_ASR_URL not configured (graceful degradation mode)"
+                )
+                return None
             raise RuntimeError(
                 "Parakeet ASR provider requested but PARAKEET_ASR_URL not configured"
             )
@@ -80,8 +95,8 @@ def get_transcription_provider(
         # Check TRANSCRIPTION_PROVIDER environment variable first
         env_provider = os.getenv("TRANSCRIPTION_PROVIDER")
         if env_provider:
-            # Recursively call with the specified provider
-            return get_transcription_provider(env_provider, mode)
+            # Recursively call with the specified provider (pass allow_missing_keys through)
+            return get_transcription_provider(env_provider, mode, allow_missing_keys)
 
         # Auto-select: prefer Deepgram if available, fallback to Parakeet
         if deepgram_key:

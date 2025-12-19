@@ -1,8 +1,31 @@
 import { useState, useEffect } from 'react'
-import { Settings, RefreshCw, CheckCircle, XCircle, AlertCircle, Activity, Users, Database, Server, Volume2, Mic, Brain } from 'lucide-react'
+import { Settings, RefreshCw, CheckCircle, XCircle, AlertCircle, Activity, Users, Database, Server, Volume2, Mic, Brain, Key } from 'lucide-react'
 import { systemApi, speakerApi } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 import MemorySettings from '../components/MemorySettings'
+
+interface ConfigurationStatus {
+  api_keys: {
+    openai: boolean
+    deepgram: boolean
+    mistral: boolean
+  }
+  features: {
+    llm_enabled: boolean
+    transcription_enabled: boolean
+    memory_extraction: boolean
+  }
+  graceful_degradation: {
+    allow_missing_api_keys: boolean
+    llm_required: boolean
+    transcription_required: boolean
+  }
+  providers: {
+    llm: string
+    transcription: string
+    memory: string
+  }
+}
 
 interface HealthData {
   status: 'healthy' | 'partial' | 'unhealthy'
@@ -75,6 +98,14 @@ export default function System() {
   const [selectedProvider, setSelectedProvider] = useState<string>('')
   const [providerLoading, setProviderLoading] = useState(false)
   const [providerMessage, setProviderMessage] = useState('')
+  const [configStatus, setConfigStatus] = useState<ConfigurationStatus | null>(null)
+  const [apiKeys, setApiKeys] = useState({
+    openai_api_key: '',
+    deepgram_api_key: '',
+    mistral_api_key: ''
+  })
+  const [configLoading, setConfigLoading] = useState(false)
+  const [configMessage, setConfigMessage] = useState('')
 
   const { isAdmin } = useAuth()
 
@@ -147,6 +178,68 @@ export default function System() {
     }
   }
 
+  const loadConfigurationStatus = async () => {
+    try {
+      setConfigLoading(true)
+      const response = await systemApi.getConfigurationStatus()
+      if (response.data.status === 'success') {
+        setConfigStatus(response.data)
+      }
+    } catch (err: any) {
+      console.error('Failed to load configuration status:', err)
+    } finally {
+      setConfigLoading(false)
+    }
+  }
+
+  const saveApiKeys = async () => {
+    try {
+      setConfigLoading(true)
+      setConfigMessage('')
+
+      // Only send non-empty API keys
+      const keysToUpdate: any = {}
+      if (apiKeys.openai_api_key.trim()) {
+        keysToUpdate.openai_api_key = apiKeys.openai_api_key.trim()
+      }
+      if (apiKeys.deepgram_api_key.trim()) {
+        keysToUpdate.deepgram_api_key = apiKeys.deepgram_api_key.trim()
+      }
+      if (apiKeys.mistral_api_key.trim()) {
+        keysToUpdate.mistral_api_key = apiKeys.mistral_api_key.trim()
+      }
+
+      if (Object.keys(keysToUpdate).length === 0) {
+        setConfigMessage('⚠️ No API keys to update')
+        return
+      }
+
+      const response = await systemApi.updateApiKeys(keysToUpdate)
+      if (response.data.status === 'success') {
+        setConfigMessage('✅ ' + response.data.message)
+
+        // Clear input fields
+        setApiKeys({
+          openai_api_key: '',
+          deepgram_api_key: '',
+          mistral_api_key: ''
+        })
+
+        // Reload configuration status
+        await loadConfigurationStatus()
+
+        // Auto-hide success message after 5 seconds
+        setTimeout(() => setConfigMessage(''), 5000)
+      } else {
+        setConfigMessage('❌ Failed to update API keys')
+      }
+    } catch (err: any) {
+      setConfigMessage('❌ Error: ' + (err.response?.data?.error || err.message))
+    } finally {
+      setConfigLoading(false)
+    }
+  }
+
   const saveMemoryProvider = async () => {
     if (selectedProvider === currentProvider) {
       setProviderMessage('Provider is already set to ' + selectedProvider)
@@ -191,6 +284,7 @@ export default function System() {
     loadSystemData()
     loadDiarizationSettings()
     loadMemoryProvider()
+    loadConfigurationStatus()
   }, [isAdmin])
 
   const getStatusIcon = (healthy: boolean) => {
@@ -292,6 +386,169 @@ export default function System() {
               </span>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* API Key Configuration */}
+      {configStatus && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+            <Key className="h-5 w-5 mr-2 text-blue-600" />
+            API Key Configuration
+          </h3>
+
+          {/* Feature Status Display */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className={`p-4 rounded-lg ${configStatus.features.llm_enabled ? 'bg-green-50 dark:bg-green-900/20' : 'bg-yellow-50 dark:bg-yellow-900/20'}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">LLM / Memory</div>
+                  <div className={`text-xs mt-1 ${configStatus.features.llm_enabled ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
+                    {configStatus.api_keys.openai ? '✓ OpenAI Configured' : '✗ Not Configured'}
+                  </div>
+                </div>
+                {configStatus.features.llm_enabled ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-yellow-500" />
+                )}
+              </div>
+            </div>
+
+            <div className={`p-4 rounded-lg ${configStatus.features.transcription_enabled ? 'bg-green-50 dark:bg-green-900/20' : 'bg-yellow-50 dark:bg-yellow-900/20'}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Transcription</div>
+                  <div className={`text-xs mt-1 ${configStatus.features.transcription_enabled ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
+                    {configStatus.api_keys.deepgram ? '✓ Deepgram' : configStatus.api_keys.mistral ? '✓ Mistral' : '✗ Not Configured'}
+                  </div>
+                </div>
+                {configStatus.features.transcription_enabled ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-yellow-500" />
+                )}
+              </div>
+            </div>
+
+            <div className={`p-4 rounded-lg ${configStatus.graceful_degradation.allow_missing_api_keys ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-gray-50 dark:bg-gray-700'}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Mode</div>
+                  <div className="text-xs mt-1 text-gray-600 dark:text-gray-400">
+                    {configStatus.graceful_degradation.allow_missing_api_keys ? 'Quick Start' : 'Production'}
+                  </div>
+                </div>
+                <Settings className="h-5 w-5 text-gray-500" />
+              </div>
+            </div>
+          </div>
+
+          {/* API Key Input Form */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* OpenAI API Key */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  OpenAI API Key
+                  {configStatus.api_keys.openai && (
+                    <span className="ml-2 text-xs text-green-600 dark:text-green-400">✓ Configured</span>
+                  )}
+                </label>
+                <input
+                  type="password"
+                  value={apiKeys.openai_api_key}
+                  onChange={(e) => setApiKeys(prev => ({ ...prev, openai_api_key: e.target.value }))}
+                  placeholder="sk-..."
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  For memory extraction and chat
+                </div>
+              </div>
+
+              {/* Deepgram API Key */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Deepgram API Key
+                  {configStatus.api_keys.deepgram && (
+                    <span className="ml-2 text-xs text-green-600 dark:text-green-400">✓ Configured</span>
+                  )}
+                </label>
+                <input
+                  type="password"
+                  value={apiKeys.deepgram_api_key}
+                  onChange={(e) => setApiKeys(prev => ({ ...prev, deepgram_api_key: e.target.value }))}
+                  placeholder="Enter Deepgram API key"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  For audio transcription
+                </div>
+              </div>
+
+              {/* Mistral API Key */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Mistral API Key (Optional)
+                  {configStatus.api_keys.mistral && (
+                    <span className="ml-2 text-xs text-green-600 dark:text-green-400">✓ Configured</span>
+                  )}
+                </label>
+                <input
+                  type="password"
+                  value={apiKeys.mistral_api_key}
+                  onChange={(e) => setApiKeys(prev => ({ ...prev, mistral_api_key: e.target.value }))}
+                  placeholder="Enter Mistral API key"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Alternative transcription provider
+                </div>
+              </div>
+            </div>
+
+            {/* Save Button and Message */}
+            <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-600">
+              <div className="flex-1">
+                {configMessage && (
+                  <p className={`text-sm ${
+                    configMessage.startsWith('✅')
+                      ? 'text-green-600 dark:text-green-400'
+                      : configMessage.startsWith('⚠️')
+                      ? 'text-yellow-600 dark:text-yellow-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}>
+                    {configMessage}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={saveApiKeys}
+                disabled={configLoading}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {configLoading ? 'Saving...' : 'Save API Keys'}
+              </button>
+            </div>
+          </div>
+
+          {/* Info Banner */}
+          {!configStatus.features.llm_enabled && configStatus.graceful_degradation.allow_missing_api_keys && (
+            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-md">
+              <div className="flex">
+                <AlertCircle className="h-5 w-5 text-blue-400 mr-2 flex-shrink-0" />
+                <div>
+                  <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                    Quick Start Mode Active
+                  </h4>
+                  <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                    The system is running with limited features. Add API keys above to enable memory extraction, transcription, and chat features. Services will automatically activate after saving and restarting.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

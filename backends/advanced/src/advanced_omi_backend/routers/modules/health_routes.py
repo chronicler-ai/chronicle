@@ -35,8 +35,9 @@ mongo_client = AsyncIOMotorClient(MONGODB_URI)
 # Memory service
 memory_service = get_memory_service()
 
-# Transcription provider
-transcription_provider = get_transcription_provider()
+# Transcription provider (with graceful degradation support)
+allow_missing_keys = os.getenv("ALLOW_MISSING_API_KEYS", "false").lower() == "true"
+transcription_provider = get_transcription_provider(allow_missing_keys=allow_missing_keys)
 
 # Qdrant Configuration
 QDRANT_BASE_URL = os.getenv("QDRANT_BASE_URL", "qdrant")

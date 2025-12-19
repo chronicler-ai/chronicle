@@ -60,8 +60,11 @@ class AppConfig:
         self.mistral_api_key = os.getenv("MISTRAL_API_KEY")
         self.transcription_required = os.getenv("TRANSCRIPTION_REQUIRED", "true").lower() == "true"
 
-        # Get configured transcription provider
-        self.transcription_provider = get_transcription_provider(self.transcription_provider_name)
+        # Get configured transcription provider (with graceful degradation support)
+        self.transcription_provider = get_transcription_provider(
+            self.transcription_provider_name,
+            allow_missing_keys=self.allow_missing_api_keys
+        )
         if self.transcription_provider:
             logger.info(
                 f"✅ Using {self.transcription_provider.name} transcription provider ({self.transcription_provider.mode})"

@@ -562,3 +562,23 @@ async def set_memory_provider(provider: str):
         )
 
 
+# API Key and Environment Configuration Functions
+
+async def get_api_key_status():
+    """Get current API key configuration status."""
+    try:
+        from advanced_omi_backend.utils.env_writer import get_env_writer
+
+        env_writer = get_env_writer()
+        status = env_writer.get_configuration_status()
+
+        return {
+            **status,
+            "status": "success"
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting API key status: {e}")
+        return JSONResponse(
+            status_code=500, content={"error": f"Failed to get API key status: {str(e)}"}
+        )
