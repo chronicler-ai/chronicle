@@ -1,0 +1,15 @@
+# Friend-Lite Caddy Configuration
+# Auto-generated for quick-start
+
+# Default: Direct proxy to quick-start backend and frontend
+# This file will be regenerated if you use the wizard for multi-environment setup
+
+:80 {
+	# Health check endpoint
+	handle /health {
+		respond "OK" 200
+	}
+
+	# Default: Not configured for HTTPS yet
+	respond "Caddy is running. Configure Tailscale HTTPS via quick-start script." 200
+}

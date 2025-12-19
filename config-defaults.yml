@@ -1,0 +1,139 @@
+# Friend-Lite Default Configuration
+# This file provides sensible defaults for zero-config quick-start
+# Values can be overridden via environment variables
+
+system:
+  environment: quick-start
+  compose_project_name: chronicle-quickstart
+  mode: development
+
+network:
+  backend_port: 9000
+  webui_port: 4000
+  host_ip: localhost
+
+  # Backend public URL (for browser access)
+  backend_public_url: http://localhost:9000
+
+  # WebUI public URL
+  webui_public_url: http://localhost:4000
+
+database:
+  # MongoDB configuration
+  mongodb_uri: mongodb://mongo:27017
+  mongodb_database: chronicle-quickstart
+
+  # Redis configuration
+  redis_url: redis://redis:6379/0
+  redis_database: 0
+
+  # Qdrant vector database
+  qdrant_base_url: qdrant
+  qdrant_port: 6333
+
+services:
+  # LLM Service (OpenAI)
+  llm:
+    provider: openai
+    model: gpt-4o-mini
+    base_url: https://api.openai.com/v1
+    enabled_without_key: false
+    required_for:
+      - Memory extraction
+      - Chat completions
+      - Intelligent features
+
+  # Speech-to-Text Service
+  transcription:
+    provider: deepgram
+    enabled_without_key: false
+    required_for:
+      - Audio transcription
+      - Conversation creation
+      - Speech-to-text
+
+  # Memory Service
+  memory:
+    provider: friend_lite
+    always_enabled: true
+    description: Manages memory storage and retrieval
+
+  # Optional services
+  speaker_recognition:
+    enabled_by_default: false
+    required_for:
+      - Speaker identification
+      - Voice profiles
+
+  parakeet_asr:
+    enabled_by_default: false
+    description: Offline speech recognition
+
+  mycelia:
+    enabled_by_default: false
+    description: Advanced memory visualization
+
+cors:
+  # Default allowed origins for CORS
+  default_origins:
+    - http://localhost:3000
+    - http://localhost:4000
+    - http://127.0.0.1:4000
+    - http://127.0.0.1:3000
+
+  # Tailscale IP range pattern
+  tailscale_pattern: "http://100\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}:3000"
+
+admin:
+  # Default admin account
+  default_email: admin@example.com
+
+  # Password is auto-generated during quick-start
+  # See .env.quick-start for generated password
+
+audio:
+  # Audio processing settings
+  segment_seconds: 60
+  cropping_enabled: true
+  min_speech_segment_duration: 1.0
+  cropping_context_padding: 0.1
+
+conversation:
+  # Conversation timeout
+  new_conversation_timeout_minutes: 1.5
+
+  # Speech detection thresholds
+  speech_detection_min_words: 5
+  speech_detection_min_confidence: 0.5
+
+features:
+  # Feature flags for graceful degradation
+  memory_extraction:
+    requires: openai_api_key
+    fallback_behavior: disable
+    user_message: "Add OpenAI API key to enable memory extraction"
+    configure_url: "http://localhost:4000/system"
+
+  transcription:
+    requires: deepgram_api_key
+    fallback_behavior: disable
+    user_message: "Add Deepgram API key to enable transcription"
+    configure_url: "http://localhost:4000/system"
+
+  speaker_recognition:
+    requires: hf_token
+    fallback_behavior: disable
+    user_message: "Add Hugging Face token to enable speaker recognition"
+    configure_url: "http://localhost:4000/system"
+
+documentation:
+  # Links to external resources
+  openai_api_keys: https://platform.openai.com/api-keys
+  deepgram_console: https://console.deepgram.com/
+  mistral_console: https://console.mistral.ai/
+  huggingface_tokens: https://huggingface.co/settings/tokens
+
+  # Internal documentation
+  quick_start_guide: /QUICK_START.md
+  setup_wizard_guide: /WIZARD.md
+  api_reference: /docs/api-reference.md

@@ -1,0 +1,128 @@
+# Shared Infrastructure Services
+# These services are shared by ALL Friend-Lite environments
+# Start once with: docker compose -f compose/infrastructure-shared.yml up -d
+#
+# Services:
+# - MongoDB: Shared database server (port 27017)
+# - Redis: Shared cache server (port 6379)
+# - Qdrant: Shared vector database (ports 6033/6034)
+# - Neo4j: Shared graph database (ports 7474/7687) - optional
+# - Caddy: Shared reverse proxy (ports 80/443)
+#
+# Data Isolation Strategy:
+# - MongoDB: Each environment uses unique database name (MONGODB_DATABASE)
+# - Redis: Each environment uses unique database number (REDIS_DATABASE)
+# - Qdrant: Each environment uses unique collection prefix
+# - Neo4j: Each environment uses unique database name (NEO4J_DB)
+# - Caddy: Path-based routing to separate environments
+
+name: infra
+
+services:
+  mongo:
+    image: mongo:8.0.14
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - chronicle-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - chronicle-network
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6033:6333"  # gRPC
+      - "6034:6334"  # HTTP
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - chronicle-network
+    restart: unless-stopped
+
+  neo4j:
+    image: neo4j:2025.10-community
+    container_name: neo4j
+    ports:
+      - "7474:7474"  # HTTP UI
+      - "7687:7687"  # Bolt protocol
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-password}
+      - NEO4J_PLUGINS=["apoc","graph-data-science"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*,gds.*
+      - NEO4J_dbms_security_procedures_allowlist=apoc.*,gds.*
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    networks:
+      - chronicle-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    profiles:
+      - neo4j
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ../caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ../certs:/certs:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    networks:
+      - chronicle-network
+
+networks:
+  chronicle-network:
+    name: chronicle-network
+    external: true
+
+volumes:
+  mongo_data:
+    driver: local
+  redis_data:
+    driver: local
+  qdrant_data:
+    driver: local
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local
