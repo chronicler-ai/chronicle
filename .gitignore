@@ -2,6 +2,11 @@
 *.wav
 **/*.env
 !**/.env.template
+.env.secrets
+.env.api-keys
+.env.quick-start
+.env.backup.*
+config.env.backup.*
 **/memory_config.yaml
 !**/memory_config.yaml.template
 example/*
@@ -71,6 +76,7 @@ backends/advanced-backend/data/speaker_model_cache/
 backends/charts/advanced-backend/env-configmap.yaml
 
 extras/openmemory-mcp/data/*
+extras/openmemory/data/*
 .env.backup.*
 
 backends/advanced/nginx.conf
@@ -82,3 +88,27 @@ log.html
 output.xml
 report.html
 .secrets
+extras/openmemory-mcp/.env.openmemory
+extras/openmemory/.env
+certs
+
+# Environment-specific configuration files (added 2025-12-09)
+environments/
+*.env.backup.*
+backends/advanced/.env.*
+!backends/advanced/.env.template
+
+# SSL certificates
+*.crt
+*.key
+
+# IDE and tool directories
+.playwright-mcp/
+.serena/
+
+# Docker compose data directories
+**/compose/data/
+
+# Deprecated compose files (moved to root compose/)
+backends/advanced/compose/infrastructure.yml
+backends/advanced/compose/mycelia.yml

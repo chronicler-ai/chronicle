@@ -26,6 +26,9 @@ class AppConfig:
     """Centralized application configuration."""
 
     def __init__(self):
+        # Graceful degradation mode
+        self.allow_missing_api_keys = os.getenv("ALLOW_MISSING_API_KEYS", "false").lower() == "true"
+
         # MongoDB Configuration
         self.mongodb_uri = os.getenv("MONGODB_URI", "mongodb://mongo:27017")
         # default to legacy value to avoid breaking peoples .env
@@ -51,10 +54,11 @@ class AppConfig:
         self.min_speech_segment_duration = float(os.getenv("MIN_SPEECH_SEGMENT_DURATION", "1.0"))
         self.cropping_context_padding = float(os.getenv("CROPPING_CONTEXT_PADDING", "0.1"))
 
-        # Transcription Configuration
+        # Transcription Configuration with graceful degradation
         self.transcription_provider_name = os.getenv("TRANSCRIPTION_PROVIDER")
         self.deepgram_api_key = os.getenv("DEEPGRAM_API_KEY")
         self.mistral_api_key = os.getenv("MISTRAL_API_KEY")
+        self.transcription_required = os.getenv("TRANSCRIPTION_REQUIRED", "true").lower() == "true"
 
         # Get configured transcription provider
         self.transcription_provider = get_transcription_provider(self.transcription_provider_name)
@@ -62,8 +66,16 @@ class AppConfig:
             logger.info(
                 f"✅ Using {self.transcription_provider.name} transcription provider ({self.transcription_provider.mode})"
             )
+            self.transcription_enabled = True
         else:
-            logger.warning("⚠️ No transcription provider configured - speech-to-text will not be available")
+            if self.transcription_required and not self.allow_missing_api_keys:
+                logger.error("❌ Transcription provider required but not configured")
+            else:
+                logger.warning("⚠️  Transcription disabled - No transcription provider configured")
+                if self.allow_missing_api_keys:
+                    logger.warning("   Add Deepgram API key to enable transcription")
+                    logger.warning("   Configure at: http://localhost:4000/system")
+            self.transcription_enabled = False
 
         # External Services Configuration
         self.qdrant_base_url = os.getenv("QDRANT_BASE_URL", "qdrant")
@@ -87,6 +99,24 @@ class AppConfig:
 
         # Thread pool configuration
         self.max_workers = os.cpu_count() or 4
+
+        # LLM Configuration with graceful degradation
+        self.llm_provider = os.getenv("LLM_PROVIDER", "openai")
+        self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        self.llm_required = os.getenv("LLM_REQUIRED", "true").lower() == "true"
+
+        if not self.openai_api_key:
+            if self.llm_required and not self.allow_missing_api_keys:
+                logger.error("❌ LLM provider required but OPENAI_API_KEY not configured")
+            else:
+                logger.warning("⚠️  LLM disabled - Memory extraction and chat features unavailable")
+                if self.allow_missing_api_keys:
+                    logger.warning("   Add OpenAI API key to enable LLM features")
+                    logger.warning("   Configure at: http://localhost:4000/system")
+            self.llm_enabled = False
+        else:
+            self.llm_enabled = True
+            logger.info(f"✅ LLM enabled (provider: {self.llm_provider})")
 
         # Memory service configuration
         self.memory_service_supports_threshold = self.memory_provider == "chronicle"

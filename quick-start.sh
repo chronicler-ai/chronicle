@@ -14,7 +14,7 @@ BOLD='\033[1m'
 NC='\033[0m' # No Color
 
 # Configuration
-ENV_FILE=".env.quick-start"
+ENV_FILE=".env.default"
 CONFIG_FILE="config-defaults.yml"
 
 # Parse arguments
@@ -26,7 +26,7 @@ fi
 # Print header
 echo ""
 echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}🚀 Friend-Lite Quick Start${NC}"
+echo -e "${BOLD}🚀 Chronicle Quick Start${NC}"
 echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
@@ -45,21 +45,33 @@ if [[ ! -f "$ENV_FILE" ]] || [[ "$RESET_CONFIG" == true ]]; then
     echo -e "${BLUE}🔧 Generating configuration...${NC}"
     echo ""
 
-    # Generate secure secrets
+    # Generate secure secret
     if command -v openssl &> /dev/null; then
         AUTH_SECRET_KEY=$(openssl rand -hex 32)
-        ADMIN_PASSWORD=$(openssl rand -hex 16)
     else
         # Fallback for systems without openssl
         AUTH_SECRET_KEY=$(head -c 32 /dev/urandom | xxd -p -c 64)
-        ADMIN_PASSWORD=$(head -c 16 /dev/urandom | xxd -p -c 32)
     fi
 
-    ADMIN_EMAIL="admin@example.com"
+    # Prompt for admin credentials
+    echo ""
+    echo -e "${BOLD}Admin Account Setup${NC}"
+    echo -e "${YELLOW}Press Enter to use defaults shown in [brackets]${NC}"
+    echo ""
+
+    read -p "Admin Name [admin]: " INPUT_ADMIN_NAME
+    ADMIN_NAME="${INPUT_ADMIN_NAME:-admin}"
+
+    read -p "Admin Email [admin@example.com]: " INPUT_ADMIN_EMAIL
+    ADMIN_EMAIL="${INPUT_ADMIN_EMAIL:-admin@example.com}"
+
+    read -sp "Admin Password [password-123]: " INPUT_ADMIN_PASSWORD
+    echo ""
+    ADMIN_PASSWORD="${INPUT_ADMIN_PASSWORD:-password-123}"
 
     # Create .env.quick-start
     cat > "$ENV_FILE" <<EOF
-# Friend-Lite Quick Start Configuration
+# Chronicle Quick Start Configuration
 # Generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 # DO NOT COMMIT THIS FILE - Contains sensitive credentials
 
@@ -67,6 +79,7 @@ if [[ ! -f "$ENV_FILE" ]] || [[ "$RESET_CONFIG" == true ]]; then
 # AUTHENTICATION & SECURITY
 # ==========================================
 AUTH_SECRET_KEY=${AUTH_SECRET_KEY}
+ADMIN_NAME=${ADMIN_NAME}
 ADMIN_EMAIL=${ADMIN_EMAIL}
 ADMIN_PASSWORD=${ADMIN_PASSWORD}
 
@@ -91,11 +104,16 @@ QDRANT_PORT=6333
 # ==========================================
 # NETWORK CONFIGURATION
 # ==========================================
-BACKEND_PORT=9000
-WEBUI_PORT=4000
+# Port offset for running multiple instances (default: 0)
+# - Backend: 8000 + PORT_OFFSET = 8000
+# - WebUI: 3000 + PORT_OFFSET = 3000
+# - Redis DB: PORT_OFFSET / 1000 = 0
+PORT_OFFSET=0
+BACKEND_PORT=8000
+WEBUI_PORT=3000
 HOST_IP=localhost
-CORS_ORIGINS=http://localhost:3000,http://localhost:4000,http://127.0.0.1:4000
-VITE_BACKEND_URL=http://localhost:9000
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+VITE_BACKEND_URL=http://localhost:8000
 
 # ==========================================
 # SERVICE CONFIGURATION
@@ -115,78 +133,45 @@ EOF
 
     chmod 600 "$ENV_FILE"
 
-    # Display credentials prominently
+    # Display credentials confirmation
     echo ""
-    echo -e "${BOLD}${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${BOLD}${RED}⚠️  SAVE THESE CREDENTIALS NOW! ⚠️${NC}"
-    echo -e "${BOLD}${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}✅ Admin account configured${NC}"
     echo ""
-    echo -e "${BOLD}Admin Email:${NC}    ${ADMIN_EMAIL}"
-    echo -e "${BOLD}Admin Password:${NC} ${YELLOW}${ADMIN_PASSWORD}${NC}"
-    echo ""
-    echo -e "${BOLD}${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BOLD}Login Credentials:${NC}"
+    echo -e "  Name:     ${ADMIN_NAME}"
+    echo -e "  Email:    ${ADMIN_EMAIL}"
+    echo -e "  Password: ${YELLOW}${ADMIN_PASSWORD}${NC}"
     echo ""
     sleep 2
 else
     echo -e "${GREEN}✅ Using existing configuration${NC}"
-    # Extract password to display
-    ADMIN_PASSWORD=$(grep "^ADMIN_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2)
+    # Extract credentials to display
+    ADMIN_NAME=$(grep "^ADMIN_NAME=" "$ENV_FILE" | cut -d'=' -f2)
     ADMIN_EMAIL=$(grep "^ADMIN_EMAIL=" "$ENV_FILE" | cut -d'=' -f2)
+    ADMIN_PASSWORD=$(grep "^ADMIN_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2)
     echo ""
-    echo -e "${BOLD}Admin Email:${NC}    ${ADMIN_EMAIL}"
-    echo -e "${BOLD}Admin Password:${NC} ${YELLOW}${ADMIN_PASSWORD}${NC}"
+    echo -e "${BOLD}Login Credentials:${NC}"
+    echo -e "  Name:     ${ADMIN_NAME:-admin}"
+    echo -e "  Email:    ${ADMIN_EMAIL}"
+    echo -e "  Password: ${YELLOW}${ADMIN_PASSWORD}${NC}"
     echo ""
 fi
 
-# Create chronicle-network if it doesn't exist
-echo -e "${BLUE}🔗 Checking Docker network...${NC}"
-if ! docker network inspect chronicle-network &> /dev/null; then
-    echo "   Creating chronicle-network..."
-    docker network create chronicle-network
-    echo -e "${GREEN}   ✅ Network created${NC}"
-else
-    echo -e "${GREEN}   ✅ Network exists${NC}"
-fi
-echo ""
-
-# Start shared infrastructure
-echo -e "${BLUE}🏗️  Starting shared infrastructure...${NC}"
-echo ""
-
-# Check if infrastructure is already running
-MONGO_RUNNING=$(docker ps --filter "name=^mongo$" --filter "status=running" --format "{{.Names}}" 2>/dev/null || true)
-REDIS_RUNNING=$(docker ps --filter "name=^redis$" --filter "status=running" --format "{{.Names}}" 2>/dev/null || true)
-QDRANT_RUNNING=$(docker ps --filter "name=^qdrant$" --filter "status=running" --format "{{.Names}}" 2>/dev/null || true)
-
-if [[ -n "$MONGO_RUNNING" ]] && [[ -n "$REDIS_RUNNING" ]] && [[ -n "$QDRANT_RUNNING" ]]; then
+# Start infrastructure
+echo -e "${BLUE}🏗️  Starting infrastructure...${NC}"
+if docker ps --filter "name=^mongo$" --filter "status=running" -q | grep -q .; then
     echo -e "${GREEN}   ✅ Infrastructure already running${NC}"
 else
-    echo "   Starting MongoDB, Redis, Qdrant, Caddy..."
-    docker compose -f compose/infrastructure-shared.yml up -d --no-recreate 2>&1 | grep -v "is up to date" || true
-    echo ""
-    echo "   Waiting for services to be ready..."
-    sleep 5
+    docker compose -f docker-compose.infra.yml up -d
     echo -e "${GREEN}   ✅ Infrastructure started${NC}"
+    sleep 3
 fi
-
-echo ""
-echo -e "   ${BOLD}Services:${NC}"
-echo -e "   📊 MongoDB:  ${GREEN}Running${NC} (mongodb://localhost:27017)"
-echo -e "   💾 Redis:    ${GREEN}Running${NC} (redis://localhost:6379)"
-echo -e "   🔍 Qdrant:   ${GREEN}Running${NC} (http://localhost:6034)"
 echo ""
 
-# Start application services
-echo -e "${BLUE}🚀 Starting Friend-Lite application...${NC}"
+# Start application
+echo -e "${BLUE}🚀 Starting Chronicle application...${NC}"
 echo ""
-
-cd backends/advanced
-
-# Start backend, workers, and webui
-docker compose \
-  -p chronicle-quickstart \
-  --env-file ../../.env.quick-start \
-  up -d friend-backend workers webui
+docker compose --env-file .env.default up -d
 
 echo ""
 echo "   Waiting for backend to be healthy..."
@@ -198,7 +183,7 @@ ELAPSED=0
 BACKEND_HEALTHY=false
 
 while [[ $ELAPSED -lt $TIMEOUT ]]; do
-    if curl -s http://localhost:9000/health > /dev/null 2>&1; then
+    if curl -s http://localhost:8000/health > /dev/null 2>&1; then
         BACKEND_HEALTHY=true
         break
     fi
@@ -210,14 +195,14 @@ cd ../..
 
 echo ""
 if [[ "$BACKEND_HEALTHY" == true ]]; then
-    echo -e "${GREEN}${BOLD}✅ Friend-Lite is ready!${NC}"
+    echo -e "${GREEN}${BOLD}✅ Chronicle is ready!${NC}"
 else
     echo -e "${YELLOW}⚠️  Backend is starting... (may take a moment)${NC}"
 fi
 
 echo ""
 echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}${BOLD}   Access Friend-Lite at: http://localhost:4000${NC}"
+echo -e "${GREEN}${BOLD}   Access Chronicle at: http://localhost:3000${NC}"
 echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
@@ -226,7 +211,7 @@ echo -e "${YELLOW}⚠️  Some features are disabled (no API keys configured):${
 echo -e "   • Memory extraction (needs OpenAI API key)"
 echo -e "   • Transcription (needs Deepgram API key)"
 echo ""
-echo -e "   ${BOLD}→ Add API keys at: http://localhost:4000/system${NC}"
+echo -e "   ${BOLD}→ Add API keys at: http://localhost:3000/system${NC}"
 echo ""
 
 # Next steps
@@ -257,7 +242,7 @@ if command -v tailscale &> /dev/null && tailscale status &> /dev/null; then
             echo "# Tailscale HTTPS Configuration" >> "$ENV_FILE"
             echo "TAILSCALE_HOSTNAME=${TAILSCALE_HOSTNAME}" >> "$ENV_FILE"
             echo "HTTPS_ENABLED=true" >> "$ENV_FILE"
-            echo "CORS_ORIGINS=https://${TAILSCALE_HOSTNAME}:9000,https://${TAILSCALE_HOSTNAME}:4000,http://localhost:4000" >> "$ENV_FILE"
+            echo "CORS_ORIGINS=https://${TAILSCALE_HOSTNAME}:9000,https://${TAILSCALE_HOSTNAME}:4000,http://localhost:3000" >> "$ENV_FILE"
 
             echo ""
             echo -e "${GREEN}✅ HTTPS configured!${NC}"
@@ -266,7 +251,7 @@ if command -v tailscale &> /dev/null && tailscale status &> /dev/null; then
             echo -e "   ${BOLD}https://${TAILSCALE_HOSTNAME}:4000${NC}"
             echo ""
             echo -e "${YELLOW}   Note: Restart services to apply HTTPS settings:${NC}"
-            echo -e "   ${BOLD}docker compose -p chronicle-quickstart restart${NC}"
+            echo -e "   ${BOLD}make restart${NC}"
             echo ""
         fi
     fi
@@ -274,9 +259,10 @@ fi
 
 # Usage information
 echo -e "${BOLD}Helpful commands:${NC}"
-echo "  Stop:    make quick-start-stop"
-echo "  Restart: docker compose -p chronicle-quickstart restart"
-echo "  Logs:    docker compose -p chronicle-quickstart logs -f"
+echo "  Stop:    make down"
+echo "  Restart: make restart"
+echo "  Logs:    make logs"
+echo "  Rebuild: make build"
 echo ""
 
 echo -e "${GREEN}${BOLD}🎉 Setup complete! Happy coding!${NC}"

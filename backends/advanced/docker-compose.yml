@@ -1,241 +1,52 @@
-services:
-  chronicle-backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    volumes:
-      - ./src:/app/src  # Mount source code for development
-      - ./data/audio_chunks:/app/audio_chunks
-      - ./data/debug_dir:/app/debug_dir
-      - ./data:/app/data
-    environment:
-      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
-      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
-      - MISTRAL_MODEL=${MISTRAL_MODEL}
-      - TRANSCRIPTION_PROVIDER=${TRANSCRIPTION_PROVIDER}
-      - PARAKEET_ASR_URL=${PARAKEET_ASR_URL}
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
-      - HF_TOKEN=${HF_TOKEN}
-      - SPEAKER_SERVICE_URL=${SPEAKER_SERVICE_URL}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      - ADMIN_EMAIL=${ADMIN_EMAIL}
-      - AUTH_SECRET_KEY=${AUTH_SECRET_KEY}
-      - LLM_PROVIDER=${LLM_PROVIDER}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
-      - OPENAI_MODEL=${OPENAI_MODEL}
-      - NEO4J_HOST=${NEO4J_HOST}
-      - NEO4J_USER=${NEO4J_USER}
-      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
-      - CORS_ORIGINS=http://localhost:3010,http://localhost:8000,http://192.168.1.153:3010,http://192.168.1.153:8000,https://localhost:3010,https://localhost:8000,https://100.105.225.45,https://localhost
-      - REDIS_URL=redis://redis:6379/0
-    depends_on:
-      qdrant:
-        condition: service_started
-      mongo:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      # neo4j-mem0:
-      #   condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/readiness"]
-      interval: 30s
-      timeout: 30s
-      retries: 5
-      start_period: 5s
-    restart: unless-stopped
+# Friend-Lite Docker Compose
+# Root compose file using modular includes
+#
+# Usage:
+#   Development:  docker compose up
+#   With Mycelia:  docker compose --profile mycelia up
+#   With HTTPS:    docker compose --profile https up
+#   Testing:       docker compose -f docker-compose.yml -f compose/overrides/test.yml up
+#   Production:    docker compose -f docker-compose.yml -f compose/overrides/prod.yml up
+#
+# Structure:
+#   compose/backend.yml           - Backend API and workers
+#   compose/frontend.yml          - Web UI
+#   compose/overrides/            - Environment-specific overrides
 
-  # Unified Worker Container
-  # No CUDA needed for chronicle-backend and workers, workers only orchestrate jobs and call external services
-  # Runs all workers in a single container for efficiency:
-  # - 3 RQ workers (transcription, memory, default queues)
-  # - 1 Audio stream worker (Redis Streams consumer - must be single to maintain sequential chunks)
-  workers:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: ["./start-workers.sh"]
-    env_file:
-      - .env
-    volumes:
-      - ./src:/app/src
-      - ./start-workers.sh:/app/start-workers.sh
-      - ./data/audio_chunks:/app/audio_chunks
-      - ./data:/app/data
-    environment:
-      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
-      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
-      - MISTRAL_MODEL=${MISTRAL_MODEL}
-      - TRANSCRIPTION_PROVIDER=${TRANSCRIPTION_PROVIDER}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
-      - OPENAI_MODEL=${OPENAI_MODEL}
-      - LLM_PROVIDER=${LLM_PROVIDER}
-      - REDIS_URL=redis://redis:6379/0
-    depends_on:
-      redis:
-        condition: service_healthy
-      mongo:
-        condition: service_healthy
-      qdrant:
-        condition: service_started
-    restart: unless-stopped
+include:
+  # Application services (always included)
+  - compose/backend.yml
+  - compose/frontend.yml
 
-  webui:
-    build:
-      context: ./webui
-      dockerfile: Dockerfile
-      args:
-        # Direct access (http://localhost:3010):
-        # - VITE_BACKEND_URL=http://localhost:8000
-        # - BACKEND_URL=http://localhost:8000
-        # For Caddy HTTPS (https://localhost), use:
-        - VITE_BACKEND_URL=
-        - BACKEND_URL=
-    ports:
-      # - "${WEBUI_PORT:-3010}:80"
-      - 3010:80
-    depends_on:
-      chronicle-backend:
-        condition: service_healthy
-    restart: unless-stopped
+  # Note: Infrastructure (MongoDB, Redis, Qdrant) is SHARED across all environments
+  # Start infrastructure once with: docker compose -f ../../compose/infrastructure-shared.yml up -d
+  # Each environment connects to shared infrastructure using unique database names
 
-  # Caddy reverse proxy - provides HTTPS for microphone access
-  # Access at: https://localhost (accepts self-signed cert warning)
-  # Only starts when HTTPS is configured (Caddyfile exists)
-  caddy:
-    image: caddy:2-alpine
-    ports:
-      - "443:443"
-      - "80:80"  # HTTP redirect to HTTPS
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      chronicle-backend:
-        condition: service_healthy
-    restart: unless-stopped
-    profiles:
-      - https
+  # Note: Caddy is SHARED across all environments
+  # Start Caddy once with: docker compose -f ../../compose/caddy.yml up -d
+  # Caddy serves all environments via path-based routing
 
-  # Development webui service (use with docker-compose --profile dev up)
-  webui-dev:
-    build:
-      context: ./webui
-      dockerfile: Dockerfile.dev
-    ports:
-      - "${WEBUI_DEV_PORT:-5173}:5173"
-    environment:
-      - VITE_BACKEND_URL=http://${HOST_IP}:${BACKEND_PUBLIC_PORT:-8000}
-    volumes:
-      - ./webui/src:/app/src
-      - ./webui/public:/app/public
-    depends_on:
-      chronicle-backend:
-        condition: service_healthy
-    profiles:
-      - dev
+  # Note: Mycelia moved to root level (../../compose/mycelia.yml)
+  # To use Mycelia, run from project root: docker compose --profile mycelia up
 
-  qdrant:
-    image: qdrant/qdrant:latest
-    ports:
-      - "6033:6033" # gRPC
-      - "6034:6034" # HTTP
-    volumes:
-      - ./data/qdrant_data:/qdrant/storage 
-  
+  # Development overrides (default)
+  - compose/overrides/dev.yml
 
-  mongo:
-    image: mongo:8.0.14
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"  # Avoid conflict with dev on 6379
-    volumes:
-      - ./data/redis_data:/data
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
-  ##  Additional
-
-  # neo4j-mem0:
-  #   image: neo4j:5.15-community
-  #   ports:
-  #     - "7474:7474" # HTTP
-  #     - "7687:7687" # Bolt
-  #   environment:
-  #     - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-password}
-  #     - NEO4J_PLUGINS=["apoc"]
-  #     - NEO4J_dbms_security_procedures_unrestricted=apoc.*
-  #     - NEO4J_dbms_security_procedures_allowlist=apoc.*
-  #   volumes:
-  #     - ./data/neo4j_data:/data
-  #     - ./data/neo4j_logs:/logs
-  #   restart: unless-stopped
-
-  # ollama:
-  #   image: ollama/ollama:latest
-  #   container_name: ollama
-  #   ports:
-  #     - "11434:11434"
-  #   volumes:
-  #     - ollama_data:/root/.ollama
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
-
-
-
-  # Use tailscale instead
-  # UNCOMMENT OUT FOR LOCAL DEMO - EXPOSES to internet
-  # ngrok:
-  #   image: ngrok/ngrok:latest
-  #   depends_on: [chronicle-backend, proxy]
-  #   ports:
-  #     - "4040:4040" # Ngrok web interface
-  #   environment:
-  #     - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-  #   command: "http proxy:80 --url=${NGROK_URL} --basic-auth=${NGROK_BASIC_AUTH}"
-
-# Shared network for cross-project communication
+# Shared network configuration
 networks:
   chronicle-network:
     name: chronicle-network
+    external: true
 
-
+# Shared volume configuration
 volumes:
-  ollama_data:
-    driver: local
   mongo_data:
     driver: local
   caddy_data:
     driver: local
   caddy_config:
+    driver: local
+  ollama_data:
     driver: local
   neo4j_data:
     driver: local

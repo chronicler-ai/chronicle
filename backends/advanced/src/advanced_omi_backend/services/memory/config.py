@@ -141,8 +141,13 @@ def create_mycelia_config(
     return config
 
 
-def build_memory_config_from_env() -> MemoryConfig:
-    """Build memory configuration from environment variables and YAML config."""
+def build_memory_config_from_env(allow_missing_keys: bool = False) -> MemoryConfig:
+    """Build memory configuration from environment variables and YAML config.
+
+    Args:
+        allow_missing_keys: If True, allow missing API keys and disable features gracefully.
+                           If False, raise errors when required keys are missing.
+    """
     try:
         # Determine memory provider
         memory_provider = os.getenv("MEMORY_PROVIDER", "chronicle").lower()
@@ -226,25 +231,30 @@ def build_memory_config_from_env() -> MemoryConfig:
         if llm_provider == "openai":
             openai_api_key = os.getenv("OPENAI_API_KEY")
             if not openai_api_key:
-                raise ValueError("OPENAI_API_KEY required for OpenAI provider")
-            
-            # Use environment variables for model, fall back to config, then defaults
-            model = os.getenv("OPENAI_MODEL") or memory_config.get("llm_settings", {}).get("model") or "gpt-4o-mini"
-            embedding_model = memory_config.get("llm_settings", {}).get("embedding_model") or "text-embedding-3-small"
-            base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
-            memory_logger.info(f"🔧 Memory config: LLM={model}, Embedding={embedding_model}, Base URL={base_url}")
-            
-            llm_config = create_openai_config(
-                api_key=openai_api_key,
-                model=model,
-                embedding_model=embedding_model,
-                base_url=base_url,
-                temperature=memory_config.get("llm_settings", {}).get("temperature", 0.1),
-                max_tokens=memory_config.get("llm_settings", {}).get("max_tokens", 2000)
-            )
-            llm_provider_enum = LLMProvider.OPENAI
-            embedding_dims = get_embedding_dims(llm_config)
-            memory_logger.info(f"🔧 Setting Embedder dims {embedding_dims}")
+                if allow_missing_keys:
+                    memory_logger.warning("OPENAI_API_KEY not set - memory extraction will be disabled")
+                    llm_config = None
+                    llm_provider_enum = None
+                else:
+                    raise ValueError("OPENAI_API_KEY required for OpenAI provider")
+            else:
+                # Use environment variables for model, fall back to config, then defaults
+                model = os.getenv("OPENAI_MODEL") or memory_config.get("llm_settings", {}).get("model") or "gpt-4o-mini"
+                embedding_model = memory_config.get("llm_settings", {}).get("embedding_model") or "text-embedding-3-small"
+                base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+                memory_logger.info(f"🔧 Memory config: LLM={model}, Embedding={embedding_model}, Base URL={base_url}")
+
+                llm_config = create_openai_config(
+                    api_key=openai_api_key,
+                    model=model,
+                    embedding_model=embedding_model,
+                    base_url=base_url,
+                    temperature=memory_config.get("llm_settings", {}).get("temperature", 0.1),
+                    max_tokens=memory_config.get("llm_settings", {}).get("max_tokens", 2000)
+                )
+                llm_provider_enum = LLMProvider.OPENAI
+                embedding_dims = get_embedding_dims(llm_config)
+                memory_logger.info(f"🔧 Setting Embedder dims {embedding_dims}")
         
         elif llm_provider == "ollama":
             base_url = os.getenv("OLLAMA_BASE_URL")

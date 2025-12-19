@@ -9,6 +9,12 @@ interface HealthData {
   services: Record<string, {
     healthy: boolean
     message?: string
+    url?: string
+    status?: string
+    provider?: string
+    worker_count?: number
+    active_workers?: number
+    idle_workers?: number
   }>
   timestamp?: string
 }
@@ -302,9 +308,16 @@ export default function System() {
                 <div key={service} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
                   <div className="flex items-center space-x-3">
                     {getStatusIcon(status.healthy)}
-                    <span className="font-medium text-gray-900 dark:text-gray-100">
-                      {getServiceDisplayName(service)}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {getServiceDisplayName(service)}
+                      </span>
+                      {(status as any).url && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                          {(status as any).url}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="text-right">
                     {status.message && (
