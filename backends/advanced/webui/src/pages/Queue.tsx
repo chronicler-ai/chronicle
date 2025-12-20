@@ -699,8 +699,8 @@ const Queue: React.FC = () => {
         <div className="flex items-center space-x-3">
           <Layers className="w-6 h-6 text-blue-600" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Queue Management</h1>
-            <p className="text-xs text-gray-500">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Queue Management</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Last updated: {new Date(lastUpdate).toLocaleTimeString()} • Auto-refresh every 2s
             </p>
           </div>
@@ -748,71 +748,71 @@ const Queue: React.FC = () => {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-          <div className="bg-white rounded-lg border p-4">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg border p-4">
             <div className="flex items-center space-x-2">
-              <Layers className="w-5 h-5 text-gray-600" />
+              <Layers className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               <div>
-                <p className="text-sm text-gray-600">Total</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
                 <p className="text-xl font-semibold">{stats.total_jobs}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border p-4">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg border p-4">
             <div className="flex items-center space-x-2">
               <Clock className="w-5 h-5 text-yellow-600" />
               <div>
-                <p className="text-sm text-gray-600">Queued</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Queued</p>
                 <p className="text-xl font-semibold text-yellow-600">{stats.queued_jobs}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border p-4">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg border p-4">
             <div className="flex items-center space-x-2">
               <Play className={`w-5 h-5 text-blue-600 ${stats.processing_jobs > 0 ? 'animate-pulse' : ''}`} />
               <div>
-                <p className="text-sm text-gray-600">Processing</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Processing</p>
                 <p className="text-xl font-semibold text-blue-600">{stats.processing_jobs}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border p-4">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg border p-4">
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-5 h-5 text-green-600" />
               <div>
-                <p className="text-sm text-gray-600">Completed</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Completed</p>
                 <p className="text-xl font-semibold text-green-600">{stats.completed_jobs}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border p-4">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg border p-4">
             <div className="flex items-center space-x-2">
               <XCircle className="w-5 h-5 text-red-600" />
               <div>
-                <p className="text-sm text-gray-600">Failed</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Failed</p>
                 <p className="text-xl font-semibold text-red-600">{stats.failed_jobs}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border p-4">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg border p-4">
             <div className="flex items-center space-x-2">
-              <StopCircle className="w-5 h-5 text-gray-600" />
+              <StopCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               <div>
-                <p className="text-sm text-gray-600">Cancelled</p>
-                <p className="text-xl font-semibold text-gray-600">{stats.cancelled_jobs}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Cancelled</p>
+                <p className="text-xl font-semibold text-gray-600 dark:text-gray-400">{stats.cancelled_jobs}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border p-4">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg border p-4">
             <div className="flex items-center space-x-2">
               <Pause className="w-5 h-5 text-blue-600" />
               <div>
-                <p className="text-sm text-gray-600">Deferred</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Deferred</p>
                 <p className="text-xl font-semibold text-blue-600">{stats.deferred_jobs}</p>
               </div>
             </div>
@@ -822,7 +822,7 @@ const Queue: React.FC = () => {
 
       {/* Streaming Status */}
       {streamingStatus && (
-        <div className="bg-white rounded-lg border overflow-hidden">
+        <div className="bg-white dark:bg-neutral-800 rounded-lg border overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <h3 className="text-lg font-medium">Audio Streaming & Conversations</h3>
             <div className="flex items-center space-x-2">
@@ -917,7 +917,7 @@ const Queue: React.FC = () => {
                   console.log(`  - All listen jobs (active): ${allListenJobs.length}, showing latest: ${listenJobs.length}`);
 
                   return (
-                    <div key={streamKey} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div key={streamKey} className="p-4 bg-gray-50 rounded-lg border border-gray-200 dark:border-gray-700">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium">{streamKey}</span>
                         <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">Active</span>
@@ -925,21 +925,21 @@ const Queue: React.FC = () => {
 
                       <div className="space-y-2">
                         <div className="flex justify-between text-xs">
-                          <span className="text-gray-600">Stream Length:</span>
+                          <span className="text-gray-600 dark:text-gray-400">Stream Length:</span>
                           <span className="font-medium">{health.stream_length}</span>
                         </div>
                         <div className="flex justify-between text-xs">
-                          <span className="text-gray-600">Age:</span>
+                          <span className="text-gray-600 dark:text-gray-400">Age:</span>
                           <span className="font-medium">{(health.stream_age_seconds || 0).toFixed(0)}s</span>
                         </div>
                         <div className="flex justify-between text-xs">
-                          <span className="text-gray-600">Pending:</span>
+                          <span className="text-gray-600 dark:text-gray-400">Pending:</span>
                           <span className={`font-medium ${health.total_pending && health.total_pending > 0 ? 'text-yellow-600' : 'text-green-600'}`}>
                             {health.total_pending}
                           </span>
                         </div>
                         {health.consumer_groups && health.consumer_groups.map((group) => (
-                          <div key={group.name} className="mt-2 pt-2 border-t border-gray-200">
+                          <div key={group.name} className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                             <div className="text-xs text-gray-600 mb-1">{group.name}:</div>
                             {group.consumers.map((consumer) => (
                               <div key={consumer.name} className="flex justify-between text-xs pl-2">
@@ -954,7 +954,7 @@ const Queue: React.FC = () => {
 
                         {/* Current Speech Detection Job */}
                         {listenJobs.length > 0 && (
-                          <div className="mt-2 pt-2 border-t border-gray-200">
+                          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                             <div className="text-xs text-gray-600 mb-1">Current Speech Detection:</div>
                             {listenJobs.map((job) => {
                               const runtime = job.started_at
@@ -964,7 +964,7 @@ const Queue: React.FC = () => {
                               const seconds = runtime % 60;
 
                               return (
-                                <div key={job.job_id} className="bg-white rounded p-2 space-y-1">
+                                <div key={job.job_id} className="bg-white dark:bg-neutral-800 rounded p-2 space-y-1">
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center space-x-1">
                                       {getStatusIcon(job.status)}
@@ -1019,17 +1019,17 @@ const Queue: React.FC = () => {
                                     if (!session) return null;
 
                                     return (
-                                      <div className="text-xs space-y-1 pl-4 mt-2 pt-2 border-t border-gray-200">
+                                      <div className="text-xs space-y-1 pl-4 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                                         <div className="font-semibold text-gray-700 mb-1">Speech Detection Events:</div>
                                         {session.last_event && (
                                           <div className="flex justify-between">
-                                            <span className="text-gray-600">Last Event:</span>
+                                            <span className="text-gray-600 dark:text-gray-400">Last Event:</span>
                                             <span className="text-gray-800 font-mono text-xs">{session.last_event.split(':')[0]}</span>
                                           </div>
                                         )}
                                         {session.speaker_check_status && (
                                           <div className="flex justify-between">
-                                            <span className="text-gray-600">Speaker Check:</span>
+                                            <span className="text-gray-600 dark:text-gray-400">Speaker Check:</span>
                                             <span className={`font-medium ${
                                               session.speaker_check_status === 'enrolled' ? 'text-green-700' :
                                               session.speaker_check_status === 'checking' ? 'text-blue-700' :
@@ -1041,7 +1041,7 @@ const Queue: React.FC = () => {
                                         )}
                                         {session.identified_speakers && (
                                           <div className="flex justify-between">
-                                            <span className="text-gray-600">Speakers:</span>
+                                            <span className="text-gray-600 dark:text-gray-400">Speakers:</span>
                                             <span className="text-green-700 font-medium">{session.identified_speakers}</span>
                                           </div>
                                         )}
@@ -1134,7 +1134,7 @@ const Queue: React.FC = () => {
 
                   if (conversationMap.size === 0) {
                     return (
-                      <div className="text-center py-8 text-gray-500 text-sm bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="text-center py-8 text-gray-500 text-sm bg-gray-50 rounded-lg border border-gray-200 dark:border-gray-700">
                         No active conversations
                       </div>
                     );
@@ -1180,7 +1180,7 @@ const Queue: React.FC = () => {
                                   ) : (
                                     <Brain className="w-4 h-4 text-cyan-600 animate-pulse" />
                                   )}
-                                  <span className="text-sm font-medium text-gray-900">{clientId}</span>
+                                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{clientId}</span>
                                   {hasFailedJob ? (
                                     <span className="text-xs px-2 py-0.5 bg-red-200 text-red-800 rounded font-medium">
                                       {failedJobCount} Error{failedJobCount > 1 ? 's' : ''}
@@ -1194,7 +1194,7 @@ const Queue: React.FC = () => {
                                     </span>
                                   )}
                                 </div>
-                                <div className="mt-1 text-xs text-gray-600">
+                                <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
                                   Conversation: {conversationId.substring(0, 8)}... •
                                   {createdAt && `Started: ${new Date(createdAt).toLocaleTimeString()} • `}
                                   Words: {wordCount}
@@ -1210,7 +1210,7 @@ const Queue: React.FC = () => {
 
                           {/* Expanded Jobs Section */}
                           {isExpanded && (
-                            <div className="border-t border-cyan-200 bg-white p-3">
+                            <div className="border-t border-cyan-200 bg-white dark:bg-neutral-800 p-3">
                               {/* Pipeline Timeline */}
                               <div className="mb-4">
                                 <h5 className="text-xs font-medium text-gray-700 mb-3">Pipeline Timeline:</h5>
@@ -1290,7 +1290,7 @@ const Queue: React.FC = () => {
                                   return (
                                     <div className="space-y-2">
                                       {/* Time axis */}
-                                      <div className="relative h-4 border-b border-gray-300">
+                                      <div className="relative h-4 border-b border-gray-300 dark:border-gray-600">
                                         {timeMarkers.map((marker, idx) => (
                                           <div
                                             key={idx}
@@ -1380,7 +1380,7 @@ const Queue: React.FC = () => {
                                             <span className={`text-xs px-1.5 py-0.5 rounded ${getStatusColor(job.status)}`}>
                                               {job.status}
                                             </span>
-                                            <span className="text-xs text-gray-500">{job.queue}</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">{job.queue}</span>
                                             {/* Show memory count badge on collapsed card */}
                                             {!expandedJobs.has(job.job_id) && job.job_type === 'process_memory_job' && job.result?.memories_created !== undefined && (
                                               <span className="text-xs px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded">
@@ -1405,7 +1405,7 @@ const Queue: React.FC = () => {
 
                                           {/* Show job-specific metadata */}
                                           {job.meta && (
-                                            <div className="space-y-0.5 pl-2 border-l-2 border-gray-300">
+                                            <div className="space-y-0.5 pl-2 border-l-2 border-gray-300 dark:border-gray-600">
                                               {/* open_conversation_job metadata */}
                                               {job.job_type === 'open_conversation_job' && (
                                                 <>
@@ -1474,7 +1474,7 @@ const Queue: React.FC = () => {
 
                                               {/* Show conversation_id if present */}
                                               {job.meta.conversation_id && (
-                                                <div className="font-mono text-gray-500">
+                                                <div className="font-mono text-gray-500 dark:text-gray-400">
                                                   Conv: {job.meta.conversation_id.substring(0, 8)}...
                                                 </div>
                                               )}
@@ -1510,9 +1510,9 @@ const Queue: React.FC = () => {
               {/* Completed Conversations - Grouped by conversation_id */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-medium text-gray-700">Completed Conversations</h4>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Completed Conversations</h4>
                   <div className="flex items-center space-x-2">
-                    <label className="text-xs text-gray-600">Time range:</label>
+                    <label className="text-xs text-gray-600 dark:text-gray-400">Time range:</label>
                     <select
                       value={completedConvTimeRange}
                       onChange={(e) => {
@@ -1597,7 +1597,7 @@ const Queue: React.FC = () => {
 
                   if (conversationMap.size === 0) {
                     return (
-                      <div className="text-center py-8 text-gray-500 text-sm bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="text-center py-8 text-gray-500 text-sm bg-gray-50 rounded-lg border border-gray-200 dark:border-gray-700">
                         No completed conversations
                       </div>
                     );
@@ -1629,7 +1629,7 @@ const Queue: React.FC = () => {
 
                   if (conversationsArray.length === 0) {
                     return (
-                      <div className="text-center py-8 text-gray-500 text-sm bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="text-center py-8 text-gray-500 text-sm bg-gray-50 rounded-lg border border-gray-200 dark:border-gray-700">
                         No completed conversations in the selected time range
                       </div>
                     );
@@ -1702,7 +1702,7 @@ const Queue: React.FC = () => {
                                     <ChevronRight className={`w-4 h-4 ${iconColor}`} />
                                   )}
                                   <StatusIcon className={`w-4 h-4 ${iconColor}`} />
-                                  <span className="text-sm font-medium text-gray-900">{clientId}</span>
+                                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{clientId}</span>
                                   <span className={`text-xs px-2 py-0.5 rounded font-medium ${statusBadge}`}>
                                     {statusText}
                                   </span>
@@ -1712,7 +1712,7 @@ const Queue: React.FC = () => {
                                     </span>
                                   )}
                                 </div>
-                                <div className="mt-1 text-xs text-gray-600">
+                                <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
                                   Conversation: {conversationId.substring(0, 8)}... •
                                   Words: {wordCount}
                                   {createdAt && (
@@ -1723,7 +1723,7 @@ const Queue: React.FC = () => {
                                 {allComplete ? (
                                   <>
                                     {title ? (
-                                      <div className="mt-1 text-sm font-medium text-gray-900">
+                                      <div className="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                                         {title}
                                       </div>
                                     ) : transcript ? (
@@ -1749,7 +1749,7 @@ const Queue: React.FC = () => {
 
                             {/* Expanded Jobs Section */}
                             {isExpanded && (
-                              <div className={`border-t bg-white p-3 ${
+                              <div className={`border-t bg-white dark:bg-neutral-800 p-3 ${
                                 allComplete ? 'border-green-200' : 'border-yellow-200'
                               }`}>
                                 {/* Pipeline Timeline */}
@@ -1831,7 +1831,7 @@ const Queue: React.FC = () => {
                                     return (
                                       <div className="space-y-2">
                                         {/* Time axis */}
-                                        <div className="relative h-4 border-b border-gray-300">
+                                        <div className="relative h-4 border-b border-gray-300 dark:border-gray-600">
                                           {timeMarkers.map((marker, idx) => (
                                             <div
                                               key={idx}
@@ -1920,7 +1920,7 @@ const Queue: React.FC = () => {
                                             <span className={`text-xs px-1.5 py-0.5 rounded ${getStatusColor(job.status)}`}>
                                               {job.status}
                                             </span>
-                                            <span className="text-xs text-gray-500">{job.queue || job.data?.queue || 'unknown'}</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">{job.queue || job.data?.queue || 'unknown'}</span>
                                             {/* Show memory count badge on collapsed card */}
                                             {!expandedJobs.has(job.job_id) && job.job_type === 'process_memory_job' && job.result?.memories_created !== undefined && (
                                               <span className="text-xs px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded">
@@ -1953,7 +1953,7 @@ const Queue: React.FC = () => {
 
                                             {/* Show job-specific metadata */}
                                             {job.meta && (
-                                              <div className="space-y-0.5 pl-2 border-l-2 border-gray-300">
+                                              <div className="space-y-0.5 pl-2 border-l-2 border-gray-300 dark:border-gray-600">
                                                 {/* open_conversation_job metadata */}
                                                 {job.job_type === 'open_conversation_job' && (
                                                   <>
@@ -2012,7 +2012,7 @@ const Queue: React.FC = () => {
 
                                                 {/* Show conversation_id if present */}
                                                 {job.meta.conversation_id && (
-                                                  <div className="font-mono text-gray-500">
+                                                  <div className="font-mono text-gray-500 dark:text-gray-400">
                                                     Conv: {job.meta.conversation_id.substring(0, 8)}...
                                                   </div>
                                                 )}
@@ -2035,8 +2035,8 @@ const Queue: React.FC = () => {
 
                       {/* Pagination Controls */}
                       {totalPages > 1 && (
-                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-                          <div className="text-xs text-gray-600">
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
                             Showing {startIndex + 1}-{Math.min(endIndex, totalConversations)} of {totalConversations} conversations
                           </div>
                           <div className="flex items-center space-x-2">
@@ -2051,7 +2051,7 @@ const Queue: React.FC = () => {
                             >
                               Previous
                             </button>
-                            <span className="text-xs text-gray-600">
+                            <span className="text-xs text-gray-600 dark:text-gray-400">
                               Page {completedConvPage} of {totalPages}
                             </span>
                             <button
@@ -2078,7 +2078,7 @@ const Queue: React.FC = () => {
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-lg border p-4">
+      <div className="bg-white dark:bg-neutral-800 rounded-lg border p-4">
         <h3 className="text-lg font-medium mb-4">Filters</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
@@ -2147,14 +2147,14 @@ const Queue: React.FC = () => {
       </div>
 
           {/* Jobs Table */}
-      <div className="bg-white rounded-lg border overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
+      <div className="bg-white dark:bg-neutral-800 rounded-lg border overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-medium">Jobs</h3>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Date</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Conversation ID</th>
@@ -2165,9 +2165,9 @@ const Queue: React.FC = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-gray-700">
               {jobs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((job) => (
-                <tr key={job.job_id} className="hover:bg-gray-50">
+                <tr key={job.job_id} className="hover:bg-gray-50 dark:bg-gray-800">
                   <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                     {new Date(job.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </td>
@@ -2182,7 +2182,7 @@ const Queue: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{getJobTypeShort(job.job_type)}</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">{getJobTypeShort(job.job_type)}</div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}>
@@ -2226,7 +2226,7 @@ const Queue: React.FC = () => {
                       {job.status === 'completed' && (
                         <button
                           onClick={() => cancelJob(job.job_id)}
-                          className="text-gray-400 hover:text-gray-600"
+                          className="text-gray-400 hover:text-gray-600 dark:text-gray-400"
                           title="Delete job"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -2242,22 +2242,22 @@ const Queue: React.FC = () => {
 
         {/* Pagination */}
         {pagination.total > pagination.limit && (
-          <div className="bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-700">
+          <div className="bg-white dark:bg-neutral-800 px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+            <div className="text-sm text-gray-700 dark:text-gray-300">
               Showing {pagination.offset + 1} to {Math.min(pagination.offset + pagination.limit, pagination.total)} of {pagination.total} results
             </div>
             <div className="flex space-x-2">
               <button
                 onClick={prevPage}
                 disabled={pagination.offset === 0}
-                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white dark:bg-neutral-800 hover:bg-gray-50 disabled:opacity-50"
               >
                 Previous
               </button>
               <button
                 onClick={nextPage}
                 disabled={!pagination.has_more}
-                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white dark:bg-neutral-800 hover:bg-gray-50 disabled:opacity-50"
               >
                 Next
               </button>
@@ -2270,10 +2270,10 @@ const Queue: React.FC = () => {
       {/* Job Details Modal */}
       {selectedJob && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-6xl shadow-lg rounded-md bg-white">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-6xl shadow-lg rounded-md bg-white dark:bg-neutral-800">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Job Details</h3>
-              <button onClick={() => setSelectedJob(null)} className="text-gray-400 hover:text-gray-600">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Job Details</h3>
+              <button onClick={() => setSelectedJob(null)} className="text-gray-400 hover:text-gray-600 dark:text-gray-400">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -2286,11 +2286,11 @@ const Queue: React.FC = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Job ID</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Job ID</label>
                     <p className="text-sm text-gray-900 font-mono">{selectedJob.job_id}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Status</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedJob.status)}`}>
                       {getStatusIcon(selectedJob.status)}
                       <span className="ml-1">{selectedJob.status.charAt(0).toUpperCase() + selectedJob.status.slice(1)}</span>
@@ -2298,33 +2298,33 @@ const Queue: React.FC = () => {
                   </div>
                   {selectedJob.description && (
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700">Description</label>
-                      <p className="text-sm text-gray-900">{selectedJob.description}</p>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                      <p className="text-sm text-gray-900 dark:text-gray-100">{selectedJob.description}</p>
                     </div>
                   )}
                   {selectedJob.func_name && (
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700">Function Name</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Function Name</label>
                       <p className="text-sm text-gray-900 font-mono">{selectedJob.func_name}</p>
                     </div>
                   )}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Created</label>
-                    <p className="text-sm text-gray-900">{selectedJob.created_at ? formatDate(selectedJob.created_at) : '-'}</p>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Created</label>
+                    <p className="text-sm text-gray-900 dark:text-gray-100">{selectedJob.created_at ? formatDate(selectedJob.created_at) : '-'}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Started</label>
-                    <p className="text-sm text-gray-900">{selectedJob.started_at ? formatDate(selectedJob.started_at) : '-'}</p>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Started</label>
+                    <p className="text-sm text-gray-900 dark:text-gray-100">{selectedJob.started_at ? formatDate(selectedJob.started_at) : '-'}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Ended</label>
-                    <p className="text-sm text-gray-900">{selectedJob.ended_at ? formatDate(selectedJob.ended_at) : '-'}</p>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ended</label>
+                    <p className="text-sm text-gray-900 dark:text-gray-100">{selectedJob.ended_at ? formatDate(selectedJob.ended_at) : '-'}</p>
                   </div>
                 </div>
 
                 {selectedJob.args && selectedJob.args.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Arguments</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Arguments</label>
                     <pre className="text-xs text-gray-900 bg-gray-50 p-2 rounded overflow-auto max-h-64 whitespace-pre-wrap break-words">
                       {JSON.stringify(selectedJob.args, null, 2)}
                     </pre>
@@ -2333,7 +2333,7 @@ const Queue: React.FC = () => {
 
                 {selectedJob.kwargs && Object.keys(selectedJob.kwargs).length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Keyword Arguments</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Keyword Arguments</label>
                     <pre className="text-xs text-gray-900 bg-gray-50 p-2 rounded overflow-auto max-h-64 whitespace-pre-wrap break-words">
                       {JSON.stringify(selectedJob.kwargs, null, 2)}
                     </pre>
@@ -2342,7 +2342,7 @@ const Queue: React.FC = () => {
 
                 {selectedJob.error_message && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Error</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Error</label>
                     <pre className="text-xs text-red-600 bg-red-50 p-2 rounded overflow-auto max-h-64 whitespace-pre-wrap break-words">
                       {selectedJob.error_message}
                     </pre>
@@ -2351,7 +2351,7 @@ const Queue: React.FC = () => {
 
                 {selectedJob.result && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Result</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Result</label>
                     <pre className="text-xs text-gray-900 bg-green-50 p-2 rounded overflow-auto max-h-64 whitespace-pre-wrap break-words">
                       {JSON.stringify(selectedJob.result, null, 2)}
                     </pre>
@@ -2399,7 +2399,7 @@ const Queue: React.FC = () => {
                         {selectedJob.meta.transcript && (
                           <div className="mt-2">
                             <div className="text-sm font-medium mb-1">Transcript:</div>
-                            <div className="text-sm italic text-gray-700 bg-white p-2 rounded border border-gray-200 max-h-32 overflow-y-auto">
+                            <div className="text-sm italic text-gray-700 bg-white dark:bg-neutral-800 p-2 rounded border border-gray-200 max-h-32 overflow-y-auto">
                               "{selectedJob.meta.transcript}"
                             </div>
                           </div>
@@ -2501,7 +2501,7 @@ const Queue: React.FC = () => {
 
                     {/* Raw JSON metadata (collapsible) */}
                     <details className="mt-2">
-                      <summary className="text-sm font-medium text-gray-700 cursor-pointer hover:text-gray-900">
+                      <summary className="text-sm font-medium text-gray-700 cursor-pointer hover:text-gray-900 dark:text-gray-100">
                         Raw Metadata JSON
                       </summary>
                       <pre className="text-xs text-gray-900 bg-blue-50 p-2 rounded overflow-auto max-h-64 mt-2 whitespace-pre-wrap break-words">
@@ -2519,13 +2519,13 @@ const Queue: React.FC = () => {
       {/* Flush Jobs Modal */}
       {showFlushModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 lg:w-1/3 shadow-lg rounded-md bg-white">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 lg:w-1/3 shadow-lg rounded-md bg-white dark:bg-neutral-800">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 flex items-center">
                 <Trash2 className="w-5 h-5 mr-2" />
                 Flush Jobs
               </h3>
-              <button onClick={() => setShowFlushModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowFlushModal(false)} className="text-gray-400 hover:text-gray-600 dark:text-gray-400">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -2631,7 +2631,7 @@ const Queue: React.FC = () => {
                             onChange={(e) => setFlushSettings(prev => ({ ...prev, include_failed: e.target.checked }))}
                             className="text-red-600"
                           />
-                          <span className="text-xs text-gray-700">Also flush failed jobs</span>
+                          <span className="text-xs text-gray-700 dark:text-gray-300">Also flush failed jobs</span>
                         </label>
 
                         <label className="flex items-center space-x-2">
@@ -2641,7 +2641,7 @@ const Queue: React.FC = () => {
                             onChange={(e) => setFlushSettings(prev => ({ ...prev, include_completed: e.target.checked }))}
                             className="text-red-600"
                           />
-                          <span className="text-xs text-gray-700">Also flush completed jobs</span>
+                          <span className="text-xs text-gray-700 dark:text-gray-300">Also flush completed jobs</span>
                         </label>
                       </div>
                     </div>
@@ -2652,7 +2652,7 @@ const Queue: React.FC = () => {
               <div className="flex space-x-2 pt-4 border-t">
                 <button
                   onClick={() => setShowFlushModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 dark:bg-gray-800"
                 >
                   Cancel
                 </button>

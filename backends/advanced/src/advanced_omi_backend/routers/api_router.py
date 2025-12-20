@@ -16,6 +16,7 @@ from .modules import (
     conversation_router,
     memory_router,
     queue_router,
+    settings_router,
     system_router,
     user_router,
 )
@@ -34,6 +35,7 @@ router.include_router(chat_router)
 router.include_router(client_router)
 router.include_router(conversation_router)
 router.include_router(memory_router)
+router.include_router(settings_router)
 router.include_router(system_router)
 router.include_router(queue_router)
 router.include_router(health_router)  # Also include under /api for frontend compatibility

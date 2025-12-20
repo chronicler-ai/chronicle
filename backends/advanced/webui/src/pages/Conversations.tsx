@@ -49,7 +49,12 @@ const SPEAKER_COLOR_PALETTE = [
   'text-cyan-600 dark:text-cyan-400',
 ];
 
-export default function Conversations() {
+interface ConversationsProps {
+  activeTab?: 'classic' | 'timeline'
+  setActiveTab?: (tab: 'classic' | 'timeline') => void
+}
+
+export default function Conversations({ activeTab = 'classic', setActiveTab }: ConversationsProps = {}) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -385,20 +390,28 @@ export default function Conversations() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-gray-600 dark:text-gray-400">Loading conversations...</span>
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <div className="animate-spin rounded-full h-10 w-10 border-3 border-primary-200 border-t-primary-600 dark:border-neutral-700 dark:border-t-primary-500"></div>
+        <p className="text-sm font-medium text-neutral-600 dark:text-neutral-400">Loading conversations...</p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="text-center">
-        <div className="text-red-600 dark:text-red-400 mb-4">{error}</div>
+      <div className="text-center py-12">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-error-100 dark:bg-error-900/20 rounded-full mb-4">
+          <MessageSquare className="h-8 w-8 text-error-600 dark:text-error-400" />
+        </div>
+        <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+          Unable to load conversations
+        </h3>
+        <p className="text-sm text-error-600 dark:text-error-400 mb-6 max-w-md mx-auto">
+          {error}
+        </p>
         <button
           onClick={loadConversations}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="btn-primary"
         >
           Try Again
         </button>
@@ -409,26 +422,33 @@ export default function Conversations() {
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center space-x-2">
-          <MessageSquare className="h-6 w-6 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Latest Conversations
-          </h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+            <MessageSquare className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">
+              Conversations
+            </h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              View and manage your audio conversations
+            </p>
+          </div>
         </div>
-        <div className="flex items-center space-x-4">
-          <label className="flex items-center space-x-2 text-sm">
+        <div className="flex items-center space-x-3">
+          <label className="flex items-center space-x-2 px-3 py-2 bg-neutral-100 dark:bg-neutral-700/50 rounded-lg cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors">
             <input
               type="checkbox"
               checked={debugMode}
               onChange={(e) => setDebugMode(e.target.checked)}
-              className="rounded border-gray-300"
+              className="rounded border-neutral-300 dark:border-neutral-600 text-primary-600 focus:ring-primary-500"
             />
-            <span className="text-gray-700 dark:text-gray-300">Debug Mode</span>
+            <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Debug Mode</span>
           </label>
           <button
             onClick={loadConversations}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="btn-primary space-x-2"
           >
             <RefreshCw className="h-4 w-4" />
             <span>Refresh</span>
@@ -436,21 +456,60 @@ export default function Conversations() {
         </div>
       </div>
 
+      {/* Tab Navigation */}
+      {setActiveTab && (
+        <div className="mb-6 border-b border-neutral-200 dark:border-neutral-700">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('classic')}
+              className={`
+                py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                ${activeTab === 'classic'
+                  ? 'border-primary-600 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300 dark:text-neutral-400 dark:hover:text-neutral-300'
+                }
+              `}
+            >
+              Classic View
+            </button>
+            <button
+              onClick={() => setActiveTab('timeline')}
+              className={`
+                py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                ${activeTab === 'timeline'
+                  ? 'border-primary-600 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300 dark:text-neutral-400 dark:hover:text-neutral-300'
+                }
+              `}
+            >
+              Timeline
+            </button>
+          </nav>
+        </div>
+      )}
+
       {/* Conversations List */}
       <div className="space-y-6">
         {conversations.length === 0 ? (
-          <div className="text-center text-gray-500 dark:text-gray-400 py-12">
-            <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No conversations found</p>
+          <div className="text-center py-16">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-neutral-100 dark:bg-neutral-800 rounded-full mb-4">
+              <MessageSquare className="h-10 w-10 text-neutral-400 dark:text-neutral-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+              No conversations yet
+            </h3>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-md mx-auto">
+              Start recording audio to create your first conversation and build your personal knowledge base.
+            </p>
           </div>
         ) : (
           conversations.map((conversation) => (
             <div
               key={conversation.conversation_id || conversation.audio_uuid}
-              className={`rounded-lg p-6 border ${
+              className={`rounded-xl p-6 border transition-all duration-200 ${
                 conversation.deleted
-                  ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
-                  : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
+                  ? 'bg-error-50 dark:bg-error-900/10 border-error-200 dark:border-error-800/50'
+                  : 'bg-neutral-50 dark:bg-neutral-800/50 border-neutral-200 dark:border-neutral-700 hover:shadow-md hover:border-neutral-300 dark:hover:border-neutral-600'
               }`}
             >
               {/* Deleted Conversation Warning */}

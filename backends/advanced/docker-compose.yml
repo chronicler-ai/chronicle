@@ -224,8 +224,9 @@ services:
 
 # Shared network for cross-project communication
 networks:
-  default:
+  chronicle-network:
     name: chronicle-network
+
 
 volumes:
   ollama_data:

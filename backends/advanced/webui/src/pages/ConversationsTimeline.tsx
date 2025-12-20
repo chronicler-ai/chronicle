@@ -193,7 +193,12 @@ function ConversationCard({ conversation, formatDuration }: ConversationCardProp
   )
 }
 
-export default function ConversationsTimeline() {
+interface ConversationsTimelineProps {
+  activeTab?: 'classic' | 'timeline'
+  setActiveTab?: (tab: 'classic' | 'timeline') => void
+}
+
+export default function ConversationsTimeline({ activeTab = 'timeline', setActiveTab }: ConversationsTimelineProps = {}) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -276,6 +281,38 @@ export default function ConversationsTimeline() {
           <span>Refresh</span>
         </button>
       </div>
+
+      {/* Tab Navigation */}
+      {setActiveTab && (
+        <div className="mb-6 border-b border-neutral-200 dark:border-neutral-700">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('classic')}
+              className={`
+                py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                ${activeTab === 'classic'
+                  ? 'border-primary-600 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300 dark:text-neutral-400 dark:hover:text-neutral-300'
+                }
+              `}
+            >
+              Classic View
+            </button>
+            <button
+              onClick={() => setActiveTab('timeline')}
+              className={`
+                py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                ${activeTab === 'timeline'
+                  ? 'border-primary-600 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300 dark:text-neutral-400 dark:hover:text-neutral-300'
+                }
+              `}
+            >
+              Timeline
+            </button>
+          </nav>
+        </div>
+      )}
 
       {/* Timeline */}
       {conversations.length === 0 ? (

@@ -37,6 +37,7 @@ from advanced_omi_backend.routers.modules.health_routes import router as health_
 from advanced_omi_backend.routers.modules.websocket_routes import router as websocket_router
 from advanced_omi_backend.services.audio_service import get_audio_stream_service
 from advanced_omi_backend.task_manager import init_task_manager, get_task_manager
+from advanced_omi_backend.services.mcp_server import setup_mcp_server
 
 logger = logging.getLogger(__name__)
 application_logger = logging.getLogger("audio_processing")
@@ -65,6 +66,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         application_logger.error(f"Failed to initialize Beanie: {e}")
         raise
+
+    # Initialize settings manager
+    try:
+        from advanced_omi_backend.settings_manager import init_settings_manager
+        settings_mgr = init_settings_manager(config.db)
+        await settings_mgr.initialize()
+        application_logger.info("✅ Settings manager initialized and loaded from environment/database")
+    except Exception as e:
+        application_logger.error(f"Failed to initialize settings manager: {e}")
+        # Don't raise - use fallback to environment variables if settings manager fails
 
     # Create admin user if needed
     try:
@@ -204,6 +215,10 @@ def create_app() -> FastAPI:
         prefix="/users",
         tags=["users"],
     )
+
+    # Setup MCP server for conversation access
+    setup_mcp_server(app)
+    logger.info("MCP server configured for conversation access")
 
     # Mount static files LAST (mounts are catch-all patterns)
     CHUNK_DIR = Path("/app/audio_chunks")

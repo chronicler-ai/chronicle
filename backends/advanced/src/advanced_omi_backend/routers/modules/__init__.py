@@ -12,6 +12,7 @@ This package contains organized router modules for different functional areas:
 - audio_routes: Audio file uploads and processing
 - health_routes: Health check endpoints
 - websocket_routes: WebSocket connection handling
+- settings_routes: Application settings management
 """
 
 from .audio_routes import router as audio_router
@@ -21,6 +22,7 @@ from .conversation_routes import router as conversation_router
 from .health_routes import router as health_router
 from .memory_routes import router as memory_router
 from .queue_routes import router as queue_router
+from .settings_routes import router as settings_router
 from .system_routes import router as system_router
 from .user_routes import router as user_router
 from .websocket_routes import router as websocket_router
@@ -33,6 +35,7 @@ __all__ = [
    "health_router",
    "memory_router",
    "queue_router",
+   "settings_router",
    "system_router",
    "user_router",
    "websocket_router",

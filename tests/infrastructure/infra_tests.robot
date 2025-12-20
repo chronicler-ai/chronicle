@@ -163,7 +163,8 @@ Worker Registration Loss Detection Test
     END
 
     # Cleanup: Always restart workers after this test to ensure subsequent tests work
-    [Teardown]    Run Keywords
+    [Teardown]    
+    ...    Run Keywords
     ...    Log To Console    \n🧹 Cleanup: Restarting workers for subsequent tests
     ...    AND    Restart Workers Container
 

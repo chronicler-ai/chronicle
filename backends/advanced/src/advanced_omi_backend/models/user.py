@@ -25,6 +25,8 @@ class UserRead(BaseUser[PydanticObjectId]):
     display_name: Optional[str] = None
     registered_clients: dict[str, dict] = Field(default_factory=dict)
     primary_speakers: list[dict] = Field(default_factory=list)
+    api_key: Optional[str] = None
+    api_key_created_at: Optional[datetime] = None
 
 
 class UserUpdate(BaseUserUpdate):
@@ -62,6 +64,9 @@ class User(BeanieBaseUser, Document):
     registered_clients: dict[str, dict] = Field(default_factory=dict)
     # Speaker processing filter configuration
     primary_speakers: list[dict] = Field(default_factory=list)
+    # API key for MCP access
+    api_key: Optional[str] = None
+    api_key_created_at: Optional[datetime] = None
 
     class Settings:
         name = "users"  # Collection name in MongoDB - standardized from "fastapi_users"

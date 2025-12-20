@@ -258,14 +258,76 @@ export const chatApi = {
 export const speakerApi = {
   // Get current user's speaker configuration
   getSpeakerConfiguration: () => api.get('/api/speaker-configuration'),
-  
+
   // Update current user's speaker configuration
-  updateSpeakerConfiguration: (primarySpeakers: Array<{speaker_id: string, name: string, user_id: number}>) => 
+  updateSpeakerConfiguration: (primarySpeakers: Array<{speaker_id: string, name: string, user_id: number}>) =>
     api.post('/api/speaker-configuration', primarySpeakers),
-    
-  // Get enrolled speakers from speaker recognition service  
+
+  // Get enrolled speakers from speaker recognition service
   getEnrolledSpeakers: () => api.get('/api/enrolled-speakers'),
-  
+
   // Check speaker service status (admin only)
   getSpeakerServiceStatus: () => api.get('/api/speaker-service-status'),
+}
+
+export const settingsApi = {
+  // Generate new API key for current user
+  generateApiKey: () => api.post('/api/users/me/api-key'),
+
+  // Revoke current user's API key
+  revokeApiKey: () => api.delete('/api/users/me/api-key'),
+
+  // Application settings (requires admin)
+  getAllSettings: () => api.get('/api/settings'),
+  updateAllSettings: (settings: any) => api.put('/api/settings', settings),
+
+  // Individual setting categories
+  getSpeechDetection: () => api.get('/api/settings/speech-detection'),
+  updateSpeechDetection: (settings: any) => api.put('/api/settings/speech-detection', settings),
+
+  getConversation: () => api.get('/api/settings/conversation'),
+  updateConversation: (settings: any) => api.put('/api/settings/conversation', settings),
+
+  getAudioProcessing: () => api.get('/api/settings/audio-processing'),
+  updateAudioProcessing: (settings: any) => api.put('/api/settings/audio-processing', settings),
+
+  getDiarization: () => api.get('/api/settings/diarization'),
+  updateDiarization: (settings: any) => api.put('/api/settings/diarization', settings),
+
+  getLLM: () => api.get('/api/settings/llm'),
+  updateLLM: (settings: any) => api.put('/api/settings/llm', settings),
+
+  getProviders: () => api.get('/api/settings/providers'),
+  updateProviders: (settings: any) => api.put('/api/settings/providers', settings),
+
+  getNetwork: () => api.get('/api/settings/network'),
+  updateNetwork: (settings: any) => api.put('/api/settings/network', settings),
+
+  getInfrastructure: () => api.get('/api/settings/infrastructure'),
+  updateInfrastructure: (settings: any) => api.put('/api/settings/infrastructure', settings),
+
+  getMisc: () => api.get('/api/settings/misc'),
+  updateMisc: (settings: any) => api.put('/api/settings/misc', settings),
+
+  getApiKeys: () => api.get('/api/settings/api-keys'),
+  updateApiKeys: (settings: any) => api.put('/api/settings/api-keys', settings),
+  saveApiKeys: (settings: any, saveToFile: boolean = true, saveToDatabase: boolean = true) =>
+    api.post('/api/settings/api-keys/save', settings, {
+      params: { save_to_file: saveToFile, save_to_database: saveToDatabase }
+    }),
+  loadApiKeysFromFile: (filePath: string = '.env.api-keys') =>
+    api.get('/api/settings/api-keys/load-from-file', {
+      params: { file_path: filePath }
+    }),
+
+  // Cache management
+  invalidateCache: (category?: string) => api.post('/api/settings/cache/invalidate', null, {
+    params: category ? { category } : {}
+  }),
+
+  // Infrastructure status
+  getInfrastructureStatus: () => api.get('/api/settings/infrastructure/status'),
+
+  // API keys status
+  getApiKeysStatus: () => api.get('/api/settings/api-keys/status'),
 }
