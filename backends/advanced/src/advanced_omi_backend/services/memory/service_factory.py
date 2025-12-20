@@ -7,6 +7,7 @@ implementation and the OpenMemory MCP backend.
 
 import asyncio
 import logging
+import os
 import threading
 from typing import Optional
 
@@ -92,7 +93,9 @@ def get_memory_service() -> MemoryServiceBase:
             if _memory_service is None:
                 try:
                     # Build configuration from environment
-                    config = build_memory_config_from_env()
+                    # Check for graceful degradation mode
+                    allow_missing_keys = os.getenv("ALLOW_MISSING_API_KEYS", "false").lower() == "true"
+                    config = build_memory_config_from_env(allow_missing_keys=allow_missing_keys)
 
                     # Create appropriate service implementation
                     _memory_service = create_memory_service(config)

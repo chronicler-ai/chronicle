@@ -56,6 +56,15 @@ localhost TAILSCALE_IP {
         reverse_proxy chronicle-backend:8000
     }
 
+    # MCP endpoints - proxy to backend
+    handle /mcp/* {
+        reverse_proxy friend-backend:8000 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
     # Everything else - proxy to webui
     handle {
         reverse_proxy webui:80
@@ -98,6 +107,15 @@ localhost TAILSCALE_IP {
 #     # Audio files
 #     handle /audio/* {
 #         reverse_proxy chronicle-backend:8000
+#     }
+#
+#     # MCP endpoints
+#     handle /mcp/* {
+#         reverse_proxy friend-backend:8000 {
+#             header_up X-Real-IP {remote_host}
+#             header_up X-Forwarded-For {remote_host}
+#             header_up X-Forwarded-Proto {scheme}
+#         }
 #     }
 #
 #     # Everything else - webui

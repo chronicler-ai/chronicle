@@ -143,3 +143,10 @@ async def set_memory_provider(
 ):
     """Set memory provider and restart backend services. Admin only."""
     return await system_controller.set_memory_provider(provider)
+# API Key and Configuration Management Endpoints
+
+@router.get("/admin/config/status")
+async def get_configuration_status(current_user: User = Depends(current_superuser)):
+    """Get current API key configuration and feature status. Admin only."""
+    return await system_controller.get_api_key_status()
+

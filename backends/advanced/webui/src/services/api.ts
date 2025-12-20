@@ -172,6 +172,19 @@ export const systemApi = {
   // Memory Provider Management
   getMemoryProvider: () => api.get('/api/admin/memory/provider'),
   setMemoryProvider: (provider: string) => api.post('/api/admin/memory/provider', { provider }),
+
+  // API Key and Configuration Management
+  getConfigurationStatus: () => api.get('/api/admin/config/status'),
+  updateApiKeys: (apiKeys: {
+    openai_api_key?: string
+    deepgram_api_key?: string
+    mistral_api_key?: string
+  }) => api.post('/api/admin/config/api-keys', apiKeys),
+  updateProviderConfig: (providerConfig: {
+    llm_provider?: string
+    transcription_provider?: string
+    memory_provider?: string
+  }) => api.post('/api/admin/config/providers', providerConfig),
 }
 
 export const queueApi = {

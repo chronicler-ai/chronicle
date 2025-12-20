@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-
 # Load .env from backends/advanced directory to get COMPOSE_PROJECT_NAME
 backend_env_path = Path(__file__).resolve().parents[2] / "backends" / "advanced" / ".env"
 if backend_env_path.exists():
