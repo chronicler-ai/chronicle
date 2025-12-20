@@ -7,7 +7,8 @@ services:
       context: ..
       dockerfile: Dockerfile
     env_file:
-      - ../../../.env.default
+      - ../../../.env.default  # Committed defaults
+      - ../.env                # Generated overrides (if exists)
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
@@ -40,7 +41,8 @@ services:
       dockerfile: Dockerfile
     command: ["./start-workers.sh"]
     env_file:
-      - ../../../.env.default
+      - ../../../.env.default  # Committed defaults
+      - ../.env                # Generated overrides (if exists)
     volumes:
       - ../src:/app/src
       - ../start-workers.sh:/app/start-workers.sh

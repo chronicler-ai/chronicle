@@ -235,46 +235,58 @@ up: ## 🚀 Start Chronicle (infrastructure + application)
 	else \
 		if ! docker ps --filter "name=^mongo$$" --filter "status=running" -q | grep -q .; then \
 			echo "🏗️  Infrastructure not running, starting it first..."; \
-			docker compose -f docker-compose.infra.yml up -d; \
+			docker compose -f compose/infrastructure-shared.yml up -d; \
 			sleep 3; \
 		fi; \
-		docker compose --env-file .env.default up -d; \
+		cd backends/advanced && docker compose up -d; \
 		echo "✅ Chronicle started"; \
+		echo ""; \
+		WEBUI_PORT=$$(grep '^WEBUI_PORT=' backends/advanced/.env 2>/dev/null | cut -d= -f2 || echo "3000"); \
+		echo "╔════════════════════════════════════════════════════╗"; \
+		echo "║                                                    ║"; \
+		echo "║  🚀 Open Chronicle WebUI:                         ║"; \
+		echo "║                                                    ║"; \
+		echo "║     http://localhost:$$WEBUI_PORT                      ║"; \
+		echo "║                                                    ║"; \
+		echo "║  (Click the link above or copy to browser)        ║"; \
+		echo "║                                                    ║"; \
+		echo "╚════════════════════════════════════════════════════╝"; \
+		echo ""; \
 	fi
 
 down: ## 🛑 Stop Chronicle application only (keeps infrastructure running)
 	@echo "🛑 Stopping Chronicle application..."
-	@docker compose down
+	@cd backends/advanced && docker compose down
 	@echo "✅ Application stopped (infrastructure still running)"
 	@echo "💡 To stop everything: make down-all"
 
 down-all: ## 🛑 Stop everything (infrastructure + application)
 	@echo "🛑 Stopping all services..."
-	@docker compose down
-	@docker compose -f docker-compose.infra.yml down
+	@cd backends/advanced && docker compose down
+	@docker compose -f compose/infrastructure-shared.yml down
 	@echo "✅ All services stopped"
 
 build: ## 🔨 Rebuild Chronicle application images
 	@echo "🔨 Building Chronicle..."
-	@docker compose build
+	@cd backends/advanced && docker compose build
 
 restart: ## 🔄 Restart Chronicle application only
 	@echo "🔄 Restarting Chronicle application..."
-	@docker compose restart
+	@cd backends/advanced && docker compose restart
 	@echo "✅ Application restarted"
 
 restart-all: ## 🔄 Restart everything (infrastructure + application)
 	@echo "🔄 Restarting all services..."
-	@docker compose restart
-	@docker compose -f docker-compose.infra.yml restart
+	@cd backends/advanced && docker compose restart
+	@docker compose -f compose/infrastructure-shared.yml restart
 	@echo "✅ All services restarted"
 
 logs: ## 📋 View Chronicle application logs
-	@docker compose logs -f
+	@cd backends/advanced && docker compose logs -f
 
 logs-all: ## 📋 View all logs (infrastructure + application)
-	@docker compose logs -f &
-	@docker compose -f docker-compose.infra.yml logs -f
+	@cd backends/advanced && docker compose logs -f &
+	@docker compose -f compose/infrastructure-shared.yml logs -f
 
 quick-start: ## 🚀 Start Chronicle with zero configuration (interactive setup)
 	@./quick-start.sh
@@ -284,37 +296,22 @@ quick-start-reset: ## 🔄 Reset and regenerate quick-start configuration
 
 quick-start-stop: ## 🛑 Stop quick-start environment
 	@echo "🛑 Stopping application..."
-	@docker compose down
+	@cd backends/advanced && docker compose down
 	@echo "✅ Application stopped (data preserved)"
 
 quick-start-clean: ## 🗑️  Stop application and remove all data volumes
 	@echo "🗑️  Stopping application and removing data..."
-	@docker compose down -v
-	@docker compose -f docker-compose.infra.yml down -v
+	@cd backends/advanced && docker compose down -v
+	@docker compose -f compose/infrastructure-shared.yml down -v
 	@echo "✅ Environment cleaned"
 
 quick-start-logs: ## 📋 View quick-start logs
-	@docker compose logs -f
+	@cd backends/advanced && docker compose logs -f
 
 quick-start-rebuild: ## 🔨 Rebuild and restart application (keeps infrastructure running)
 	@echo "🔨 Rebuilding application..."
-	@docker compose up -d --build
+	@cd backends/advanced && docker compose up -d --build
 	@echo "✅ Application rebuilt and restarted"
-
-infra-start: ## 🏗️  Start infrastructure only (MongoDB, Redis, Qdrant)
-	@echo "🏗️  Starting infrastructure..."
-	@docker compose -f docker-compose.infra.yml up -d
-	@echo "✅ Infrastructure started"
-
-infra-stop: ## 🛑 Stop infrastructure (keeps data)
-	@echo "🛑 Stopping infrastructure..."
-	@docker compose -f docker-compose.infra.yml down
-	@echo "✅ Infrastructure stopped (data preserved)"
-
-infra-clean: ## 🗑️  Stop infrastructure and remove all data
-	@echo "🗑️  Stopping infrastructure and removing data..."
-	@docker compose -f docker-compose.infra.yml down -v
-	@echo "✅ Infrastructure cleaned"
 
 # ========================================
 # INTERACTIVE SETUP WIZARD

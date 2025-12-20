@@ -14,7 +14,7 @@ BOLD='\033[1m'
 NC='\033[0m' # No Color
 
 # Configuration
-ENV_FILE=".env.default"
+ENV_FILE="backends/advanced/.env"  # Overrides .env.default in backends/advanced
 CONFIG_FILE="config-defaults.yml"
 
 # Parse arguments
@@ -69,14 +69,76 @@ if [[ ! -f "$ENV_FILE" ]] || [[ "$RESET_CONFIG" == true ]]; then
     echo ""
     ADMIN_PASSWORD="${INPUT_ADMIN_PASSWORD:-password-123}"
 
-    # Create .env.quick-start
+    # Prompt for environment name (for multi-worktree setups)
+    echo ""
+    echo -e "${BOLD}Environment Name${NC}"
+    echo -e "${YELLOW}For multi-worktree setups, give each environment a unique name${NC}"
+    echo -e "${YELLOW}Examples: chronicle, blue, gold, green, dev, staging${NC}"
+    echo ""
+
+    read -p "Environment name [chronicle]: " INPUT_ENV_NAME
+    ENV_NAME="${INPUT_ENV_NAME:-chronicle}"
+
+    # Convert to lowercase and replace spaces/special chars with hyphens
+    ENV_NAME=$(echo "$ENV_NAME" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]' '-' | sed 's/-$//')
+
+    # Prompt for port offset (for multi-worktree environments)
+    echo ""
+    echo -e "${BOLD}Port Configuration${NC}"
+    echo -e "${YELLOW}For multi-worktree setups, use different offsets for each environment${NC}"
+    echo -e "${YELLOW}Suggested: blue=0, gold=10, green=20, red=30${NC}"
+    echo ""
+    read -p "Port offset [0]: " INPUT_PORT_OFFSET
+    PORT_OFFSET="${INPUT_PORT_OFFSET:-0}"
+
+    # Calculate application ports from offset (backend and frontend only)
+    BACKEND_PORT=$((8000 + PORT_OFFSET))
+    WEBUI_PORT=$((3000 + PORT_OFFSET))
+
+    # Calculate Redis database number for isolation (shared Redis instance)
+    REDIS_DATABASE=$((PORT_OFFSET / 10))
+
+    # Calculate test environment ports (for parallel testing across worktrees)
+    # Tests use shared infrastructure (MongoDB, Redis, Qdrant) but need unique app ports
+    TEST_BACKEND_PORT=$((8001 + PORT_OFFSET))
+    TEST_WEBUI_PORT=$((3001 + PORT_OFFSET))
+
+    # Set database and project names based on environment name
+    # Avoid chronicle-chronicle duplication
+    if [[ "$ENV_NAME" == "chronicle" ]]; then
+        MONGODB_DATABASE="chronicle"
+        COMPOSE_PROJECT_NAME="chronicle"
+    else
+        MONGODB_DATABASE="chronicle_${ENV_NAME}"
+        COMPOSE_PROJECT_NAME="chronicle-${ENV_NAME}"
+    fi
+
+    echo ""
+    echo -e "${GREEN}✅ Environment configured${NC}"
+    echo -e "  Name:     ${ENV_NAME}"
+    echo -e "  Project:  ${COMPOSE_PROJECT_NAME}"
+    echo -e "  Backend:  ${BACKEND_PORT}"
+    echo -e "  WebUI:    ${WEBUI_PORT}"
+    echo -e "  Database: ${MONGODB_DATABASE}"
+    echo ""
+
+    # Create minimal .env file with worktree-specific overrides
     cat > "$ENV_FILE" <<EOF
-# Chronicle Quick Start Configuration
+# Chronicle Environment Overrides
 # Generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-# DO NOT COMMIT THIS FILE - Contains sensitive credentials
+# DO NOT COMMIT - Contains environment-specific configuration
+#
+# This file contains ONLY worktree-specific overrides.
+# Base configuration is in .env.default (committed to git).
 
 # ==========================================
-# AUTHENTICATION & SECURITY
+# ENVIRONMENT & PROJECT NAMING
+# ==========================================
+ENV_NAME=${ENV_NAME}
+COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
+
+# ==========================================
+# AUTHENTICATION (Generated)
 # ==========================================
 AUTH_SECRET_KEY=${AUTH_SECRET_KEY}
 ADMIN_NAME=${ADMIN_NAME}
@@ -84,47 +146,30 @@ ADMIN_EMAIL=${ADMIN_EMAIL}
 ADMIN_PASSWORD=${ADMIN_PASSWORD}
 
 # ==========================================
-# GRACEFUL DEGRADATION SETTINGS
+# DATABASE ISOLATION
 # ==========================================
-# Allow backend to start without API keys
-ALLOW_MISSING_API_KEYS=true
-LLM_REQUIRED=false
-TRANSCRIPTION_REQUIRED=false
+MONGODB_DATABASE=${MONGODB_DATABASE}
+REDIS_DATABASE=${REDIS_DATABASE}
 
 # ==========================================
-# DATABASE CONFIGURATION
+# PORT CONFIGURATION
 # ==========================================
-MONGODB_URI=mongodb://mongo:27017
-MONGODB_DATABASE=chronicle-quickstart
-REDIS_URL=redis://redis:6379/0
-REDIS_DATABASE=0
-QDRANT_BASE_URL=qdrant
-QDRANT_PORT=6333
+PORT_OFFSET=${PORT_OFFSET}
+BACKEND_PORT=${BACKEND_PORT}
+WEBUI_PORT=${WEBUI_PORT}
+TEST_BACKEND_PORT=${TEST_BACKEND_PORT}
+TEST_WEBUI_PORT=${TEST_WEBUI_PORT}
 
 # ==========================================
-# NETWORK CONFIGURATION
+# CORS & FRONTEND CONFIGURATION
 # ==========================================
-# Port offset for running multiple instances (default: 0)
-# - Backend: 8000 + PORT_OFFSET = 8000
-# - WebUI: 3000 + PORT_OFFSET = 3000
-# - Redis DB: PORT_OFFSET / 1000 = 0
-PORT_OFFSET=0
-BACKEND_PORT=8000
-WEBUI_PORT=3000
-HOST_IP=localhost
-CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
-VITE_BACKEND_URL=http://localhost:8000
+# CORS origins with expanded port values for backend
+CORS_ORIGINS=http://localhost:${WEBUI_PORT},http://127.0.0.1:${WEBUI_PORT},http://localhost:${BACKEND_PORT},http://127.0.0.1:${BACKEND_PORT}
+# Frontend build-time configuration (must be expanded for Docker build args)
+VITE_BACKEND_URL=http://localhost:${BACKEND_PORT}
 
 # ==========================================
-# SERVICE CONFIGURATION
-# ==========================================
-LLM_PROVIDER=openai
-OPENAI_MODEL=gpt-4o-mini
-MEMORY_PROVIDER=friend_lite
-TRANSCRIPTION_PROVIDER=deepgram
-
-# ==========================================
-# API KEYS (Add via UI after startup)
+# API KEYS (Optional - Add your keys here)
 # ==========================================
 # OPENAI_API_KEY=
 # DEEPGRAM_API_KEY=
@@ -145,10 +190,15 @@ EOF
     sleep 2
 else
     echo -e "${GREEN}✅ Using existing configuration${NC}"
-    # Extract credentials to display
+    # Extract credentials and ports to display
     ADMIN_NAME=$(grep "^ADMIN_NAME=" "$ENV_FILE" | cut -d'=' -f2)
     ADMIN_EMAIL=$(grep "^ADMIN_EMAIL=" "$ENV_FILE" | cut -d'=' -f2)
     ADMIN_PASSWORD=$(grep "^ADMIN_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2)
+    BACKEND_PORT=$(grep "^BACKEND_PORT=" "$ENV_FILE" | cut -d'=' -f2)
+    WEBUI_PORT=$(grep "^WEBUI_PORT=" "$ENV_FILE" | cut -d'=' -f2)
+    # Set defaults if not found
+    BACKEND_PORT=${BACKEND_PORT:-8000}
+    WEBUI_PORT=${WEBUI_PORT:-3000}
     echo ""
     echo -e "${BOLD}Login Credentials:${NC}"
     echo -e "  Name:     ${ADMIN_NAME:-admin}"
@@ -162,7 +212,7 @@ echo -e "${BLUE}🏗️  Starting infrastructure...${NC}"
 if docker ps --filter "name=^mongo$" --filter "status=running" -q | grep -q .; then
     echo -e "${GREEN}   ✅ Infrastructure already running${NC}"
 else
-    docker compose -f docker-compose.infra.yml up -d
+    docker compose -f compose/infrastructure-shared.yml up -d
     echo -e "${GREEN}   ✅ Infrastructure started${NC}"
     sleep 3
 fi
@@ -171,7 +221,7 @@ echo ""
 # Start application
 echo -e "${BLUE}🚀 Starting Chronicle application...${NC}"
 echo ""
-docker compose --env-file .env.default up -d
+cd backends/advanced && docker compose up -d --build  # Build and start with .env overrides
 
 echo ""
 echo "   Waiting for backend to be healthy..."
@@ -183,15 +233,13 @@ ELAPSED=0
 BACKEND_HEALTHY=false
 
 while [[ $ELAPSED -lt $TIMEOUT ]]; do
-    if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+    if curl -s http://localhost:${BACKEND_PORT}/health > /dev/null 2>&1; then
         BACKEND_HEALTHY=true
         break
     fi
     sleep 2
     ELAPSED=$((ELAPSED + 2))
 done
-
-cd ../..
 
 echo ""
 if [[ "$BACKEND_HEALTHY" == true ]]; then
@@ -201,9 +249,15 @@ else
 fi
 
 echo ""
-echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}${BOLD}   Access Chronicle at: http://localhost:3000${NC}"
-echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BOLD}╔════════════════════════════════════════════════════╗${NC}"
+echo -e "${BOLD}║                                                    ║${NC}"
+echo -e "${BOLD}║  ${GREEN}🚀 Open Chronicle WebUI:${NC}${BOLD}                        ║${NC}"
+echo -e "${BOLD}║                                                    ║${NC}"
+echo -e "${BOLD}║     ${GREEN}${BOLD}http://localhost:${WEBUI_PORT}${NC}${BOLD}                          ║${NC}"
+echo -e "${BOLD}║                                                    ║${NC}"
+echo -e "${BOLD}║  ${YELLOW}(Click the link above or copy to browser)${NC}${BOLD}     ║${NC}"
+echo -e "${BOLD}║                                                    ║${NC}"
+echo -e "${BOLD}╚════════════════════════════════════════════════════╝${NC}"
 echo ""
 
 # Check for missing API keys
@@ -211,7 +265,7 @@ echo -e "${YELLOW}⚠️  Some features are disabled (no API keys configured):${
 echo -e "   • Memory extraction (needs OpenAI API key)"
 echo -e "   • Transcription (needs Deepgram API key)"
 echo ""
-echo -e "   ${BOLD}→ Add API keys at: http://localhost:3000/system${NC}"
+echo -e "   ${BOLD}→ Add API keys at: http://localhost:${WEBUI_PORT}/system${NC}"
 echo ""
 
 # Next steps
@@ -242,7 +296,7 @@ if command -v tailscale &> /dev/null && tailscale status &> /dev/null; then
             echo "# Tailscale HTTPS Configuration" >> "$ENV_FILE"
             echo "TAILSCALE_HOSTNAME=${TAILSCALE_HOSTNAME}" >> "$ENV_FILE"
             echo "HTTPS_ENABLED=true" >> "$ENV_FILE"
-            echo "CORS_ORIGINS=https://${TAILSCALE_HOSTNAME}:9000,https://${TAILSCALE_HOSTNAME}:4000,http://localhost:3000" >> "$ENV_FILE"
+            echo "CORS_ORIGINS=https://${TAILSCALE_HOSTNAME}:9000,https://${TAILSCALE_HOSTNAME}:4000,http://localhost:${WEBUI_PORT}" >> "$ENV_FILE"
 
             echo ""
             echo -e "${GREEN}✅ HTTPS configured!${NC}"
