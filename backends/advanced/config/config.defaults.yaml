@@ -1,0 +1,91 @@
+# Chronicle Default Configuration
+# This file contains safe default values and serves as a template.
+# Copy to config.yaml and customize for your deployment.
+#
+# DO NOT store secrets in this file - it is committed to git.
+# Actual secrets should go in config.yaml (which is gitignored).
+
+version: 1.0.0
+wizard_completed: false
+
+# Authentication Configuration
+auth:
+  secret_key: ''  # Auto-generated on first run if empty
+  admin_name: admin
+  admin_email: admin@example.com
+  admin_password_hash: ''  # Set via wizard or environment variable
+
+# Speech Detection Settings
+speech_detection:
+  min_words: 5
+  min_confidence: 0.5
+  min_duration: 10.0
+
+# Conversation Management Settings
+conversation:
+  transcription_buffer_seconds: 120.0
+  speech_inactivity_threshold: 60.0
+  new_conversation_timeout_minutes: 1.5
+  record_only_enrolled_speakers: true
+
+# Audio Processing Settings
+audio_processing:
+  audio_cropping_enabled: true
+  min_speech_segment_duration: 1.0
+  cropping_context_padding: 0.1
+
+# Speaker Diarization Settings
+diarization:
+  diarization_source: pyannote
+  similarity_threshold: 0.15
+  min_duration: 0.5
+  collar: 2.0
+  min_duration_off: 1.5
+  min_speakers: 2
+  max_speakers: 6
+
+# LLM Configuration
+llm:
+  llm_provider: openai
+  openai_model: gpt-4o-mini
+  chat_llm_model: null
+  chat_temperature: 0.7
+  ollama_model: llama3.1:latest
+  ollama_embedder_model: nomic-embed-text:latest
+
+# Service Providers
+providers:
+  memory_provider: chronicle
+  transcription_provider: auto
+
+# Network Configuration
+network:
+  host_ip: localhost
+  backend_public_port: 8000
+  webui_port: 5173
+  cors_origins: http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000
+
+# Infrastructure Services
+infrastructure:
+  mongodb_uri: mongodb://mongo:27017
+  mongodb_database: chronicle
+  redis_url: redis://redis:6379/0
+  qdrant_base_url: qdrant
+  qdrant_port: '6333'
+  neo4j_host: neo4j-mem0
+  neo4j_user: neo4j
+
+# Miscellaneous Settings
+misc:
+  debug_dir: ./data/debug_dir
+  langfuse_enable_telemetry: false
+
+# API Keys (leave empty - set via wizard or config.yaml)
+api_keys:
+  openai_api_key: null
+  deepgram_api_key: null
+  mistral_api_key: null
+  hf_token: null
+  langfuse_public_key: null
+  langfuse_secret_key: null
+  ngrok_authtoken: null

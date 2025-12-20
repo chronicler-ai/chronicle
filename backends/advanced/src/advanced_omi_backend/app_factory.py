@@ -15,6 +15,13 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from advanced_omi_backend.app_config import get_app_config
+from advanced_omi_backend.config import (
+    ChronicleConfig,
+    get_config_parser,
+    init_config_parser,
+)
+from advanced_omi_backend.config.settings_adapter import ConfigBasedSettingsManager
+import advanced_omi_backend.settings_manager as settings_manager_module
 from advanced_omi_backend.auth import (
     bearer_backend,
     cookie_backend,
@@ -67,15 +74,31 @@ async def lifespan(app: FastAPI):
         application_logger.error(f"Failed to initialize Beanie: {e}")
         raise
 
-    # Initialize settings manager
+    # Initialize config parser (new config.yaml system)
     try:
-        from advanced_omi_backend.settings_manager import init_settings_manager
-        settings_mgr = init_settings_manager(config.db)
+        config_parser = init_config_parser("config/config.yaml")
+
+        # Load config (auto-copies from config/config.defaults.yaml if needed)
+        chronicle_config = await config_parser.load()
+        application_logger.info(f"✅ Configuration loaded (wizard_completed={chronicle_config.wizard_completed})")
+
+    except Exception as e:
+        application_logger.error(f"Failed to initialize config parser: {e}")
+        raise
+
+    # Initialize settings manager (for backward compatibility with settings_routes)
+    try:
+        config_parser = get_config_parser()
+        settings_mgr = ConfigBasedSettingsManager(config_parser)
         await settings_mgr.initialize()
-        application_logger.info("✅ Settings manager initialized and loaded from environment/database")
+
+        # Register as global settings manager
+        settings_manager_module._settings_manager = settings_mgr
+
+        application_logger.info("✅ Settings manager initialized (using config.yaml)")
     except Exception as e:
         application_logger.error(f"Failed to initialize settings manager: {e}")
-        # Don't raise - use fallback to environment variables if settings manager fails
+        raise
 
     # Create admin user if needed
     try:

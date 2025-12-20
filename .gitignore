@@ -5,8 +5,12 @@
 .env.secrets
 .env.api-keys
 .env.quick-start
+.env.default
 .env.backup.*
 config.env.backup.*
+backends/advanced/config/config.yaml
+backends/advanced/config/config.yaml.backup
+backends/advanced/config/config.yaml.lock
 **/memory_config.yaml
 !**/memory_config.yaml.template
 example/*
