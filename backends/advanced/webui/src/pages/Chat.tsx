@@ -287,42 +287,51 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Sidebar */}
-      <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <MessageCircle className="h-6 w-6 text-blue-600" />
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Chat</h1>
-            </div>
-            <button
-              onClick={createNewSession}
-              className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-              title="New Chat"
-            >
-              <Plus className="h-5 w-5" />
-            </button>
+    <div>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+            <MessageCircle className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">
+              Chat
+            </h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              Chat with your AI assistant using your memories
+            </p>
           </div>
         </div>
+        <button
+          onClick={createNewSession}
+          className="btn-primary space-x-2"
+        >
+          <Plus className="h-4 w-4" />
+          <span>New Chat</span>
+        </button>
+      </div>
 
-        {/* Sessions List */}
-        <div className="flex-1 overflow-y-auto">
-          {isLoading ? (
-            <div className="p-4 text-center text-gray-500">Loading sessions...</div>
-          ) : sessions.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">
-              No chat sessions yet.
-              <br />
-              <button
-                onClick={createNewSession}
-                className="mt-2 text-blue-600 hover:text-blue-700"
-              >
-                Start your first chat!
-              </button>
-            </div>
-          ) : (
+      {/* Chat Container */}
+      <div className="flex h-[600px] rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-700">
+        {/* Sidebar */}
+        <div className="w-80 bg-white dark:bg-neutral-800 border-r border-neutral-200 dark:border-neutral-700 flex flex-col">
+          {/* Sessions List */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {isLoading ? (
+              <div className="text-center text-neutral-500 dark:text-neutral-400">Loading sessions...</div>
+            ) : sessions.length === 0 ? (
+              <div className="text-center text-neutral-500 dark:text-neutral-400">
+                No chat sessions yet.
+                <br />
+                <button
+                  onClick={createNewSession}
+                  className="mt-2 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+                >
+                  Start your first chat!
+                </button>
+              </div>
+            ) : (
             <div className="p-2 space-y-1">
               {sessions.map((session) => (
                 <div
@@ -360,11 +369,11 @@ export default function Chat() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col bg-neutral-50 dark:bg-neutral-900">
         {currentSession ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <div className="p-4 border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {currentSession.title}
@@ -479,7 +488,7 @@ export default function Chat() {
             </div>
 
             {/* Input Area */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <div className="p-4 border-t border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800">
               {error && (
                 <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
                   {error}
@@ -519,7 +528,7 @@ export default function Chat() {
           </>
         ) : (
           /* No Session Selected */
-          <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+          <div className="flex-1 flex items-center justify-center bg-neutral-50 dark:bg-neutral-900">
             <div className="text-center">
               <MessageCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -539,38 +548,39 @@ export default function Chat() {
         )}
       </div>
 
-      {/* Memory Panel (if enabled and has context) */}
-      {showMemoryPanel && memoryContext && memoryContext.memory_count > 0 && (
-        <div className="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center space-x-2">
-              <Brain className="h-5 w-5 text-blue-600" />
-              <span>Memory Context</span>
-            </h3>
-            <button
-              onClick={() => setShowMemoryPanel(false)}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            <p>Using {memoryContext.memory_count} relevant memories to enhance this conversation.</p>
-            <div className="mt-4 space-y-2">
-              {memoryContext.memory_ids.slice(0, 3).map((id) => (
-                <div key={id} className="p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs">
-                  Memory ID: {id}
-                </div>
-              ))}
-              {memoryContext.memory_ids.length > 3 && (
-                <div className="text-xs text-gray-500">
-                  +{memoryContext.memory_ids.length - 3} more memories
-                </div>
-              )}
+        {/* Memory Panel (if enabled and has context) */}
+        {showMemoryPanel && memoryContext && memoryContext.memory_count > 0 && (
+          <div className="w-80 bg-white dark:bg-neutral-800 border-l border-neutral-200 dark:border-neutral-700 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center space-x-2">
+                <Brain className="h-5 w-5 text-blue-600" />
+                <span>Memory Context</span>
+              </h3>
+              <button
+                onClick={() => setShowMemoryPanel(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              <p>Using {memoryContext.memory_count} relevant memories to enhance this conversation.</p>
+              <div className="mt-4 space-y-2">
+                {memoryContext.memory_ids.slice(0, 3).map((id) => (
+                  <div key={id} className="p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs">
+                    Memory ID: {id}
+                  </div>
+                ))}
+                {memoryContext.memory_ids.length > 3 && (
+                  <div className="text-xs text-gray-500">
+                    +{memoryContext.memory_ids.length - 3} more memories
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

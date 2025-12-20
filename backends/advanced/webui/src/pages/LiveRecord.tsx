@@ -11,24 +11,31 @@ export default function LiveRecord() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-2">
-          <Radio className="h-6 w-6 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Live Audio Recording
-          </h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+            <Radio className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">
+              Live Audio Recording
+            </h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              Record audio in real-time with streaming or batch processing
+            </p>
+          </div>
         </div>
 
         {/* Mode Toggle */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center space-x-3">
           <button
             onClick={() => recording.setMode('streaming')}
             disabled={recording.isRecording}
             className={`
               flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
               ${recording.mode === 'streaming'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                ? 'bg-primary-600 text-white shadow-md'
+                : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-300 dark:hover:bg-neutral-600'
               }
               ${recording.isRecording ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
             `}
@@ -42,8 +49,8 @@ export default function LiveRecord() {
             className={`
               flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
               ${recording.mode === 'batch'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                ? 'bg-primary-600 text-white shadow-md'
+                : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-300 dark:hover:bg-neutral-600'
               }
               ${recording.isRecording ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
             `}
@@ -55,8 +62,8 @@ export default function LiveRecord() {
       </div>
 
       {/* Mode Description */}
-      <div className="mb-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-        <p className="text-sm text-gray-700 dark:text-gray-300">
+      <div className="mb-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
+        <p className="text-sm text-neutral-700 dark:text-neutral-300">
           {recording.mode === 'streaming' ? (
             <>
               <strong>Streaming Mode:</strong> Audio is sent in real-time chunks and processed immediately.
