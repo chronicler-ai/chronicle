@@ -2,6 +2,7 @@
 Config Parser - Simple YAML-based configuration management.
 """
 
+import shutil
 from pathlib import Path
 from typing import Optional
 from ruamel.yaml import YAML
@@ -14,13 +15,22 @@ yaml = YAML()
 class ConfigParser:
     """Simple configuration parser for config.yaml using ruamel.yaml."""
 
-    def __init__(self, config_path: str = "config.yaml"):
+    def __init__(self, config_path: str = "config/config.yaml", defaults_path: str = None):
         self.config_path = Path(config_path)
+        # Auto-determine defaults path based on config path
+        if defaults_path is None:
+            defaults_path = str(self.config_path.parent / "config.defaults.yaml")
+        self.defaults_path = Path(defaults_path)
 
     async def load(self) -> ChronicleConfig:
         """Load and validate configuration from YAML file."""
         if not self.config_path.exists():
-            return ChronicleConfig()
+            # Try to copy from defaults
+            if self.defaults_path.exists():
+                shutil.copy(self.defaults_path, self.config_path)
+            else:
+                # Fallback to empty config
+                return ChronicleConfig()
 
         with open(self.config_path) as f:
             data = yaml.load(f) or {}

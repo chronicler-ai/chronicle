@@ -567,13 +567,21 @@ async def set_memory_provider(provider: str):
 async def get_api_key_status():
     """Get current API key configuration status."""
     try:
-        from advanced_omi_backend.utils.env_writer import get_env_writer
+        from advanced_omi_backend.config import get_config_parser
 
-        env_writer = get_env_writer()
-        status = env_writer.get_configuration_status()
+        config_parser = get_config_parser()
+        config = await config_parser.load()
+
+        # Check which API keys are configured
+        api_keys = config.api_keys
 
         return {
-            **status,
+            "openai_configured": bool(api_keys.openai_api_key),
+            "deepgram_configured": bool(api_keys.deepgram_api_key),
+            "mistral_configured": bool(api_keys.mistral_api_key),
+            "huggingface_configured": bool(api_keys.hf_token),
+            "langfuse_configured": bool(api_keys.langfuse_public_key and api_keys.langfuse_secret_key),
+            "ngrok_configured": bool(api_keys.ngrok_authtoken),
             "status": "success"
         }
 
