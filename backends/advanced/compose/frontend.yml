@@ -10,7 +10,8 @@ services:
         - VITE_BASE_PATH=${VITE_BASE_PATH:-/}
         - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:8000}
     env_file:
-      - ../../../.env.default
+      - ../../../.env.default  # Committed defaults
+      - ../.env                # Generated overrides (if exists)
     ports:
       - "${WEBUI_PORT:-3000}:80"
     depends_on:

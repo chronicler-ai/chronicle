@@ -1,6 +1,8 @@
 # docker-compose-test.yml
-# Isolated test environment for integration tests
-# Uses different ports to avoid conflicts with development environment
+# Test environment for integration tests
+# Uses shared infrastructure (MongoDB:27017, Redis:6379, Qdrant:6333) with _test database names
+# Only backend/webui use offset ports for parallel testing across worktrees
+# Example: BLUE uses 8001/3001, GOLD uses 8011/3011
 
 services:
   chronicle-backend-test:
@@ -8,18 +10,19 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8001:8000"  # Avoid conflict with dev on 8000
+      - "${TEST_BACKEND_PORT:-8001}:8000"  # Default 8001, or 8000 + PORT_OFFSET + 1
     volumes:
       - ./src:/app/src  # Mount source code for easier development
       - ./data/test_audio_chunks:/app/audio_chunks
       - ./data/test_debug_dir:/app/debug_dir
       - ./data/test_data:/app/data
     environment:
-      # Override with test-specific settings
-      - MONGODB_URI=mongodb://mongo-test:27017/test_db
-      - QDRANT_BASE_URL=qdrant-test
+      # Use shared infrastructure with _test database suffix for isolation
+      - MONGODB_URI=mongodb://mongo:27017
+      - MONGODB_DATABASE=${MONGODB_DATABASE:-chronicle}_test
+      - QDRANT_BASE_URL=qdrant
       - QDRANT_PORT=6333
-      - REDIS_URL=redis://redis-test:6379/0
+      - REDIS_URL=redis://redis:6379/${REDIS_DATABASE:-0}
       - DEBUG_DIR=/app/debug_dir
       # Import API keys from environment
       - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
@@ -34,28 +37,20 @@ services:
       - ADMIN_EMAIL=test-admin@example.com
       # Transcription provider configuration
       - TRANSCRIPTION_PROVIDER=${TRANSCRIPTION_PROVIDER:-deepgram}
-      # - PARAKEET_ASR_URL=${PARAKEET_ASR_URL}
       # Memory provider configuration
       - MEMORY_PROVIDER=${MEMORY_PROVIDER:-chronicle}
       - OPENMEMORY_MCP_URL=${OPENMEMORY_MCP_URL:-http://host.docker.internal:8765}
       - OPENMEMORY_USER_ID=${OPENMEMORY_USER_ID:-openmemory}
-      - MYCELIA_URL=http://mycelia-backend-test:5173
-      - MYCELIA_DB=mycelia_test
+      - MYCELIA_URL=http://mycelia-backend:5173
+      - MYCELIA_DB=mycelia_${MONGODB_DATABASE:-chronicle}_test
       # Disable speaker recognition in test environment to prevent segment duplication
       - DISABLE_SPEAKER_RECOGNITION=false
       - SPEAKER_SERVICE_URL=https://localhost:8085
-      - CORS_ORIGINS=http://localhost:3001,http://localhost:8001,https://localhost:3001,https://localhost:8001
+      - CORS_ORIGINS=http://localhost:${TEST_WEBUI_PORT:-3001},http://localhost:${TEST_BACKEND_PORT:-8001},https://localhost:${TEST_WEBUI_PORT:-3001},https://localhost:${TEST_BACKEND_PORT:-8001}
       # Set low inactivity timeout for tests (2 seconds instead of 60)
       - SPEECH_INACTIVITY_THRESHOLD_SECONDS=2
       # Wait for audio queue to drain before timing out (test mode)
       - WAIT_FOR_AUDIO_QUEUE_DRAIN=true
-    depends_on:
-      qdrant-test:
-        condition: service_started
-      mongo-test:
-        condition: service_healthy
-      redis-test:
-        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/readiness"]
       interval: 10s
@@ -63,63 +58,25 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
+    networks:
+      - chronicle-network
 
   webui-test:
     build:
       context: ./webui
       dockerfile: Dockerfile
       args:
-        - VITE_BACKEND_URL=http://localhost:8001
-        - BACKEND_URL=http://localhost:8001
+        - VITE_BACKEND_URL=http://localhost:${TEST_BACKEND_PORT:-8001}
+        - BACKEND_URL=http://localhost:${TEST_BACKEND_PORT:-8001}
     volumes:
       - ./webui/src:/app/src  # Mount source code for easier development
     ports:
-      - "3001:80"  # Avoid conflict with dev on 3000
+      - "${TEST_WEBUI_PORT:-3001}:80"  # Default 3001, or 3000 + PORT_OFFSET + 1
     depends_on:
       chronicle-backend-test:
         condition: service_healthy
-      mongo-test:
-        condition: service_healthy
-      qdrant-test:
-        condition: service_started
-      redis-test:
-        condition: service_started
-
-  qdrant-test:
-    image: qdrant/qdrant:latest
-    ports:
-      - "6337:6333"  # gRPC - avoid conflict with dev 6333
-      - "6338:6334"  # HTTP - avoid conflict with dev 6334
-    volumes:
-      - ./data/test_qdrant_data:/qdrant/storage
-
-  mongo-test:
-    image: mongo:8.0.14
-    ports:
-      - "27018:27017"  # Avoid conflict with dev on 27017
-    volumes:
-      - ./data/test_mongo_data:/data/db
-    # Use test database name to ensure isolation
-    command: mongod --dbpath /data/db --bind_ip_all
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok", "--quiet"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-
-  redis-test:
-    image: redis:7-alpine
-    ports:
-      - "6380:6379"  # Avoid conflict with dev on 6379
-    volumes:
-      - ./data/test_redis_data:/data
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+    networks:
+      - chronicle-network
 
   workers-test:
     build:
@@ -132,11 +89,12 @@ services:
       - ./data/test_debug_dir:/app/debug_dir
       - ./data/test_data:/app/data
     environment:
-      # Same environment as backend
-      - MONGODB_URI=mongodb://mongo-test:27017/test_db
-      - QDRANT_BASE_URL=qdrant-test
+      # Use shared infrastructure with _test database suffix for isolation
+      - MONGODB_URI=mongodb://mongo:27017
+      - MONGODB_DATABASE=${MONGODB_DATABASE:-chronicle}_test
+      - QDRANT_BASE_URL=qdrant
       - QDRANT_PORT=6333
-      - REDIS_URL=redis://redis-test:6379/0
+      - REDIS_URL=redis://redis:6379/${REDIS_DATABASE:-0}
       - DEBUG_DIR=/app/debug_dir
       - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -149,8 +107,8 @@ services:
       - MEMORY_PROVIDER=${MEMORY_PROVIDER:-chronicle}
       - OPENMEMORY_MCP_URL=${OPENMEMORY_MCP_URL:-http://host.docker.internal:8765}
       - OPENMEMORY_USER_ID=${OPENMEMORY_USER_ID:-openmemory}
-      - MYCELIA_URL=http://mycelia-backend-test:5173
-      - MYCELIA_DB=mycelia_test
+      - MYCELIA_URL=http://mycelia-backend:5173
+      - MYCELIA_DB=mycelia_${MONGODB_DATABASE:-chronicle}_test
       - DISABLE_SPEAKER_RECOGNITION=false
       - SPEAKER_SERVICE_URL=https://localhost:8085
       # Set low inactivity timeout for tests (2 seconds instead of 60)
@@ -160,90 +118,19 @@ services:
     depends_on:
       chronicle-backend-test:
         condition: service_healthy
-      mongo-test:
-        condition: service_healthy
-      redis-test:
-        condition: service_started
-      qdrant-test:
-        condition: service_started
     restart: unless-stopped
+    networks:
+      - chronicle-network
 
-  # Mycelia - AI memory and timeline service (test environment)
-  # mycelia-backend-test:
-  #   build:
-  #     context: ../../extras/mycelia/backend
-  #     dockerfile: Dockerfile.simple
-  #   ports:
-  #     - "5100:5173"  # Test backend port
-  #   environment:
-  #     # Shared JWT secret for Chronicle authentication (test key)
-  #     - JWT_SECRET=test-jwt-signing-key-for-integration-tests
-  #     - SECRET_KEY=test-jwt-signing-key-for-integration-tests
-  #     # MongoDB connection (test database)
-  #     - MONGO_URL=mongodb://mongo-test:27017
-  #     - MONGO_DB=mycelia_test
-  #     - DATABASE_NAME=mycelia_test
-  #     # Redis connection (ioredis uses individual host/port, not URL)
-  #     - REDIS_HOST=redis-test
-  #     - REDIS_PORT=6379
-  #   volumes:
-  #     - ../../extras/mycelia/backend/app:/app/app  # Mount source for development
-  #   depends_on:
-  #     mongo-test:
-  #       condition: service_healthy
-  #     redis-test:
-  #       condition: service_started
-  #   healthcheck:
-  #     test: ["CMD", "deno", "eval", "fetch('http://localhost:5173/health').then(r => r.ok ? Deno.exit(0) : Deno.exit(1))"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 5s
-  #   restart: unless-stopped
-  #   profiles:
-  #     - mycelia
+# Shared network configuration
+networks:
+  chronicle-network:
+    name: chronicle-network
+    external: true
 
-  # mycelia-frontend-test:
-  #   build:
-  #     context: ../../extras/mycelia
-  #     dockerfile: frontend/Dockerfile.simple
-  #     args:
-  #       - VITE_API_URL=http://localhost:5100
-  #   ports:
-  #     - "3002:8080"  # Nginx serves on 8080 internally
-  #   environment:
-  #     - VITE_API_URL=http://localhost:5100
-  #   volumes:
-  #     - ../../extras/mycelia/frontend/src:/app/src  # Mount source for development
-  #   depends_on:
-  #     mycelia-backend-test:
-  #       condition: service_healthy
-  #   restart: unless-stopped
-  #   profiles:
-  #     - mycelia
-
-  # caddy:
-  #   image: caddy:2-alpine
-  #   ports:
-  #     - "443:443"
-  #     - "80:80"  # HTTP redirect to HTTPS
-  #   volumes:
-  #     - ./Caddyfile-test:/etc/caddy/Caddyfile:ro
-  #     - ./data/caddy_data:/data
-  #     - ./data/caddy_config:/config
-  #   depends_on:
-  #     webui-test:
-  #       condition: service_started
-  #     chronicle-backend-test:
-  #       condition: service_healthy
-  #   restart: unless-stopped
-
-# CI Considerations (for future implementation):
-# - GitHub Actions can run these services in isolated containers
-# - Port conflicts won't exist in CI since each job runs in isolation
-# - For CI, we could add:
-#   - --build flag for fresh builds
-#   - --force-recreate for clean state
-#   - Volume cleanup between test runs
-# - Environment variables can be injected via GitHub secrets
-# - Health checks ensure services are ready before tests run
+# Notes:
+# - Tests use shared infrastructure (MongoDB:27017, Redis:6379, Qdrant:6333)
+# - Database isolation via database names: {worktree}_test (e.g., chronicle_blue_test)
+# - Redis isolation via database number from REDIS_DATABASE variable
+# - Only backend/webui ports are offset for parallel testing
+# - To run tests: ./run-test.sh (uses variables from .env.default)
