@@ -68,7 +68,7 @@ export default function LoginPage() {
             Chronicle
           </h2>
           <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400 font-medium">
-            AI-Powered Personal Audio System
+            AI powered conversation system
           </p>
           <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-500">
             Sign in to access your dashboard
@@ -153,13 +153,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          {/* Additional Info */}
-          <div className="pt-4 border-t border-neutral-200 dark:border-neutral-700">
-            <p className="text-xs text-center text-neutral-500 dark:text-neutral-400">
-              Protected by enterprise-grade security
-            </p>
-          </div>
         </div>
 
         {/* Footer */}

@@ -1064,7 +1064,7 @@ const Queue: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Active Conversations - Grouped by conversation_id */}
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Active Conversations</h4>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Active Conversations</h4>
                 {(() => {
                   // Group all jobs by conversation_id with deduplication
                   const allJobsRaw = Object.values(sessionJobs).flat().filter(job => job != null);
@@ -1134,7 +1134,7 @@ const Queue: React.FC = () => {
 
                   if (conversationMap.size === 0) {
                     return (
-                      <div className="text-center py-8 text-gray-500 text-sm bg-gray-50 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm bg-gray-50 dark:bg-neutral-900 rounded-lg border border-gray-200 dark:border-gray-700">
                         No active conversations
                       </div>
                     );
@@ -1201,7 +1201,7 @@ const Queue: React.FC = () => {
                                   {lastUpdate && ` • Updated: ${new Date(lastUpdate).toLocaleTimeString()}`}
                                 </div>
                                 {transcript && (
-                                  <div className="mt-1 text-xs text-gray-700 italic truncate">
+                                  <div className="mt-1 text-xs text-gray-700 dark:text-gray-300 italic truncate">
                                     "{transcript.substring(0, 100)}{transcript.length > 100 ? '...' : ''}"
                                   </div>
                                 )}
@@ -1213,7 +1213,7 @@ const Queue: React.FC = () => {
                             <div className="border-t border-cyan-200 bg-white dark:bg-neutral-800 p-3">
                               {/* Pipeline Timeline */}
                               <div className="mb-4">
-                                <h5 className="text-xs font-medium text-gray-700 mb-3">Pipeline Timeline:</h5>
+                                <h5 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-3">Pipeline Timeline:</h5>
                                 {(() => {
                                   // Helper function to get display name from job type
                                   const getJobDisplayName = (jobType: string) => {
@@ -1519,7 +1519,7 @@ const Queue: React.FC = () => {
                         setCompletedConvTimeRange(Number(e.target.value));
                         setCompletedConvPage(1); // Reset to first page
                       }}
-                      className="text-xs border border-gray-300 rounded px-2 py-1"
+                      className="text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100"
                     >
                       <option value={1}>Last 1 hour</option>
                       <option value={6}>Last 6 hours</option>
@@ -1597,7 +1597,7 @@ const Queue: React.FC = () => {
 
                   if (conversationMap.size === 0) {
                     return (
-                      <div className="text-center py-8 text-gray-500 text-sm bg-gray-50 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm bg-gray-50 dark:bg-neutral-900 rounded-lg border border-gray-200 dark:border-gray-700">
                         No completed conversations
                       </div>
                     );
@@ -1629,7 +1629,7 @@ const Queue: React.FC = () => {
 
                   if (conversationsArray.length === 0) {
                     return (
-                      <div className="text-center py-8 text-gray-500 text-sm bg-gray-50 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm bg-gray-50 dark:bg-neutral-900 rounded-lg border border-gray-200 dark:border-gray-700">
                         No completed conversations in the selected time range
                       </div>
                     );
@@ -2082,11 +2082,11 @@ const Queue: React.FC = () => {
         <h3 className="text-lg font-medium mb-4">Filters</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
             <select
               value={filters.status}
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100"
             >
               <option value="">All Statuses</option>
               <option value="queued">Queued</option>
@@ -2099,11 +2099,11 @@ const Queue: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Job Type</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Job Type</label>
             <select
               value={filters.job_type}
               onChange={(e) => setFilters({ ...filters, job_type: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100"
             >
               <option value="">All Types</option>
               <option value="process_audio_files">Audio File Processing</option>
@@ -2114,11 +2114,11 @@ const Queue: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
             <select
               value={filters.priority}
               onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100"
             >
               <option value="">All Priorities</option>
               <option value="high">High</option>
