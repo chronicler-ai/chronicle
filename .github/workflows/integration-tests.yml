@@ -28,23 +28,23 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Verify required secrets
+    - name: Check secrets availability
+      id: secretscheck
       env:
         DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
-        echo "Verifying required secrets..."
-        if [ -z "$DEEPGRAM_API_KEY" ]; then
-          echo "❌ ERROR: DEEPGRAM_API_KEY secret is not set"
-          exit 1
+        echo "Checking secrets availability..."
+        if [ -z "$DEEPGRAM_API_KEY" ] || [ -z "$OPENAI_API_KEY" ]; then
+          echo "available=false" >> $GITHUB_OUTPUT
+          echo "⚠️ Secrets not available (likely fork PR)."
+          echo "💡 Maintainers: Comment '/run-integration-tests' to run tests with secrets."
+        else
+          echo "available=true" >> $GITHUB_OUTPUT
+          echo "✓ DEEPGRAM_API_KEY is set (length: ${#DEEPGRAM_API_KEY})"
+          echo "✓ OPENAI_API_KEY is set (length: ${#OPENAI_API_KEY})"
+          echo "✓ All required secrets verified"
         fi
-        if [ -z "$OPENAI_API_KEY" ]; then
-          echo "❌ ERROR: OPENAI_API_KEY secret is not set"
-          exit 1
-        fi
-        echo "✓ DEEPGRAM_API_KEY is set (length: ${#DEEPGRAM_API_KEY})"
-        echo "✓ OPENAI_API_KEY is set (length: ${#OPENAI_API_KEY})"
-        echo "✓ All required secrets verified"
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -63,6 +63,7 @@ jobs:
       run: sudo apt-get update && sudo apt-get install -y portaudio19-dev
         
     - name: Run Advanced Backend Integration Tests
+      if: steps.secretscheck.outputs.available == 'true'
       env:
         DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -70,7 +71,14 @@ jobs:
         cd backends/advanced
         chmod +x run-test.sh
         ./run-test.sh
-        
+
+    - name: Integration tests skipped
+      if: steps.secretscheck.outputs.available == 'false'
+      run: |
+        echo "⏭️ Integration tests skipped - secrets not available."
+        echo "This is expected for fork PRs."
+        echo "Maintainers can comment '/run-integration-tests' to run tests with secrets."
+
     - name: Upload test logs on failure
       if: failure()
       uses: actions/upload-artifact@v4

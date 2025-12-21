@@ -1,0 +1,141 @@
+name: Integration Tests (maintainer-approved)
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  run-approved:
+    # Only run when someone comments exactly: /run-integration-tests
+    if: >
+      github.event.issue.pull_request &&
+      github.event.comment.body == '/run-integration-tests'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check commenter permission
+        uses: actions/github-script@v7
+        id: perm
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const username = context.payload.comment.user.login;
+
+            const res = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner,
+              repo,
+              username,
+            });
+
+            const p = res.data.permission; // admin, maintain, write, triage, read, none
+            core.info(`${username} permission: ${p}`);
+
+            if (!['admin','maintain','write'].includes(p)) {
+              core.setFailed('Only repo members with write/maintain/admin can trigger this.');
+            }
+
+      - name: Get PR info
+        uses: actions/github-script@v7
+        id: pr
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.issue.number;
+
+            const pr = await github.rest.pulls.get({ owner, repo, pull_number: issue_number });
+
+            core.setOutput('head_repo', pr.data.head.repo.full_name);
+            core.setOutput('head_sha', pr.data.head.sha);
+            core.setOutput('head_ref', pr.data.head.ref);
+
+      # IMPORTANT:
+      # We checkout the PR HEAD SHA (the contributor's code) *after* we've verified
+      # the commenter is trusted. Secrets will be available because this workflow
+      # runs in the base repo context.
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.pr.outputs.head_repo }}
+          ref: ${{ steps.pr.outputs.head_sha }}
+
+      - name: Verify required secrets
+        env:
+          DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          echo "Verifying required secrets..."
+          if [ -z "$DEEPGRAM_API_KEY" ]; then
+            echo "❌ ERROR: DEEPGRAM_API_KEY secret is not set"
+            exit 1
+          fi
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "❌ ERROR: OPENAI_API_KEY secret is not set"
+            exit 1
+          fi
+          echo "✓ DEEPGRAM_API_KEY is set (length: ${#DEEPGRAM_API_KEY})"
+          echo "✓ OPENAI_API_KEY is set (length: ${#OPENAI_API_KEY})"
+          echo "✓ All required secrets verified"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PortAudio dependencies
+        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev
+
+      - name: Run Advanced Backend Integration Tests
+        env:
+          DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          cd backends/advanced
+          chmod +x run-test.sh
+          ./run-test.sh
+
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-logs-approved
+          path: |
+            backends/advanced/test_integration.log
+            backends/advanced/docker-compose-test.yml
+            backends/advanced/.env.test
+          retention-days: 7
+
+      - name: Comment on PR with results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue_number = context.payload.issue.number;
+            const { owner, repo } = context.repo;
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${context.runId}`;
+
+            let message;
+            if (context.job.status === 'success' || '${{ job.status }}' === 'success') {
+              message = `✅ Integration tests passed!\n\nView run: ${runUrl}`;
+            } else {
+              message = `❌ Integration tests failed.\n\nView run: ${runUrl}`;
+            }
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number,
+              body: message
+            });
