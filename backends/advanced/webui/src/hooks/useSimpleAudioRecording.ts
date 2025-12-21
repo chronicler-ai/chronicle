@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { BACKEND_URL } from '../services/api'
 import { getStorageKey } from '../utils/storage'
+import { useRecording, RecordingMode, RecordingStep } from '../contexts/RecordingContext'
 
-export type RecordingStep = 'idle' | 'mic' | 'websocket' | 'audio-start' | 'streaming' | 'stopping' | 'error'
-export type RecordingMode = 'batch' | 'streaming'
+// Re-export types for components that import from this hook
+export type { RecordingMode, RecordingStep }
 
 export interface DebugStats {
   chunksSent: number
@@ -37,12 +38,19 @@ export interface SimpleAudioRecordingReturn {
 }
 
 export const useSimpleAudioRecording = (): SimpleAudioRecordingReturn => {
-  // Basic state
-  const [currentStep, setCurrentStep] = useState<RecordingStep>('idle')
-  const [isRecording, setIsRecording] = useState(false)
-  const [recordingDuration, setRecordingDuration] = useState(0)
-  const [error, setError] = useState<string | null>(null)
-  const [mode, setMode] = useState<RecordingMode>('streaming')
+  // Get recording state from global context
+  const recording = useRecording()
+  const {
+    currentStep,
+    isRecording,
+    duration: recordingDuration,
+    error,
+    mode,
+    setMode,
+    setCurrentStep,
+    setRecordingDuration,
+    setError
+  } = recording
   
   // Debug stats
   const [debugStats, setDebugStats] = useState<DebugStats>({
@@ -397,14 +405,16 @@ export const useSimpleAudioRecording = (): SimpleAudioRecordingReturn => {
       setCurrentStep('streaming')
       // Step 4: Start audio streaming (includes processing delay)
       await startAudioStreaming(stream, ws)
-      
-      // All steps complete - mark as recording
-      setIsRecording(true)
+
+      // All steps complete - mark as recording via context
+      // Note: startRecording is already called by context, we just update duration
       setRecordingDuration(0)
-      
-      // Start duration timer
+
+      // Start duration timer (use functional update to avoid stale closures)
+      const startTime = Date.now()
       durationIntervalRef.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1)
+        const elapsed = Math.floor((Date.now() - startTime) / 1000)
+        setRecordingDuration(elapsed)
       }, 1000)
       
       console.log('🎉 Recording started successfully!')
@@ -449,21 +459,24 @@ export const useSimpleAudioRecording = (): SimpleAudioRecordingReturn => {
     
     // Cleanup resources
     cleanup()
-    
-    // Reset state
-    setIsRecording(false)
+
+    // Reset state via context
+    recording.stopRecording()
     setRecordingDuration(0)
-    setCurrentStep('idle')
-    
+
     console.log('✅ Recording stopped')
-  }, [isRecording, cleanup])
+  }, [isRecording, cleanup, recording])
   
-  // Cleanup on unmount
+  // Cleanup on unmount - DO NOT cleanup if recording is active
+  // Recording should persist across page navigation
   useEffect(() => {
     return () => {
-      cleanup()
+      // Only cleanup if NOT currently recording
+      if (!isRecording) {
+        cleanup()
+      }
     }
-  }, [cleanup])
+  }, [cleanup, isRecording])
   
   return {
     currentStep,
