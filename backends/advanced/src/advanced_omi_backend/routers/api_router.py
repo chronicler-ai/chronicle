@@ -21,6 +21,7 @@ from .modules import (
     user_router,
 )
 from .modules.health_routes import router as health_router
+from .modules.setup_routes import router as setup_router
 
 logger = logging.getLogger(__name__)
 audio_logger = logging.getLogger("audio_processing")
@@ -29,6 +30,7 @@ audio_logger = logging.getLogger("audio_processing")
 router = APIRouter(prefix="/api", tags=["api"])
 
 # Include all sub-routers
+router.include_router(setup_router)  # Setup routes (public, no auth required)
 router.include_router(audio_router)
 router.include_router(user_router)
 router.include_router(chat_router)

@@ -11,8 +11,6 @@ wizard_completed: false
 # Authentication Configuration
 auth:
   secret_key: ''  # Auto-generated on first run if empty
-  admin_name: admin
-  admin_email: admin@example.com
   admin_password_hash: ''  # Set via wizard or environment variable
 
 # Speech Detection Settings

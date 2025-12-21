@@ -106,6 +106,16 @@ export const authApi = {
   getMe: () => api.get('/users/me'),
 }
 
+export const setupApi = {
+  getSetupStatus: () => api.get('/api/setup/status'),
+  createAdmin: (setupData: {
+    display_name: string
+    email: string
+    password: string
+    confirm_password: string
+  }) => api.post('/api/setup/create-admin', setupData),
+}
+
 export const conversationsApi = {
   getAll: () => api.get('/api/conversations'),
   getById: (id: string) => api.get(`/api/conversations/${id}`),

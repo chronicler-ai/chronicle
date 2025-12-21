@@ -24,6 +24,7 @@ from advanced_omi_backend.config.settings_adapter import ConfigBasedSettingsMana
 import advanced_omi_backend.settings_manager as settings_manager_module
 from advanced_omi_backend.auth import (
     bearer_backend,
+    check_admin_exists,
     cookie_backend,
     create_admin_user_if_needed,
     current_superuser,
@@ -100,11 +101,21 @@ async def lifespan(app: FastAPI):
         application_logger.error(f"Failed to initialize settings manager: {e}")
         raise
 
-    # Create admin user if needed
+    # Create admin user if needed (supports both env var and web UI setup)
     try:
-        await create_admin_user_if_needed()
+        import os
+        if os.getenv("ADMIN_PASSWORD"):
+            # Backward compatibility: Use environment variable for auto-creation
+            await create_admin_user_if_needed()
+        else:
+            # Web UI setup mode: Check if admin exists
+            admin_exists = await check_admin_exists()
+            if not admin_exists:
+                application_logger.info("⚠️  No admin user exists - setup via web UI required at /setup")
+            else:
+                application_logger.info("✅ Admin user already exists (setup completed)")
     except Exception as e:
-        application_logger.error(f"Failed to create admin user: {e}")
+        application_logger.error(f"Failed to check/create admin user: {e}")
         # Don't raise here as this is not critical for startup
 
     # Sync admin user with Mycelia OAuth (if using Mycelia memory provider)

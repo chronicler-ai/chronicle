@@ -11,7 +11,12 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const { user, login } = useAuth()
+  const { user, login, setupRequired } = useAuth()
+
+  // Redirect to setup if required
+  if (setupRequired === true) {
+    return <Navigate to="/setup" replace />
+  }
 
   // Redirect if already logged in
   if (user) {

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { authApi } from '../services/api'
+import { authApi, setupApi } from '../services/api'
 import { getStorageKey } from '../utils/storage'
 
 interface User {
@@ -18,6 +18,8 @@ interface AuthContextType {
   logout: () => void
   isLoading: boolean
   isAdmin: boolean
+  setupRequired: boolean | null  // null = checking, true/false = determined
+  checkSetupStatus: () => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -26,16 +28,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(localStorage.getItem(getStorageKey('token')))
   const [isLoading, setIsLoading] = useState(true)
+  const [setupRequired, setSetupRequired] = useState<boolean | null>(null)
 
   // Check if user is admin
   const isAdmin = user?.is_superuser || false
 
+  // Function to check setup status
+  const checkSetupStatus = async (): Promise<boolean> => {
+    try {
+      const response = await setupApi.getSetupStatus()
+      const required = response.data.requires_setup
+      setSetupRequired(required)
+      return required
+    } catch (error) {
+      console.error('❌ AuthContext: Failed to check setup status:', error)
+      setSetupRequired(false)  // Assume setup not required on error to avoid blocking login
+      return false
+    }
+  }
+
   useEffect(() => {
     const initAuth = async () => {
       console.log('🔐 AuthContext: Initializing authentication...')
+
+      // First, check setup status
+      console.log('🔐 AuthContext: Checking setup status...')
+      await checkSetupStatus()
+
       const savedToken = localStorage.getItem(getStorageKey('token'))
       console.log('🔐 AuthContext: Saved token exists:', !!savedToken)
-      
+
       if (savedToken) {
         try {
           console.log('🔐 AuthContext: Verifying token with API call...')
@@ -108,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading, isAdmin }}>
+    <AuthContext.Provider value={{ user, token, login, logout, isLoading, isAdmin, setupRequired, checkSetupStatus }}>
       {children}
     </AuthContext.Provider>
   )

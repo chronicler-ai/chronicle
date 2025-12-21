@@ -4,6 +4,7 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import { RecordingProvider } from './contexts/RecordingContext'
 import Layout from './components/layout/Layout'
 import LoginPage from './pages/LoginPage'
+import SetupPage from './pages/SetupPage'
 import Chat from './pages/Chat'
 import ConversationsRouter from './pages/ConversationsRouter'
 import MemoriesRouter from './pages/MemoriesRouter'
@@ -31,6 +32,7 @@ function App() {
           <RecordingProvider>
             <Router basename={basename} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <Routes>
+              <Route path="/setup" element={<SetupPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/" element={
                 <ProtectedRoute>

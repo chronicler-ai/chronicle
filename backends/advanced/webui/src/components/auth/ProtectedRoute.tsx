@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, adminOnly = false }: ProtectedRouteProps) {
-  const { user, token, isLoading, isAdmin } = useAuth()
+  const { user, token, isLoading, isAdmin, setupRequired } = useAuth()
 
   if (isLoading) {
     return (
@@ -16,6 +16,11 @@ export default function ProtectedRoute({ children, adminOnly = false }: Protecte
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
+  }
+
+  // Redirect to setup if required
+  if (setupRequired === true) {
+    return <Navigate to="/setup" replace />
   }
 
   if (!token || !user) {

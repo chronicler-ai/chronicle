@@ -23,10 +23,10 @@ services:
       - MYCELIA_URL=${MYCELIA_URL:-http://mycelia-backend:5173}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/readiness"]
-      interval: 30s
-      timeout: 30s
+      interval: 5s
+      timeout: 10s
       retries: 5
-      start_period: 5s
+      start_period: 10s
     restart: unless-stopped
     networks:
       - chronicle-network

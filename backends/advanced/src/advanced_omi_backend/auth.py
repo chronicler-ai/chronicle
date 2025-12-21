@@ -46,8 +46,8 @@ def _verify_configured(var_name: str, *, optional: bool = False) -> Optional[str
 SECRET_KEY = _verify_configured("AUTH_SECRET_KEY")
 COOKIE_SECURE = _verify_configured("COOKIE_SECURE", optional=True) == "true"
 
-# Admin user configuration
-ADMIN_PASSWORD = _verify_configured("ADMIN_PASSWORD")
+# Admin user configuration (optional - can use web UI setup if not set)
+ADMIN_PASSWORD = _verify_configured("ADMIN_PASSWORD", optional=True)
 ADMIN_EMAIL = _verify_configured("ADMIN_EMAIL", optional=True) or "admin@example.com"
 
 
@@ -198,6 +198,25 @@ def get_accessible_user_ids(user: User) -> list[str] | None:
         return None  # Can access all data
     else:
         return [str(user.id)]  # Can only access own data
+
+
+async def check_admin_exists() -> bool:
+    """
+    Check if any admin user exists in the database.
+
+    Returns:
+        True if at least one superuser exists, False otherwise
+    """
+    try:
+        # Import User model here to avoid circular import
+        from advanced_omi_backend.users import User
+
+        # Query for any user with is_superuser=True
+        admin = await User.find_one({"is_superuser": True})
+        return admin is not None
+    except Exception as e:
+        logger.error(f"Failed to check admin existence: {e}")
+        raise
 
 
 async def create_admin_user_if_needed():
