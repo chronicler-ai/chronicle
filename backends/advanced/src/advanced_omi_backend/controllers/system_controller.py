@@ -15,8 +15,8 @@ from advanced_omi_backend.config import (
     load_diarization_settings_from_file,
     save_diarization_settings_to_file,
 )
-from advanced_omi_backend.models.user import User
 from advanced_omi_backend.model_registry import _find_config_path, load_models_config
+from advanced_omi_backend.models.user import User
 from advanced_omi_backend.task_manager import get_task_manager
 
 logger = logging.getLogger(__name__)

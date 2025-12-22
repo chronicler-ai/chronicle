@@ -11,7 +11,11 @@ from fastapi import APIRouter, Body, Depends, Request
 from pydantic import BaseModel
 
 from advanced_omi_backend.auth import current_active_user, current_superuser
-from advanced_omi_backend.controllers import system_controller, session_controller, queue_controller
+from advanced_omi_backend.controllers import (
+    queue_controller,
+    session_controller,
+    system_controller,
+)
 from advanced_omi_backend.models.user import User
 
 logger = logging.getLogger(__name__)
