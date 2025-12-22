@@ -719,6 +719,7 @@ async def _process_batch_audio_complete(
         relative_audio_path, file_path, duration = await write_audio_file(
             raw_audio_data=complete_audio,
             audio_uuid=audio_uuid,
+            source="websocket",
             client_id=client_id,
             user_id=user_id,
             user_email=user_email,
