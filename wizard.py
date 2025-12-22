@@ -385,6 +385,13 @@ def main():
     # Next Steps
     console.print("\n📖 [bold]Next Steps:[/bold]")
 
+    # Configuration info
+    console.print("")
+    console.print("📝 [bold cyan]Configuration Files Updated:[/bold cyan]")
+    console.print("   • [green].env files[/green] - API keys and service URLs")
+    console.print("   • [green]config.yml[/green] - Model definitions and memory provider settings")
+    console.print("")
+
     # Development Environment Setup
     console.print("1. Setup development environment (git hooks, testing):")
     console.print("   [cyan]make setup-dev[/cyan]")
