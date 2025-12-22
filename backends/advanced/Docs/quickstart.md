@@ -340,7 +340,7 @@ curl -X POST "http://localhost:8000/api/audio/upload" \
 
 **Implementation**: 
 - **Memory System**: `src/advanced_omi_backend/memory/memory_service.py` + `src/advanced_omi_backend/controllers/memory_controller.py`
-- **Configuration**: `memory_config.yaml` + `src/advanced_omi_backend/memory_config_loader.py`
+- **Configuration**: `config.yml` (memory + models) in repo root
 
 ### Authentication & Security
 - **Email Authentication**: Login with email and password
@@ -539,10 +539,10 @@ OPENMEMORY_MCP_URL=http://host.docker.internal:8765
 
 > 🎯 **New to memory configuration?** Read our [Memory Configuration Guide](./memory-configuration-guide.md) for a step-by-step setup guide with examples.
 
-The system uses **centralized configuration** via `memory_config.yaml` for all memory extraction settings. All hardcoded values have been removed from the code to ensure consistent, configurable behavior.
+The system uses **centralized configuration** via `config.yml` for all memory extraction and model settings.
 
 ### Configuration File Location
-- **Path**: `backends/advanced-backend/memory_config.yaml`
+- **Path**: `config.yml` in repo root
 - **Hot-reload**: Changes are applied on next processing cycle (no restart required)
 - **Fallback**: If file is missing, system uses safe defaults with environment variables
 
@@ -611,7 +611,7 @@ If you experience JSON parsing errors in fact extraction:
 
 2. **Enable fact extraction** with reliable JSON output:
    ```yaml
-   # In memory_config.yaml
+   # In config.yml (memory section)
    fact_extraction:
      enabled: true  # Safe to enable with GPT-4o
    ```
@@ -725,5 +725,5 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" \
 - **Connect audio clients** using the WebSocket API
 - **Explore the dashboard** to manage conversations and users
 - **Review the user data architecture** for understanding data organization
-- **Customize memory extraction** by editing `memory_config.yaml`
+- **Customize memory extraction** by editing the `memory` section in `config.yml`
 - **Monitor processing performance** using debug API endpoints

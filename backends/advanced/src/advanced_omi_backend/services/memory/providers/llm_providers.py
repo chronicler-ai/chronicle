@@ -32,6 +32,9 @@ from ..utils import extract_json_from_text
 
 memory_logger = logging.getLogger("memory_service")
 
+# New: config-driven model registry + universal client
+from advanced_omi_backend.model_registry import get_models_registry, ModelDef
+
 
 def _is_langfuse_enabled() -> bool:
     """Check if Langfuse is properly configured."""
@@ -133,27 +136,39 @@ def chunk_text_with_spacy(text: str, max_tokens: int = 100) -> List[str]:
     return chunks
 
 class OpenAIProvider(LLMProviderBase):
-    """OpenAI LLM provider implementation.
-    
-    Provides memory extraction, embedding generation, and memory action
-    proposals using OpenAI's GPT and embedding models.
-    
-    Attributes:
-        api_key: OpenAI API key
-        model: GPT model to use for text generation
-        embedding_model: Model to use for embeddings
-        base_url: API base URL (for custom endpoints)
-        temperature: Sampling temperature for generation
-        max_tokens: Maximum tokens in responses
+    """Config-driven LLM provider using OpenAI SDK (OpenAI-compatible).
+
+    Uses the official OpenAI client (with custom base_url and api_key) to call
+    chat and embeddings across OpenAI-compatible providers (OpenAI, Ollama, Groq).
+    Models and endpoints are resolved from config.yml via the model registry.
     """
 
     def __init__(self, config: Dict[str, Any]):
-        self.api_key = config["api_key"]
-        self.model = config.get("model", "gpt-4")
-        self.embedding_model = config.get("embedding_model", "text-embedding-3-small")
-        self.base_url = config.get("base_url", "https://api.openai.com/v1")
-        self.temperature = config.get("temperature", 0.1)
-        self.max_tokens = config.get("max_tokens", 2000)
+        # Ignore provider-specific envs; use registry as single source of truth
+        registry = get_models_registry()
+        if not registry:
+            raise RuntimeError("config.yml not found or invalid; cannot initialize model registry")
+
+        # Resolve default models
+        self.llm_def: ModelDef = registry.get_default("llm")  # type: ignore
+        self.embed_def: ModelDef | None = registry.get_default("embedding")
+
+        if not self.llm_def:
+            raise RuntimeError("No default LLM defined in config.yml")
+        # Store parameters for LLM
+        self.api_key = self.llm_def.api_key or ""
+        self.base_url = self.llm_def.model_url
+        self.model = self.llm_def.model_name
+        self.temperature = float(self.llm_def.model_params.get("temperature", 0.1))
+        self.max_tokens = int(self.llm_def.model_params.get("max_tokens", 2000))
+        
+        # Store parameters for embeddings (use separate config if available)
+        self.embedding_model = (self.embed_def.model_name if self.embed_def else self.llm_def.model_name)
+        self.embedding_api_key = (self.embed_def.api_key if self.embed_def else self.api_key)
+        self.embedding_base_url = (self.embed_def.model_url if self.embed_def else self.base_url)
+        
+        # Lazy client creation
+        self._client = None
 
     async def extract_memories(self, text: str, prompt: str) -> List[str]:
         """Extract memories using OpenAI API with the enhanced fact retrieval prompt.
@@ -166,12 +181,6 @@ class OpenAIProvider(LLMProviderBase):
             List of extracted memory strings
         """
         try:
-            client = _get_openai_client(
-                api_key=self.api_key,
-                base_url=self.base_url,
-                is_async=True
-            )
-            
             # Use the provided prompt or fall back to default
             system_prompt = prompt if prompt.strip() else FACT_RETRIEVAL_PROMPT
             
@@ -179,10 +188,7 @@ class OpenAIProvider(LLMProviderBase):
             text_chunks = chunk_text_with_spacy(text)
             
             # Process all chunks in sequence, not concurrently
-            results = [
-                await self._process_chunk(client, system_prompt, chunk, i) 
-                for i, chunk in enumerate(text_chunks)
-            ]
+            results = [await self._process_chunk(system_prompt, chunk, i) for i, chunk in enumerate(text_chunks)]
             
             # Spread list of list of facts into a single list of facts
             cleaned_facts = []
@@ -196,7 +202,7 @@ class OpenAIProvider(LLMProviderBase):
             memory_logger.error(f"OpenAI memory extraction failed: {e}")
             return []
         
-    async def _process_chunk(self, client, system_prompt: str, chunk: str, index: int) -> List[str]:
+    async def _process_chunk(self, system_prompt: str, chunk: str, index: int) -> List[str]:
         """Process a single text chunk to extract memories using OpenAI API.
         
         This private method handles the LLM interaction for a single chunk of text,
@@ -218,17 +224,17 @@ class OpenAIProvider(LLMProviderBase):
             memory extraction process.
         """
         try:
+            client = _get_openai_client(api_key=self.api_key, base_url=self.base_url, is_async=True)
             response = await client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": chunk}
+                    {"role": "user", "content": chunk},
                 ],
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
             )
-            
             facts = (response.choices[0].message.content or "").strip()
             if not facts:
                 return []
@@ -249,17 +255,9 @@ class OpenAIProvider(LLMProviderBase):
             List of embedding vectors, one per input text
         """
         try:
-            client = _get_openai_client(
-                api_key=self.api_key,
-                base_url=self.base_url,
-                is_async=True
-            )
-            
-            response = await client.embeddings.create(
-                model=self.embedding_model,
-                input=texts
-            )
-            
+            # Use embedding-specific API key and base URL
+            client = _get_openai_client(api_key=self.embedding_api_key, base_url=self.embedding_base_url, is_async=True)
+            response = await client.embeddings.create(model=self.embedding_model, input=texts)
             return [data.embedding for data in response.data]
             
         except Exception as e:
@@ -273,23 +271,13 @@ class OpenAIProvider(LLMProviderBase):
             True if connection successful, False otherwise
         """
         try:
-            # For Ollama, just check if the base URL is reachable
-            if os.getenv("LLM_PROVIDER", "openai").lower() == "ollama":
-                import httpx
-                async with httpx.AsyncClient() as client:
-                    # For Ollama, test connection by hitting the /v1/models endpoint
-                    response = await client.get(f"{self.base_url}/models")
-                    response.raise_for_status()
+            try:
+                client = _get_openai_client(api_key=self.api_key, base_url=self.base_url, is_async=True)
+                await client.models.list()
                 return True
-
-            client = _get_openai_client(
-                api_key=self.api_key,
-                base_url=self.base_url,
-                is_async=True
-            )
-            
-            await client.models.list()
-            return True
+            except Exception as e:
+                memory_logger.error(f"OpenAI connection test failed: {e}")
+                return False
             
         except Exception as e:
             memory_logger.error(f"OpenAI connection test failed: {e}")
@@ -321,19 +309,13 @@ class OpenAIProvider(LLMProviderBase):
             )
             memory_logger.debug(f"🧠 Generated prompt user content: {update_memory_messages[1]['content'][:200]}...")
 
-            client = _get_openai_client(
-                api_key=self.api_key,
-                base_url=self.base_url,
-                is_async=True
-            )
-
+            client = _get_openai_client(api_key=self.api_key, base_url=self.base_url, is_async=True)
             response = await client.chat.completions.create(
                 model=self.model,
                 messages=update_memory_messages,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
             )
-
             content = (response.choices[0].message.content or "").strip()
             if not content:
                 return {}

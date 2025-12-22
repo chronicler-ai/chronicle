@@ -108,12 +108,7 @@ case "$LLM_PROVIDER" in
         ;;
 esac
 
-# Ensure memory_config.yaml exists
-if [ ! -f "memory_config.yaml" ] && [ -f "memory_config.yaml.template" ]; then
-    print_info "Creating memory_config.yaml from template..."
-    cp memory_config.yaml.template memory_config.yaml
-    print_success "memory_config.yaml created"
-fi
+# memory_config.yaml deprecated; using config.yml for memory settings
 
 # Ensure diarization_config.json exists
 if [ ! -f "diarization_config.json" ] && [ -f "diarization_config.json.template" ]; then

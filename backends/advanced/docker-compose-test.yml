@@ -14,6 +14,7 @@ services:
       - ./data/test_audio_chunks:/app/audio_chunks
       - ./data/test_debug_dir:/app/debug_dir
       - ./data/test_data:/app/data
+      - ../../config.yml:/app/config.yml:ro  # Mount config.yml for model registry and memory settings
     environment:
       # Override with test-specific settings
       - MONGODB_URI=mongodb://mongo-test:27017/test_db
@@ -24,10 +25,7 @@ services:
       # Import API keys from environment
       - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_BASE_URL=https://api.openai.com/v1
-      # LLM provider configuration (required for memory service)
-      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
-      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - GROQ_API_KEY=${GROQ_API_KEY}
       # Authentication (test-specific)
       - AUTH_SECRET_KEY=test-jwt-signing-key-for-integration-tests
       - ADMIN_PASSWORD=test-admin-password-123
@@ -131,6 +129,7 @@ services:
       - ./data/test_audio_chunks:/app/audio_chunks
       - ./data/test_debug_dir:/app/debug_dir
       - ./data/test_data:/app/data
+      - ../../config.yml:/app/config.yml:ro  # Mount config.yml for model registry and memory settings
     environment:
       # Same environment as backend
       - MONGODB_URI=mongodb://mongo-test:27017/test_db
@@ -140,8 +139,7 @@ services:
       - DEBUG_DIR=/app/debug_dir
       - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
-      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - GROQ_API_KEY=${GROQ_API_KEY}
       - AUTH_SECRET_KEY=test-jwt-signing-key-for-integration-tests
       - ADMIN_PASSWORD=test-admin-password-123
       - ADMIN_EMAIL=test-admin@example.com

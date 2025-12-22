@@ -110,10 +110,6 @@ jobs:
         echo "LLM_PROVIDER: $LLM_PROVIDER"
         echo "TRANSCRIPTION_PROVIDER: $TRANSCRIPTION_PROVIDER"
 
-        # Create memory_config.yaml from template (file is gitignored)
-        echo "Creating memory_config.yaml from template..."
-        cp memory_config.yaml.template memory_config.yaml
-
         # Clean any existing test containers for fresh start
         echo "Cleaning up any existing test containers..."
         docker compose -f docker-compose-test.yml down -v || true

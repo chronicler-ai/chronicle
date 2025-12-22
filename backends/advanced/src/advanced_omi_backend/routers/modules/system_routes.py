@@ -82,7 +82,7 @@ async def get_memory_config_raw(current_user: User = Depends(current_superuser))
 
 @router.post("/admin/memory/config/raw")
 async def update_memory_config_raw(
-    config_yaml: str = Body(..., embed=True),
+    config_yaml: str = Body(..., media_type="text/plain"),
     current_user: User = Depends(current_superuser)
 ):
     """Update memory configuration YAML and hot reload. Admin only."""
@@ -91,7 +91,7 @@ async def update_memory_config_raw(
 
 @router.post("/admin/memory/config/validate")
 async def validate_memory_config(
-    config_yaml: str = Body(..., embed=True),
+    config_yaml: str = Body(..., media_type="text/plain"),
     current_user: User = Depends(current_superuser)
 ):
     """Validate memory configuration YAML syntax. Admin only."""

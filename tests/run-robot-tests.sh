@@ -101,10 +101,7 @@ cd ../backends/advanced
 print_info "Starting test infrastructure..."
 
 # Ensure required config files exist
-if [ ! -f "memory_config.yaml" ] && [ -f "memory_config.yaml.template" ]; then
-    print_info "Creating memory_config.yaml from template..."
-    cp memory_config.yaml.template memory_config.yaml
-fi
+# memory_config.yaml no longer used; memory settings live in config.yml
 
 # Clean up any existing test containers and volumes for fresh start
 print_info "Cleaning up any existing test environment..."

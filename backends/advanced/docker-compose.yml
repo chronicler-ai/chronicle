@@ -12,6 +12,7 @@ services:
       - ./data/audio_chunks:/app/audio_chunks
       - ./data/debug_dir:/app/debug_dir
       - ./data:/app/data
+      - ../../config.yml:/app/config.yml  # Removed :ro to allow UI config saving
     environment:
       - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
       - MISTRAL_API_KEY=${MISTRAL_API_KEY}
@@ -24,10 +25,7 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
       - AUTH_SECRET_KEY=${AUTH_SECRET_KEY}
-      - LLM_PROVIDER=${LLM_PROVIDER}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
-      - OPENAI_MODEL=${OPENAI_MODEL}
       - NEO4J_HOST=${NEO4J_HOST}
       - NEO4J_USER=${NEO4J_USER}
       - NEO4J_PASSWORD=${NEO4J_PASSWORD}
@@ -67,15 +65,15 @@ services:
       - ./start-workers.sh:/app/start-workers.sh
       - ./data/audio_chunks:/app/audio_chunks
       - ./data:/app/data
+      - ../../config.yml:/app/config.yml  # Removed :ro for consistency
     environment:
       - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
       - MISTRAL_API_KEY=${MISTRAL_API_KEY}
       - MISTRAL_MODEL=${MISTRAL_MODEL}
       - TRANSCRIPTION_PROVIDER=${TRANSCRIPTION_PROVIDER}
+      - PARAKEET_ASR_URL=${PARAKEET_ASR_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
-      - OPENAI_MODEL=${OPENAI_MODEL}
-      - LLM_PROVIDER=${LLM_PROVIDER}
+      - GROQ_API_KEY=${GROQ_API_KEY}
       - REDIS_URL=redis://redis:6379/0
     depends_on:
       redis:
@@ -211,21 +209,11 @@ services:
 
 
 
-  # Use tailscale instead
-  # UNCOMMENT OUT FOR LOCAL DEMO - EXPOSES to internet
-  # ngrok:
-  #   image: ngrok/ngrok:latest
-  #   depends_on: [chronicle-backend, proxy]
-  #   ports:
-  #     - "4040:4040" # Ngrok web interface
-  #   environment:
-  #     - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-  #   command: "http proxy:80 --url=${NGROK_URL} --basic-auth=${NGROK_BASIC_AUTH}"
-
 # Shared network for cross-project communication
 networks:
   default:
     name: chronicle-network
+    external: true
 
 volumes:
   ollama_data:

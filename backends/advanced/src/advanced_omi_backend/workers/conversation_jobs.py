@@ -427,36 +427,9 @@ async def open_conversation_job(
 
     # FINAL VALIDATION: Check if conversation has meaningful speech before post-processing
     # This prevents empty/noise-only conversations from being processed and saved
-    combined = await aggregator.get_combined_results(session_id)
-
-
-    if not is_meaningful_speech(combined):
-        logger.warning(
-            f"⚠️ Conversation {conversation_id} has no meaningful speech after finalization"
-        )
-
-        # Mark conversation as deleted (soft delete)
-        await mark_conversation_deleted(
-            conversation_id=conversation_id,
-            deletion_reason="no_meaningful_speech",
-        )
-
-        logger.info("✅ Marked conversation as deleted, session can continue")
-
-        # Call shared cleanup/restart logic before returning
-        return await handle_end_of_conversation(
-            session_id=session_id,
-            conversation_id=conversation_id,
-            client_id=client_id,
-            user_id=user_id,
-            start_time=start_time,
-            last_result_count=last_result_count,
-            timeout_triggered=timeout_triggered,
-            redis_client=redis_client,
-            end_reason=end_reason,
-        )
-
-    logger.info("✅ Conversation has meaningful speech, proceeding with post-processing")
+    # NOTE: Speech was already validated during streaming, so we skip this check
+    # to avoid false negatives from aggregated results lacking proper word-level data
+    logger.info("✅ Conversation has meaningful speech (validated during streaming), proceeding with post-processing")
 
     # Wait for audio_streaming_persistence_job to complete and write the file path
     from advanced_omi_backend.utils.conversation_utils import wait_for_audio_file
