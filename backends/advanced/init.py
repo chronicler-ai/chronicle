@@ -432,18 +432,26 @@ class ChronicleSetup:
         else:
             # Interactive configuration
             self.print_section("HTTPS Configuration (Optional)")
-            
+
             try:
                 enable_https = Confirm.ask("Enable HTTPS for microphone access?", default=False)
             except EOFError:
                 self.console.print("Using default: No")
                 enable_https = False
-            
+
             if enable_https:
                 self.console.print("[blue][INFO][/blue] HTTPS enables microphone access in browsers")
                 self.console.print("[blue][INFO][/blue] For distributed deployments, use your Tailscale IP (e.g., 100.64.1.2)")
                 self.console.print("[blue][INFO][/blue] For local-only access, use 'localhost'")
-                server_ip = self.prompt_value("Server IP/Domain for SSL certificate (Tailscale IP or localhost)", "localhost")
+
+                # Check for existing SERVER_IP
+                existing_ip = self.read_existing_env_value("SERVER_IP")
+                if existing_ip and existing_ip not in ['localhost', 'your-server-ip-here']:
+                    prompt_text = f"Server IP/Domain for SSL certificate ({existing_ip}) [press Enter to reuse, or enter new]"
+                    server_ip_input = self.prompt_value(prompt_text, "")
+                    server_ip = server_ip_input if server_ip_input else existing_ip
+                else:
+                    server_ip = self.prompt_value("Server IP/Domain for SSL certificate (Tailscale IP or localhost)", "localhost")
         
         if enable_https:
             

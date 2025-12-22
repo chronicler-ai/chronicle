@@ -209,17 +209,6 @@ services:
 
 
 
-  # Use tailscale instead
-  # UNCOMMENT OUT FOR LOCAL DEMO - EXPOSES to internet
-  # ngrok:
-  #   image: ngrok/ngrok:latest
-  #   depends_on: [chronicle-backend, proxy]
-  #   ports:
-  #     - "4040:4040" # Ngrok web interface
-  #   environment:
-  #     - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-  #   command: "http proxy:80 --url=${NGROK_URL} --basic-auth=${NGROK_BASIC_AUTH}"
-
 # Shared network for cross-project communication
 networks:
   default:
