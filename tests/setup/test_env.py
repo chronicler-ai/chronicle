@@ -21,11 +21,6 @@ def load_env_file():
 # Load .env file (CI environment variables take precedence)
 load_env_file()
 
-# Load .env from backends/advanced directory to get COMPOSE_PROJECT_NAME
-backend_env_path = Path(__file__).resolve().parents[2] / "backends" / "advanced" / ".env"
-if backend_env_path.exists():
-    load_dotenv(backend_env_path, override=False)
-
 # API Configuration
 API_URL = 'http://localhost:8001'  # Use BACKEND_URL from test.env
 API_BASE = 'http://localhost:8001/api'
