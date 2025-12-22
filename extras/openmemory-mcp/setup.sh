@@ -22,6 +22,26 @@ done
 echo "🧠 OpenMemory MCP Setup"
 echo "======================"
 
+# Clone the mem0 fork if not already present
+MEM0_DIR="mem0-fork"
+if [ ! -d "$MEM0_DIR" ]; then
+    echo "📥 Cloning Ushadow-io/mem0 fork..."
+    if ! git clone https://github.com/Ushadow-io/mem0.git "$MEM0_DIR"; then
+        echo "❌ Failed to clone mem0 fork" >&2
+        exit 1
+    fi
+    echo "✅ Fork cloned successfully"
+else
+    echo "✅ Fork already exists at $MEM0_DIR"
+    # Optionally pull latest changes
+    read -p "Update fork to latest version? (y/N): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "📥 Pulling latest changes..."
+        (cd "$MEM0_DIR" && git pull) || echo "⚠️  Failed to update fork"
+    fi
+fi
+
 # Check if already configured
 if [ -f ".env" ]; then
     echo "⚠️  .env already exists. Backing up..."
@@ -72,7 +92,10 @@ mv "$temp_file" .env
 echo ""
 echo "✅ OpenMemory MCP configured!"
 echo "📁 Configuration saved to .env"
+echo "📦 Fork cloned to: $MEM0_DIR"
 echo ""
-echo "🚀 To start: docker compose up -d"
+echo "🚀 To start: docker compose up --build -d"
+echo "   (Note: First build may take a few minutes)"
+echo ""
 echo "🌐 MCP Server: http://localhost:8765"
 echo "📱 Web UI: http://localhost:3001"

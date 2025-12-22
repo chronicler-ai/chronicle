@@ -8,9 +8,11 @@ services:
       - ./data/mem0_storage:/qdrant/storage
     restart: unless-stopped
 
-  # OpenMemory MCP Server (official Docker image)
+  # OpenMemory MCP Server (built from Ushadow-io/mem0 fork)
   openmemory-mcp:
-    image: mem0/openmemory-mcp:latest
+    build:
+      context: ./mem0-fork/openmemory/api
+      dockerfile: Dockerfile
     env_file:
       - .env
     environment:
@@ -31,9 +33,11 @@ services:
       - default
       - chronicle-network
 
-  # OpenMemory UI (starts by default with the MCP server)
+  # OpenMemory UI (built from Ushadow-io/mem0 fork)
   openmemory-ui:
-    image: mem0/openmemory-ui:latest
+    build:
+      context: ./mem0-fork/openmemory/ui
+      dockerfile: Dockerfile
     ports:
       - "3001:3000"  # Different port to avoid conflict
     environment:

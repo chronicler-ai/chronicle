@@ -2,6 +2,8 @@
 
 This directory contains a local deployment of the OpenMemory MCP (Model Context Protocol) server, which can be used as an alternative memory provider for Chronicle.
 
+**Note:** This deployment builds from the [Ushadow-io/mem0](https://github.com/Ushadow-io/mem0) fork instead of the official mem0.ai release, providing custom features and enhancements.
+
 ## What is OpenMemory MCP?
 
 OpenMemory MCP is a memory service from mem0.ai that provides:
@@ -13,11 +15,20 @@ OpenMemory MCP is a memory service from mem0.ai that provides:
 
 ## Quick Start
 
-### 1. Configure Environment
+### 1. Run Setup Script
+
+The setup script will:
+- Clone the Ushadow-io/mem0 fork
+- Configure your environment with API keys
+- Prepare the service for deployment
 
 ```bash
-cp .env.template .env
-# Edit .env and add your OPENAI_API_KEY
+./setup.sh
+```
+
+Or provide API key directly:
+```bash
+./setup.sh --openai-api-key your-api-key-here
 ```
 
 ### 2. Start Services
@@ -29,6 +40,8 @@ cp .env.template .env
 # Or start with UI (optional)
 ./run.sh --with-ui
 ```
+
+**Note:** The first build may take several minutes as Docker builds the services from source.
 
 ### 3. Configure Chronicle
 
