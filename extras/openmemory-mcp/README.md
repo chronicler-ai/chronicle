@@ -33,12 +33,19 @@ Or provide API key directly:
 
 ### 2. Start Services
 
-```bash
-# Start backend only (recommended)
-./run.sh
+The docker-compose.yml is located in the fork directory. You can start services using:
 
-# Or start with UI (optional)
-./run.sh --with-ui
+**Option A: Using Chronicle's unified service manager (Recommended)**
+```bash
+# From project root
+uv run --with-requirements setup-requirements.txt python services.py start openmemory-mcp --build
+```
+
+**Option B: Manually from the fork directory**
+```bash
+# From extras/openmemory-mcp
+cd mem0-fork/openmemory
+docker compose up --build -d
 ```
 
 **Note:** The first build may take several minutes as Docker builds the services from source.
@@ -61,13 +68,20 @@ The deployment includes:
    - FastAPI backend with MCP protocol support
    - Memory extraction using OpenAI
    - REST API and MCP endpoints
+   - Development mode with hot-reload enabled
 
-2. **Qdrant Vector Database** (port 6334)
+2. **Qdrant Vector Database** (port 6333)
    - Stores memory embeddings
    - Enables semantic search
-   - Isolated from main Chronicle Qdrant
+   - Note: Uses same port as Chronicle's Qdrant (services are isolated by Docker network)
 
-3. **OpenMemory UI** (port 3001, optional)
+3. **Neo4j Graph Database** (ports 7474, 7687)
+   - Advanced graph-based memory features
+   - APOC and Graph Data Science plugins enabled
+   - Web browser interface for visualization
+   - Default credentials: `neo4j/taketheredpillNe0`
+
+4. **OpenMemory UI** (port 3333)
    - Web interface for memory management
    - View and search memories
    - Debug and testing interface
@@ -77,10 +91,15 @@ The deployment includes:
 - **MCP Server**: http://localhost:8765
   - REST API: `/api/v1/memories`
   - MCP SSE: `/mcp/{client_name}/sse/{user_id}`
-  
-- **Qdrant Dashboard**: http://localhost:6334/dashboard
+  - API Docs: http://localhost:8765/docs
 
-- **UI** (if enabled): http://localhost:3001
+- **Qdrant Dashboard**: http://localhost:6333/dashboard
+
+- **Neo4j Browser**: http://localhost:7474
+  - Username: `neo4j`
+  - Password: `taketheredpillNe0`
+
+- **OpenMemory UI**: http://localhost:3333
 
 ## How It Works with Chronicle
 
@@ -95,7 +114,22 @@ This replaces Chronicle's built-in memory processing with OpenMemory's implement
 
 ## Managing Services
 
+**Using Chronicle's unified service manager (from project root):**
 ```bash
+# View status
+uv run --with-requirements setup-requirements.txt python services.py status
+
+# Stop services
+uv run --with-requirements setup-requirements.txt python services.py stop openmemory-mcp
+
+# Restart services
+uv run --with-requirements setup-requirements.txt python services.py restart openmemory-mcp --build
+```
+
+**Manually from the fork directory:**
+```bash
+cd extras/openmemory-mcp/mem0-fork/openmemory
+
 # View logs
 docker compose logs -f
 
@@ -153,10 +187,16 @@ This test verifies:
 
 ### Port Conflicts
 
-If ports are already in use, edit `docker-compose.yml`:
-- Change `8765:8765` to another port for MCP server
-- Change `6334:6333` to another port for Qdrant
-- Update Chronicle's `OPENMEMORY_MCP_URL` accordingly
+**Qdrant Port Note**: OpenMemory uses port 6333 for Qdrant, same as Chronicle's main Qdrant. However, they are isolated by Docker networks and won't conflict. Services communicate via container names, not localhost ports.
+
+If you need to change ports, edit `mem0-fork/openmemory/docker-compose.yml`:
+- MCP Server: Change `8765:8765` to another port
+- Qdrant: Change `6333:6333` to another port
+- Neo4j Browser: Change `7474:7474` to another port
+- Neo4j Bolt: Change `7687:7687` to another port
+- UI: Change `3333:3000` to another port
+
+Update Chronicle's `OPENMEMORY_MCP_URL` if you change the MCP server port.
 
 ### Memory Not Working
 

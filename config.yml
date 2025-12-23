@@ -185,19 +185,17 @@ models:
         words: words
         segments: segments
 memory:
-  provider: chronicle
+  provider: openmemory_mcp
   timeout_seconds: 1200
   extraction:
     enabled: true
-    prompt: 'Extract important information from this conversation and return a JSON
+    prompt: Extract important information from this conversation and return a JSON
       object with an array named "facts". Include personal preferences, plans, names,
       dates, locations, numbers, and key details hehehe. Keep items concise and useful.
-
-      '
   openmemory_mcp:
-    server_url: http://localhost:8765
+    server_url: http://host.docker.internal:8765
     client_name: chronicle
-    user_id: default
+    user_id: openmemory
     timeout: 30
   mycelia:
     api_url: http://localhost:5173

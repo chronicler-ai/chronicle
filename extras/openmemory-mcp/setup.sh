@@ -42,26 +42,28 @@ else
     fi
 fi
 
+# Configure the api/.env file inside the fork
+ENV_FILE="$MEM0_DIR/openmemory/api/.env"
+
 # Check if already configured
-if [ -f ".env" ]; then
-    echo "⚠️  .env already exists. Backing up..."
-    cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
+if [ -f "$ENV_FILE" ]; then
+    echo "⚠️  $ENV_FILE already exists. Backing up..."
+    cp "$ENV_FILE" "$ENV_FILE.backup.$(date +%Y%m%d_%H%M%S)"
 fi
 
-# Start from template - check existence first
-if [ ! -r ".env.template" ]; then
-    echo "Error: .env.template not found or not readable" >&2
-    exit 1
-fi
-
-# Copy template and set secure permissions
-if ! cp .env.template .env; then
-    echo "Error: Failed to copy .env.template to .env" >&2
-    exit 1
+# Check if .env.example exists to use as template
+if [ -f "$MEM0_DIR/openmemory/api/.env.example" ]; then
+    cp "$MEM0_DIR/openmemory/api/.env.example" "$ENV_FILE"
+else
+    # Create minimal .env if example doesn't exist
+    cat > "$ENV_FILE" << 'EOF'
+OPENAI_API_KEY=sk-xxx
+USER=openmemory
+EOF
 fi
 
 # Set restrictive permissions (owner read/write only)
-chmod 600 .env
+chmod 600 "$ENV_FILE"
 
 # Get OpenAI API Key (prompt only if not provided via command line)
 if [ -z "$OPENAI_API_KEY" ]; then
@@ -86,16 +88,37 @@ awk -v key="$OPENAI_API_KEY" '
     /^OPENAI_API_KEY=/ { print "OPENAI_API_KEY=" key; found=1; next }
     { print }
     END { if (!found) print "OPENAI_API_KEY=" key }
-' .env > "$temp_file"
-mv "$temp_file" .env
+' "$ENV_FILE" > "$temp_file"
+mv "$temp_file" "$ENV_FILE"
+
+# Ensure USER is set to openmemory
+awk '
+    /^USER=/ { print "USER=openmemory"; found=1; next }
+    { print }
+    END { if (!found) print "USER=openmemory" }
+' "$ENV_FILE" > "$temp_file"
+mv "$temp_file" "$ENV_FILE"
 
 echo ""
 echo "✅ OpenMemory MCP configured!"
-echo "📁 Configuration saved to .env"
+echo "📁 Configuration saved to: $ENV_FILE"
 echo "📦 Fork cloned to: $MEM0_DIR"
 echo ""
-echo "🚀 To start: docker compose up --build -d"
+echo "🚀 To start services:"
+echo "   cd $MEM0_DIR/openmemory"
+echo "   docker compose up --build -d"
+echo ""
 echo "   (Note: First build may take a few minutes)"
 echo ""
-echo "🌐 MCP Server: http://localhost:8765"
-echo "📱 Web UI: http://localhost:3001"
+echo "📡 Services:"
+echo "   🌐 MCP Server: http://localhost:8765"
+echo "   📱 Web UI: http://localhost:3333"
+echo "   🗄️  Neo4j Browser: http://localhost:7474"
+echo "   🔍 Qdrant: http://localhost:6333"
+echo ""
+echo "🔐 Neo4j credentials: neo4j/taketheredpillNe0"
+echo ""
+echo "⚙️  Configure Chronicle backend (.env):"
+echo "   MEMORY_PROVIDER=openmemory_mcp"
+echo "   OPENMEMORY_MCP_URL=http://openmemory-mcp:8765  (for Docker)"
+echo "   # or http://localhost:8765 (for local development)"
