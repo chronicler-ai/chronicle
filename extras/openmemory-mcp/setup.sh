@@ -19,31 +19,15 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "🧠 OpenMemory MCP Setup"
-echo "======================"
+echo "🧠 OpenMemory MCP Setup (Pre-built Images)"
+echo "=========================================="
+echo ""
+echo "This setup uses pre-built Docker images from ghcr.io/ushadow-io"
+echo "No need to clone or build from source!"
+echo ""
 
-# Clone the mem0 fork if not already present
-MEM0_DIR="mem0-fork"
-if [ ! -d "$MEM0_DIR" ]; then
-    echo "📥 Cloning Ushadow-io/mem0 fork..."
-    if ! git clone https://github.com/Ushadow-io/mem0.git "$MEM0_DIR"; then
-        echo "❌ Failed to clone mem0 fork" >&2
-        exit 1
-    fi
-    echo "✅ Fork cloned successfully"
-else
-    echo "✅ Fork already exists at $MEM0_DIR"
-    # Optionally pull latest changes
-    read -p "Update fork to latest version? (y/N): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo "📥 Pulling latest changes..."
-        (cd "$MEM0_DIR" && git pull) || echo "⚠️  Failed to update fork"
-    fi
-fi
-
-# Configure the api/.env file inside the fork
-ENV_FILE="$MEM0_DIR/openmemory/api/.env"
+# Configure the .env file
+ENV_FILE=".env"
 
 # Check if already configured
 if [ -f "$ENV_FILE" ]; then
@@ -51,14 +35,27 @@ if [ -f "$ENV_FILE" ]; then
     cp "$ENV_FILE" "$ENV_FILE.backup.$(date +%Y%m%d_%H%M%S)"
 fi
 
-# Check if .env.example exists to use as template
-if [ -f "$MEM0_DIR/openmemory/api/.env.example" ]; then
-    cp "$MEM0_DIR/openmemory/api/.env.example" "$ENV_FILE"
+# Create .env from template or start fresh
+if [ -f ".env.template" ]; then
+    cp ".env.template" "$ENV_FILE"
 else
-    # Create minimal .env if example doesn't exist
+    # Create minimal .env if template doesn't exist
     cat > "$ENV_FILE" << 'EOF'
-OPENAI_API_KEY=sk-xxx
+# OpenMemory MCP Configuration
+
+# Required: OpenAI API Key for memory processing
+OPENAI_API_KEY=
+
+# User identifier
 USER=openmemory
+OPENMEMORY_USER_ID=openmemory
+
+# Optional: API Key for MCP server authentication
+API_KEY=
+
+# Frontend configuration
+NEXT_PUBLIC_API_URL=http://localhost:8765
+NEXT_PUBLIC_USER_ID=openmemory
 EOF
 fi
 
@@ -102,23 +99,26 @@ mv "$temp_file" "$ENV_FILE"
 echo ""
 echo "✅ OpenMemory MCP configured!"
 echo "📁 Configuration saved to: $ENV_FILE"
-echo "📦 Fork cloned to: $MEM0_DIR"
 echo ""
 echo "🚀 To start services:"
-echo "   cd $MEM0_DIR/openmemory"
-echo "   docker compose up --build -d"
+echo "   docker compose up -d"
 echo ""
-echo "   (Note: First build may take a few minutes)"
+echo "   (Note: First run will pull pre-built images)"
 echo ""
 echo "📡 Services:"
 echo "   🌐 MCP Server: http://localhost:8765"
 echo "   📱 Web UI: http://localhost:3333"
 echo "   🗄️  Neo4j Browser: http://localhost:7474"
-echo "   🔍 Qdrant: http://localhost:6333"
+echo "   🔍 Qdrant: http://localhost:6335"
 echo ""
 echo "🔐 Neo4j credentials: neo4j/taketheredpillNe0"
 echo ""
 echo "⚙️  Configure Chronicle backend (.env):"
 echo "   MEMORY_PROVIDER=openmemory_mcp"
-echo "   OPENMEMORY_MCP_URL=http://openmemory-mcp:8765  (for Docker)"
-echo "   # or http://localhost:8765 (for local development)"
+echo "   OPENMEMORY_MCP_URL=http://openmemory-mcp:8765  (for Docker - recommended)"
+echo "   # or http://localhost:8765 (if backend runs outside Docker)"
+echo ""
+echo "💡 Using pre-built images from ghcr.io/ushadow-io:"
+echo "   - u-mem0-api:latest"
+echo "   - u-mem0-ui:latest"
+echo ""
