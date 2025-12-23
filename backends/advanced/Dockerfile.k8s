@@ -34,7 +34,7 @@ RUN uv sync --extra deepgram
 COPY . .
 
 # Copy memory config (created by init.sh from template)
-COPY memory_config.yaml ./
+
 
 # Copy and make K8s startup scripts executable
 COPY start-k8s.sh start-workers.sh ./

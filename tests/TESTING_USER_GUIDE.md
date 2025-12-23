@@ -722,7 +722,7 @@ robot --rerunfailed output.xml tests/
 CLEANUP_CONTAINERS=false robot tests/endpoints/auth_tests.robot
 
 # Inspect backend logs
-docker logs advanced-friend-backend-test-1
+docker logs advanced-chronicle-backend-test-1
 
 # Inspect database
 docker exec -it advanced-mongo-test-1 mongosh test_db

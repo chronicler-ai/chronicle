@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
+import yaml
 from dotenv import get_key, set_key
 from rich.console import Console
 from rich.panel import Panel
@@ -27,11 +28,16 @@ class ChronicleSetup:
         self.console = Console()
         self.config: Dict[str, Any] = {}
         self.args = args or argparse.Namespace()
-        
+        self.config_yml_path = Path("../../config.yml")  # Repo root config.yml
+        self.config_yml_data = None
+
         # Check if we're in the right directory
         if not Path("pyproject.toml").exists() or not Path("src").exists():
             self.console.print("[red][ERROR][/red] Please run this script from the backends/advanced directory")
             sys.exit(1)
+
+        # Load config.yml if it exists
+        self.load_config_yml()
 
     def print_header(self, title: str):
         """Print a colorful header"""
@@ -120,6 +126,74 @@ class ChronicleSetup:
 
         return f"{key_clean[:show_chars]}{'*' * min(15, len(key_clean) - show_chars * 2)}{key_clean[-show_chars:]}"
 
+    def load_config_yml(self):
+        """Load config.yml from repository root"""
+        if not self.config_yml_path.exists():
+            self.console.print(f"[yellow][WARNING][/yellow] config.yml not found at {self.config_yml_path}")
+            self.console.print("[yellow]Will create a new config.yml during setup[/yellow]")
+            self.config_yml_data = self._get_default_config_structure()
+            return
+
+        try:
+            with open(self.config_yml_path, 'r') as f:
+                self.config_yml_data = yaml.safe_load(f)
+            self.console.print(f"[blue][INFO][/blue] Loaded existing config.yml")
+        except Exception as e:
+            self.console.print(f"[red][ERROR][/red] Failed to load config.yml: {e}")
+            self.config_yml_data = self._get_default_config_structure()
+
+    def _get_default_config_structure(self) -> Dict[str, Any]:
+        """Return default config.yml structure if file doesn't exist"""
+        return {
+            "defaults": {
+                "llm": "openai-llm",
+                "embedding": "openai-embed",
+                "stt": "stt-deepgram",
+                "tts": "tts-http",
+                "vector_store": "vs-qdrant"
+            },
+            "models": [],
+            "memory": {
+                "provider": "chronicle",
+                "timeout_seconds": 1200,
+                "extraction": {
+                    "enabled": True,
+                    "prompt": "Extract important information from this conversation and return a JSON object with an array named \"facts\"."
+                }
+            }
+        }
+
+    def save_config_yml(self):
+        """Save config.yml back to repository root"""
+        try:
+            # Backup existing config.yml if it exists
+            if self.config_yml_path.exists():
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_path = self.config_yml_path.parent / f"config.yml.backup.{timestamp}"
+                shutil.copy2(self.config_yml_path, backup_path)
+                self.console.print(f"[blue][INFO][/blue] Backed up config.yml to {backup_path.name}")
+
+            # Write updated config
+            with open(self.config_yml_path, 'w') as f:
+                yaml.dump(self.config_yml_data, f, default_flow_style=False, sort_keys=False)
+
+            self.console.print("[green][SUCCESS][/green] config.yml updated successfully")
+        except Exception as e:
+            self.console.print(f"[red][ERROR][/red] Failed to save config.yml: {e}")
+            raise
+
+    def update_config_default(self, key: str, value: str):
+        """Update a default value in config.yml"""
+        if "defaults" not in self.config_yml_data:
+            self.config_yml_data["defaults"] = {}
+        self.config_yml_data["defaults"][key] = value
+
+    def update_memory_config(self, updates: Dict[str, Any]):
+        """Update memory configuration in config.yml"""
+        if "memory" not in self.config_yml_data:
+            self.config_yml_data["memory"] = {}
+        self.config_yml_data["memory"].update(updates)
+
     def setup_authentication(self):
         """Configure authentication settings"""
         self.print_section("Authentication Setup")
@@ -201,19 +275,21 @@ class ChronicleSetup:
             self.console.print("[blue][INFO][/blue] Skipping transcription setup")
 
     def setup_llm(self):
-        """Configure LLM provider"""
+        """Configure LLM provider - updates config.yml and .env"""
         self.print_section("LLM Provider Configuration")
-        
+
+        self.console.print("[blue][INFO][/blue] LLM configuration will be saved to config.yml")
+        self.console.print()
+
         choices = {
             "1": "OpenAI (GPT-4, GPT-3.5 - requires API key)",
-            "2": "Ollama (local models - requires Ollama server)",
+            "2": "Ollama (local models - runs locally)",
             "3": "Skip (no memory extraction)"
         }
-        
-        choice = self.prompt_choice("Choose your LLM provider for memory extraction:", choices, "1")
+
+        choice = self.prompt_choice("Which LLM provider will you use?", choices, "1")
 
         if choice == "1":
-            self.config["LLM_PROVIDER"] = "openai"
             self.console.print("[blue][INFO][/blue] OpenAI selected")
             self.console.print("Get your API key from: https://platform.openai.com/api-keys")
 
@@ -227,71 +303,91 @@ class ChronicleSetup:
             else:
                 api_key = self.prompt_value("OpenAI API key (leave empty to skip)", "")
 
-            model = self.prompt_value("OpenAI model", "gpt-5-mini")
-            base_url = self.prompt_value("OpenAI base URL (for proxies/compatible APIs)", "https://api.openai.com/v1")
-
             if api_key:
                 self.config["OPENAI_API_KEY"] = api_key
-                self.config["OPENAI_MODEL"] = model
-                self.config["OPENAI_BASE_URL"] = base_url
-                self.console.print("[green][SUCCESS][/green] OpenAI configured")
+                # Update config.yml to use OpenAI models
+                self.update_config_default("llm", "openai-llm")
+                self.update_config_default("embedding", "openai-embed")
+                self.console.print("[green][SUCCESS][/green] OpenAI configured in config.yml")
+                self.console.print("[blue][INFO][/blue] Set defaults.llm: openai-llm")
+                self.console.print("[blue][INFO][/blue] Set defaults.embedding: openai-embed")
             else:
                 self.console.print("[yellow][WARNING][/yellow] No API key provided - memory extraction will not work")
 
         elif choice == "2":
-            self.config["LLM_PROVIDER"] = "ollama"
             self.console.print("[blue][INFO][/blue] Ollama selected")
-            
-            base_url = self.prompt_value("Ollama server URL", "http://host.docker.internal:11434")
-            if not base_url.endswith("/v1"):
-                base_url = base_url.rstrip("/") + "/v1"
-                self.console.print(f"[blue][INFO][/blue] Automatically appending /v1 to Ollama URL: {base_url}")
-
-            model = self.prompt_value("Ollama model", "llama3.2")
-            
-            embedder_model = self.prompt_value("Ollama embedder model", "nomic-embed-text:latest")
-            
-            self.config["OLLAMA_BASE_URL"] = base_url
-            self.config["OLLAMA_MODEL"] = model
-            self.config["OLLAMA_EMBEDDER_MODEL"] = embedder_model
-            self.console.print("[green][SUCCESS][/green] Ollama configured")
-            self.console.print("[yellow][WARNING][/yellow] Make sure Ollama is running and all required models (LLM and embedder) are pulled")
+            # Update config.yml to use Ollama models
+            self.update_config_default("llm", "local-llm")
+            self.update_config_default("embedding", "local-embed")
+            self.console.print("[green][SUCCESS][/green] Ollama configured in config.yml")
+            self.console.print("[blue][INFO][/blue] Set defaults.llm: local-llm")
+            self.console.print("[blue][INFO][/blue] Set defaults.embedding: local-embed")
+            self.console.print("[yellow][WARNING][/yellow] Make sure Ollama is running and models are pulled")
 
         elif choice == "3":
             self.console.print("[blue][INFO][/blue] Skipping LLM setup - memory extraction disabled")
+            # Disable memory extraction in config.yml
+            self.update_memory_config({"extraction": {"enabled": False}})
 
     def setup_memory(self):
-        """Configure memory provider"""
+        """Configure memory provider - updates config.yml"""
         self.print_section("Memory Storage Configuration")
-        
+
         choices = {
             "1": "Chronicle Native (Qdrant + custom extraction)",
-            "2": "OpenMemory MCP (cross-client compatible, external server)"
+            "2": "OpenMemory MCP (cross-client compatible, external server)",
+            "3": "Mycelia (Timeline-based memory with speaker diarization)"
         }
-        
+
         choice = self.prompt_choice("Choose your memory storage backend:", choices, "1")
 
         if choice == "1":
-            self.config["MEMORY_PROVIDER"] = "chronicle"
             self.console.print("[blue][INFO][/blue] Chronicle Native memory provider selected")
-            
+
             qdrant_url = self.prompt_value("Qdrant URL", "qdrant")
             self.config["QDRANT_BASE_URL"] = qdrant_url
-            self.console.print("[green][SUCCESS][/green] Chronicle memory provider configured")
+
+            # Update config.yml
+            self.update_memory_config({"provider": "chronicle"})
+            self.console.print("[green][SUCCESS][/green] Chronicle memory provider configured in config.yml")
 
         elif choice == "2":
-            self.config["MEMORY_PROVIDER"] = "openmemory_mcp"
             self.console.print("[blue][INFO][/blue] OpenMemory MCP selected")
-            
+
             mcp_url = self.prompt_value("OpenMemory MCP server URL", "http://host.docker.internal:8765")
             client_name = self.prompt_value("OpenMemory client name", "chronicle")
             user_id = self.prompt_value("OpenMemory user ID", "openmemory")
-            
-            self.config["OPENMEMORY_MCP_URL"] = mcp_url
-            self.config["OPENMEMORY_CLIENT_NAME"] = client_name
-            self.config["OPENMEMORY_USER_ID"] = user_id
-            self.console.print("[green][SUCCESS][/green] OpenMemory MCP configured")
+            timeout = self.prompt_value("OpenMemory timeout (seconds)", "30")
+
+            # Update config.yml with OpenMemory MCP settings
+            self.update_memory_config({
+                "provider": "openmemory_mcp",
+                "openmemory_mcp": {
+                    "server_url": mcp_url,
+                    "client_name": client_name,
+                    "user_id": user_id,
+                    "timeout": int(timeout)
+                }
+            })
+            self.console.print("[green][SUCCESS][/green] OpenMemory MCP configured in config.yml")
             self.console.print("[yellow][WARNING][/yellow] Remember to start OpenMemory: cd ../../extras/openmemory-mcp && docker compose up -d")
+
+        elif choice == "3":
+            self.console.print("[blue][INFO][/blue] Mycelia memory provider selected")
+
+            mycelia_url = self.prompt_value("Mycelia API URL", "http://localhost:5173")
+            timeout = self.prompt_value("Mycelia timeout (seconds)", "30")
+
+            # Update config.yml with Mycelia settings
+            self.update_memory_config({
+                "provider": "mycelia",
+                "mycelia": {
+                    "api_url": mycelia_url,
+                    "timeout": int(timeout)
+                }
+            })
+            self.console.print("[green][SUCCESS][/green] Mycelia memory provider configured in config.yml")
+            self.console.print("[yellow][WARNING][/yellow] Make sure Mycelia is running at the configured URL")
 
     def setup_optional_services(self):
         """Configure optional services"""
@@ -336,18 +432,26 @@ class ChronicleSetup:
         else:
             # Interactive configuration
             self.print_section("HTTPS Configuration (Optional)")
-            
+
             try:
                 enable_https = Confirm.ask("Enable HTTPS for microphone access?", default=False)
             except EOFError:
                 self.console.print("Using default: No")
                 enable_https = False
-            
+
             if enable_https:
                 self.console.print("[blue][INFO][/blue] HTTPS enables microphone access in browsers")
                 self.console.print("[blue][INFO][/blue] For distributed deployments, use your Tailscale IP (e.g., 100.64.1.2)")
                 self.console.print("[blue][INFO][/blue] For local-only access, use 'localhost'")
-                server_ip = self.prompt_value("Server IP/Domain for SSL certificate (Tailscale IP or localhost)", "localhost")
+
+                # Check for existing SERVER_IP
+                existing_ip = self.read_existing_env_value("SERVER_IP")
+                if existing_ip and existing_ip not in ['localhost', 'your-server-ip-here']:
+                    prompt_text = f"Server IP/Domain for SSL certificate ({existing_ip}) [press Enter to reuse, or enter new]"
+                    server_ip_input = self.prompt_value(prompt_text, "")
+                    server_ip = server_ip_input if server_ip_input else existing_ip
+                else:
+                    server_ip = self.prompt_value("Server IP/Domain for SSL certificate (Tailscale IP or localhost)", "localhost")
         
         if enable_https:
             
@@ -455,11 +559,13 @@ class ChronicleSetup:
 
         self.console.print("[green][SUCCESS][/green] .env file configured successfully with secure permissions")
 
+        # Save config.yml with all updates
+        self.console.print()
+        self.console.print("[blue][INFO][/blue] Saving configuration to config.yml...")
+        self.save_config_yml()
+
     def copy_config_templates(self):
         """Copy other configuration files"""
-        if not Path("memory_config.yaml").exists() and Path("memory_config.yaml.template").exists():
-            shutil.copy2("memory_config.yaml.template", "memory_config.yaml")
-            self.console.print("[green][SUCCESS][/green] memory_config.yaml created")
 
         if not Path("diarization_config.json").exists() and Path("diarization_config.json.template").exists():
             shutil.copy2("diarization_config.json.template", "diarization_config.json")
@@ -469,11 +575,20 @@ class ChronicleSetup:
         """Show configuration summary"""
         self.print_section("Configuration Summary")
         self.console.print()
-        
+
         self.console.print(f"✅ Admin Account: {self.config.get('ADMIN_EMAIL', 'Not configured')}")
         self.console.print(f"✅ Transcription: {self.config.get('TRANSCRIPTION_PROVIDER', 'Not configured')}")
-        self.console.print(f"✅ LLM Provider: {self.config.get('LLM_PROVIDER', 'Not configured')}")
-        self.console.print(f"✅ Memory Provider: {self.config.get('MEMORY_PROVIDER', 'chronicle')}")
+
+        # Show LLM config from config.yml
+        llm_default = self.config_yml_data.get("defaults", {}).get("llm", "not set")
+        embedding_default = self.config_yml_data.get("defaults", {}).get("embedding", "not set")
+        self.console.print(f"✅ LLM: {llm_default} (config.yml)")
+        self.console.print(f"✅ Embedding: {embedding_default} (config.yml)")
+
+        # Show memory provider from config.yml
+        memory_provider = self.config_yml_data.get("memory", {}).get("provider", "chronicle")
+        self.console.print(f"✅ Memory Provider: {memory_provider} (config.yml)")
+
         # Auto-determine URLs based on HTTPS configuration
         if self.config.get('HTTPS_ENABLED') == 'true':
             server_ip = self.config.get('SERVER_IP', 'localhost')
@@ -552,6 +667,10 @@ class ChronicleSetup:
 
             self.console.print()
             self.console.print("[green][SUCCESS][/green] Setup complete! 🎉")
+            self.console.print()
+            self.console.print("📝 [bold]Configuration files updated:[/bold]")
+            self.console.print(f"  • .env - API keys and environment variables")
+            self.console.print(f"  • ../../config.yml - Model and memory provider configuration")
             self.console.print()
             self.console.print("For detailed documentation, see:")
             self.console.print("  • Docs/quickstart.md")

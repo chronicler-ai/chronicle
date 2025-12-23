@@ -115,7 +115,7 @@ For full transcription and memory features, use the [Advanced Backend](../advanc
 ### Logs
 ```bash
 # View service logs
-docker compose logs -f friend-backend
+docker compose logs -f chronicle-backend
 
 # Check audio processing
 tail -f ./audio_chunks/

@@ -134,27 +134,7 @@ fi
 
 # Step 2: Memory configuration
 print_header "Step 2: Memory Configuration"
-if [ -f "memory_config.yaml" ]; then
-    print_info "memory_config.yaml already exists"
-    if prompt_yes_no "Do you want to reset it from template?" "n"; then
-        backup_path=$(backup_with_timestamp "memory_config.yaml")
-        if [ $? -eq 0 ]; then
-            print_info "Backed up existing memory_config.yaml to $backup_path"
-            cp memory_config.yaml.template memory_config.yaml
-            print_success "memory_config.yaml reset from template"
-        else
-            print_error "Failed to backup memory_config.yaml file, aborting reset"
-        fi
-    fi
-else
-    if [ -f "memory_config.yaml.template" ]; then
-        cp memory_config.yaml.template memory_config.yaml
-        print_success "memory_config.yaml created from template"
-    else
-        print_error "memory_config.yaml.template not found!"
-        exit 1
-    fi
-fi
+print_info "Memory settings are managed in config.yml (memory section)."
 
 # Step 3: Diarization configuration
 print_header "Step 3: Diarization Configuration"
@@ -295,7 +275,7 @@ print_header "Setup Complete!"
 echo "Configuration Summary:"
 echo "----------------------"
 echo "✅ Environment file (.env) configured"
-echo "✅ Memory configuration (memory_config.yaml) ready"
+echo "✅ Memory configuration (config.yml) ready"
 echo "✅ Diarization configuration (diarization_config.json) ready"
 
 if [ "$HTTPS_ENABLED" = true ]; then

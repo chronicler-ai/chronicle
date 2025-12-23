@@ -28,11 +28,11 @@ Restart Backend Service
     Log    Restarting backend service to test job persistence
 
     # Stop backend container
-    Run Process    docker    compose    -f    ${COMPOSE_FILE}    stop    friend-backend-test
+    Run Process    docker    compose    -f    ${COMPOSE_FILE}    stop    chronicle-backend-test
     ...    cwd=.    timeout=30s
 
     # Start backend container again
-    Run Process    docker    compose    -f    ${COMPOSE_FILE}    start    friend-backend-test
+    Run Process    docker    compose    -f    ${COMPOSE_FILE}    start    chronicle-backend-test
     ...    cwd=.    timeout=60s
 
     # Wait for backend to be ready again

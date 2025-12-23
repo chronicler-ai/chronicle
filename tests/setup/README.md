@@ -213,7 +213,7 @@ REBUILD=true robot tests/
 CLEANUP_CONTAINERS=false robot tests/endpoints/failing_test.robot
 
 # Inspect logs
-docker logs advanced-friend-backend-test-1
+docker logs advanced-chronicle-backend-test-1
 docker logs advanced-mongo-test-1
 
 # Inspect database

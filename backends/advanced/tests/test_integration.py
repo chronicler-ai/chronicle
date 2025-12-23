@@ -73,12 +73,11 @@ PARAKEET_ASR_URL = os.environ.get("PARAKEET_ASR_URL", "http://host.docker.intern
 
 # Test Environment Configuration
 # Base configuration for both providers
+# NOTE: LLM configuration is now in config.yml (defaults.llm)
 TEST_ENV_VARS_BASE = {
     "AUTH_SECRET_KEY": "test-jwt-signing-key-for-integration-tests",
     "ADMIN_PASSWORD": "test-admin-password-123",
     "ADMIN_EMAIL": "test-admin@example.com",
-    "LLM_PROVIDER": "openai",
-    "OPENAI_MODEL": "gpt-4o-mini",  # Cheaper model for tests
     "MONGODB_URI": "mongodb://localhost:27018",  # Test port (database specified in backend)
     "QDRANT_BASE_URL": "localhost",
     "DISABLE_SPEAKER_RECOGNITION": "true",  # Prevent segment duplication in tests
@@ -457,7 +456,7 @@ class IntegrationTestRunner:
                 logger.info(f"🔄 Found {len(running_services)} running test services")
                 # Check if test backend is healthy (only skip if not rebuilding)
                 try:
-                    health_check = subprocess.run(["docker", "compose", "-f", "docker-compose-test.yml", "ps", "friend-backend-test"], capture_output=True, text=True)
+                    health_check = subprocess.run(["docker", "compose", "-f", "docker-compose-test.yml", "ps", "chronicle-backend-test"], capture_output=True, text=True)
                     if "healthy" in health_check.stdout or "Up" in health_check.stdout:
                         logger.info("✅ Test services already running and healthy, skipping restart")
                         self.services_started = True
@@ -483,12 +482,7 @@ class IntegrationTestRunner:
                 # Stop existing test services and remove volumes for fresh start
                 subprocess.run(["docker", "compose", "-f", "docker-compose-test.yml", "down", "-v"], capture_output=True)
             
-            # Ensure memory_config.yaml exists by copying from template
-            memory_config_path = "memory_config.yaml"
-            memory_template_path = "memory_config.yaml.template"
-            if not os.path.exists(memory_config_path) and os.path.exists(memory_template_path):
-                logger.info(f"📋 Creating {memory_config_path} from template...")
-                shutil.copy2(memory_template_path, memory_config_path)
+            # memory_config.yaml deprecated; memory configuration provided via config.yml
             
             # Check if we're in CI environment
             is_ci = os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true"

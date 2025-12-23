@@ -89,7 +89,7 @@ CORS_ORIGINS=https://localhost,https://127.0.0.1,https://100.83.66.30
 **Services started:**
 - ✅ nginx (ports 443/80) - SSL termination and proxy
 - ✅ webui (port 5173, internal) - Vite dev server  
-- ✅ friend-backend (port 8000, internal)
+- ✅ chronicle-backend (port 8000, internal)
 - ✅ mongo, qdrant (databases)
 
 **Access:** https://localhost/ or https://your-ip/  
@@ -99,7 +99,7 @@ CORS_ORIGINS=https://localhost,https://127.0.0.1,https://100.83.66.30
 **Services started:**
 - ✅ nginx (ports 443/80) - but without SSL certificates
 - ✅ webui (port 5173, direct access) - Vite dev server
-- ✅ friend-backend (port 8000)
+- ✅ chronicle-backend (port 8000)
 - ✅ mongo, qdrant (databases)
 
 **Access:** http://localhost:5173  
@@ -169,7 +169,7 @@ docker compose restart nginx
 **Problem:** "Cross-Origin Request Blocked"
 **Solution:**
 1. Update CORS_ORIGINS in `.env` to include your HTTPS origin
-2. Restart backend: `docker compose restart friend-backend`
+2. Restart backend: `docker compose restart chronicle-backend`
 
 ### Microphone Access Denied
 
@@ -192,7 +192,7 @@ docker compose restart nginx
 ### Standard Setup
 - **3000** - HTTP (webui production)
 - **5173** - HTTP (webui development)
-- **8000** - HTTP (friend-backend)
+- **8000** - HTTP (chronicle-backend)
 
 ## Live Recording Feature
 
