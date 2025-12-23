@@ -8,14 +8,25 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, Request
+from pydantic import BaseModel
 
 from advanced_omi_backend.auth import current_active_user, current_superuser
-from advanced_omi_backend.controllers import system_controller, session_controller, queue_controller
+from advanced_omi_backend.controllers import (
+    queue_controller,
+    session_controller,
+    system_controller,
+)
 from advanced_omi_backend.models.user import User
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["system"])
+
+
+# Request models for memory config endpoints
+class MemoryConfigRequest(BaseModel):
+    """Request model for memory configuration validation and updates."""
+    config_yaml: str
 
 
 @router.get("/metrics")
@@ -91,11 +102,11 @@ async def update_memory_config_raw(
 
 @router.post("/admin/memory/config/validate")
 async def validate_memory_config(
-    config_yaml: str = Body(..., media_type="text/plain"),
+    request: MemoryConfigRequest,
     current_user: User = Depends(current_superuser)
 ):
     """Validate memory configuration YAML syntax. Admin only."""
-    return await system_controller.validate_memory_config(config_yaml)
+    return await system_controller.validate_memory_config(request.config_yaml)
 
 
 @router.post("/admin/memory/config/reload")

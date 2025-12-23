@@ -9,13 +9,14 @@ import time
 from datetime import UTC, datetime
 
 import yaml
+from fastapi import HTTPException
 
 from advanced_omi_backend.config import (
     load_diarization_settings_from_file,
     save_diarization_settings_to_file,
 )
-from advanced_omi_backend.models.user import User
 from advanced_omi_backend.model_registry import _find_config_path, load_models_config
+from advanced_omi_backend.models.user import User
 from advanced_omi_backend.task_manager import get_task_manager
 
 logger = logging.getLogger(__name__)
@@ -80,24 +81,24 @@ async def save_diarization_settings(settings: dict):
     try:
         # Validate settings
         valid_keys = {
-            "diarization_source", "similarity_threshold", "min_duration", "collar", 
+            "diarization_source", "similarity_threshold", "min_duration", "collar",
             "min_duration_off", "min_speakers", "max_speakers"
         }
-        
+
         for key, value in settings.items():
             if key not in valid_keys:
-                raise ValueError(f"Invalid setting key: {key}")
-            
+                raise HTTPException(status_code=400, detail=f"Invalid setting key: {key}")
+
             # Type validation
             if key in ["min_speakers", "max_speakers"]:
                 if not isinstance(value, int) or value < 1 or value > 20:
-                    raise ValueError(f"Invalid value for {key}: must be integer 1-20")
+                    raise HTTPException(status_code=400, detail=f"Invalid value for {key}: must be integer 1-20")
             elif key == "diarization_source":
                 if not isinstance(value, str) or value not in ["pyannote", "deepgram"]:
-                    raise ValueError(f"Invalid value for {key}: must be 'pyannote' or 'deepgram'")
+                    raise HTTPException(status_code=400, detail=f"Invalid value for {key}: must be 'pyannote' or 'deepgram'")
             else:
                 if not isinstance(value, (int, float)) or value < 0:
-                    raise ValueError(f"Invalid value for {key}: must be positive number")
+                    raise HTTPException(status_code=400, detail=f"Invalid value for {key}: must be positive number")
         
         # Get current settings and merge with new values
         current_settings = load_diarization_settings_from_file()
@@ -321,15 +322,18 @@ async def validate_memory_config(config_yaml: str):
         try:
             parsed = yaml.safe_load(config_yaml)
         except yaml.YAMLError as e:
-            raise ValueError(f"Invalid YAML syntax: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Invalid YAML syntax: {str(e)}")
         if not isinstance(parsed, dict):
-            raise ValueError("Configuration must be a YAML object")
+            raise HTTPException(status_code=400, detail="Configuration must be a YAML object")
         # Minimal checks
         # provider optional; timeout_seconds optional; extraction enabled/prompt optional
         return {"message": "Configuration is valid", "status": "success"}
+    except HTTPException:
+        # Re-raise HTTPExceptions without wrapping
+        raise
     except Exception as e:
         logger.exception("Error validating memory config")
-        raise e
+        raise HTTPException(status_code=500, detail=f"Error validating memory config: {str(e)}")
 
 
 async def reload_memory_config():
