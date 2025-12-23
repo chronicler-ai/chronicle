@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Upload audio files to the Friend-Lite backend for processing.
+Upload audio files to the Chronicle backend for processing.
 """
 
 import argparse
@@ -376,7 +376,7 @@ def poll_job_status(job_id: str, token: str, base_url: str, total_files: int) ->
 
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="Upload audio files to Friend-Lite backend")
+    parser = argparse.ArgumentParser(description="Upload audio files to Chronicle backend")
     parser.add_argument(
         "files",
         nargs="*",
@@ -394,7 +394,7 @@ def main():
     """Main function to orchestrate the upload process."""
     args = parse_args()
     
-    logger.info("Friend-Lite Audio File Upload Tool")
+    logger.info("Chronicle Audio File Upload Tool")
     logger.info("=" * 40)
     
     # Load environment variables

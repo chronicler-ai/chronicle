@@ -3,8 +3,8 @@
 #########################  builder #################################
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
 
-# Accept CUDA version as build argument
-ARG CUDA_VERSION
+# Accept PyTorch CUDA version as build argument
+ARG PYTORCH_CUDA_VERSION
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Dependency manifest first for cache‑friendly installs
 COPY pyproject.toml uv.lock ./
-RUN uv sync --no-install-project --group parakeet --extra ${CUDA_VERSION} && \
+RUN uv sync --no-install-project --group parakeet --extra ${PYTORCH_CUDA_VERSION} && \
     uv cache clean
 
 # Should prepare the .venv for use :)

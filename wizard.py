@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Friend-Lite Root Setup Orchestrator
+Chronicle Root Setup Orchestrator
 Handles service selection and delegation only - no configuration duplication
 """
 
@@ -55,7 +55,7 @@ SERVICES = {
     'backend': {
         'advanced': {
             'path': 'backends/advanced',
-            'cmd': ['uv', 'run', '--with-requirements', 'setup-requirements.txt', 'python', 'init.py'],
+            'cmd': ['uv', 'run', '--with-requirements', '../../setup-requirements.txt', 'python', 'init.py'],
             'description': 'Advanced AI backend with full feature set',
             'required': True
         }
@@ -63,12 +63,12 @@ SERVICES = {
     'extras': {
         'speaker-recognition': {
             'path': 'extras/speaker-recognition',
-            'cmd': ['uv', 'run', '--with-requirements', 'setup-requirements.txt', 'python', 'init.py'],
+            'cmd': ['uv', 'run', '--with-requirements', '../../setup-requirements.txt', 'python', 'init.py'],
             'description': 'Speaker identification and enrollment'
         },
         'asr-services': {
             'path': 'extras/asr-services',
-            'cmd': ['./setup.sh'],
+            'cmd': ['uv', 'run', '--with-requirements', '../../setup-requirements.txt', 'python', 'init.py'],
             'description': 'Offline speech-to-text (Parakeet)'
         },
         'openmemory-mcp': {
@@ -86,7 +86,7 @@ def check_service_exists(service_name, service_config):
         return False, f"Directory {service_path} does not exist"
 
     # For services with Python init scripts, check if init.py exists
-    if service_name in ['advanced', 'speaker-recognition']:
+    if service_name in ['advanced', 'speaker-recognition', 'asr-services']:
         script_path = service_path / 'init.py'
         if not script_path.exists():
             return False, f"Script {script_path} does not exist"
@@ -100,7 +100,7 @@ def check_service_exists(service_name, service_config):
 
 def select_services():
     """Let user select which services to setup"""
-    console.print("🚀 [bold cyan]Friend-Lite Service Setup[/bold cyan]")
+    console.print("🚀 [bold cyan]Chronicle Service Setup[/bold cyan]")
     console.print("Select which services to configure:\n")
     
     selected = []
@@ -215,6 +215,14 @@ def run_service_setup(service_name, selected_services, https_enabled=False, serv
                 cmd.extend(['--compute-mode', compute_mode])
                 console.print(f"[blue][INFO][/blue] Found existing COMPUTE_MODE ({compute_mode}), reusing")
         
+        # For asr-services, try to reuse PYTORCH_CUDA_VERSION from speaker-recognition
+        if service_name == 'asr-services':
+            speaker_env_path = 'extras/speaker-recognition/.env'
+            cuda_version = read_env_value(speaker_env_path, 'PYTORCH_CUDA_VERSION')
+            if cuda_version and cuda_version in ['cu121', 'cu126', 'cu128']:
+                cmd.extend(['--pytorch-cuda-version', cuda_version])
+                console.print(f"[blue][INFO][/blue] Found existing PYTORCH_CUDA_VERSION ({cuda_version}) from speaker-recognition, reusing")
+
         # For openmemory-mcp, try to pass OpenAI API key from backend if available
         if service_name == 'openmemory-mcp':
             backend_env_path = 'backends/advanced/.env'
@@ -302,7 +310,7 @@ def setup_git_hooks():
 
 def main():
     """Main orchestration logic"""
-    console.print("🎉 [bold green]Welcome to Friend-Lite![/bold green]\n")
+    console.print("🎉 [bold green]Welcome to Chronicle![/bold green]\n")
 
     # Setup git hooks first
     setup_git_hooks()
@@ -411,12 +419,13 @@ def main():
     console.print("4. Stop services when done:")
     console.print("   [cyan]uv run --with-requirements setup-requirements.txt python services.py stop --all[/cyan]")
     
-    console.print(f"\n🚀 [bold]Enjoy Friend-Lite![/bold]")
+    console.print(f"\n🚀 [bold]Enjoy Chronicle![/bold]")
     
     # Show individual service usage
     console.print(f"\n💡 [dim]Tip: You can also setup services individually:[/dim]")
-    console.print(f"[dim]   cd backends/advanced && uv run --with-requirements setup-requirements.txt python init.py[/dim]")
-    console.print(f"[dim]   cd extras/speaker-recognition && uv run --with-requirements setup-requirements.txt python init.py[/dim]")
+    console.print(f"[dim]   cd backends/advanced && uv run --with-requirements ../../setup-requirements.txt python init.py[/dim]")
+    console.print(f"[dim]   cd extras/speaker-recognition && uv run --with-requirements ../../setup-requirements.txt python init.py[/dim]")
+    console.print(f"[dim]   cd extras/asr-services && uv run --with-requirements ../../setup-requirements.txt python init.py[/dim]")
 
 if __name__ == "__main__":
     main()

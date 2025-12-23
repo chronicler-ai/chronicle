@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
 """
-Sync Friend-Lite users with Mycelia OAuth credentials.
+Sync Chronicle users with Mycelia OAuth credentials.
 
-This script helps migrate existing Friend-Lite installations to use Mycelia,
-or sync existing Mycelia installations with Friend-Lite users.
+This script helps migrate existing Chronicle installations to use Mycelia,
+or sync existing Mycelia installations with Chronicle users.
 
 Usage:
     # Dry run (preview changes)
-    python scripts/sync_friendlite_mycelia.py --dry-run
+    python scripts/sync_chronicle_mycelia.py --dry-run
 
     # Sync all users
-    python scripts/sync_friendlite_mycelia.py --sync-all
+    python scripts/sync_chronicle_mycelia.py --sync-all
 
     # Sync specific user
-    python scripts/sync_friendlite_mycelia.py --email admin@example.com
+    python scripts/sync_chronicle_mycelia.py --email admin@example.com
 
     # Check for orphaned Mycelia objects
-    python scripts/sync_friendlite_mycelia.py --check-orphans
+    python scripts/sync_chronicle_mycelia.py --check-orphans
 
     # Reassign orphaned objects to a user
-    python scripts/sync_friendlite_mycelia.py --reassign-orphans --target-email admin@example.com
+    python scripts/sync_chronicle_mycelia.py --reassign-orphans --target-email admin@example.com
 
 Environment Variables:
     MONGODB_URI or MONGO_URL - MongoDB connection string
@@ -41,18 +41,18 @@ from bson import ObjectId
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 
-class FriendLiteMyceliaSync:
-    """Sync Friend-Lite users with Mycelia OAuth credentials."""
+class ChronicleMyceliaSync:
+    """Sync Chronicle users with Mycelia OAuth credentials."""
 
-    def __init__(self, mongo_url: str, mycelia_db: str, friendlite_db: str):
+    def __init__(self, mongo_url: str, mycelia_db: str, chronicle_db: str):
         self.mongo_url = mongo_url
         self.mycelia_db = mycelia_db
-        self.friendlite_db = friendlite_db
+        self.chronicle_db = chronicle_db
         self.client = MongoClient(mongo_url)
 
         print(f"📊 Connected to MongoDB:")
         print(f"   URL: {mongo_url}")
-        print(f"   Friend-Lite DB: {friendlite_db}")
+        print(f"   Chronicle DB: {chronicle_db}")
         print(f"   Mycelia DB: {mycelia_db}\n")
 
     def _hash_api_key_with_salt(self, api_key: str, salt: bytes) -> str:
@@ -62,9 +62,9 @@ class FriendLiteMyceliaSync:
         h.update(api_key.encode('utf-8'))
         return base64.b64encode(h.digest()).decode('utf-8')
 
-    def get_all_friendlite_users(self) -> List[Dict]:
-        """Get all users from Friend-Lite database."""
-        db = self.client[self.friendlite_db]
+    def get_all_chronicle_users(self) -> List[Dict]:
+        """Get all users from Chronicle database."""
+        db = self.client[self.chronicle_db]
         users = list(db["users"].find({}))
         return users
 
@@ -84,7 +84,7 @@ class FriendLiteMyceliaSync:
         return api_key
 
     def create_mycelia_api_key(self, user_id: str, user_email: str, dry_run: bool = False) -> Tuple[str, str]:
-        """Create a Mycelia API key for a Friend-Lite user."""
+        """Create a Mycelia API key for a Chronicle user."""
         # Generate API key
         random_part = secrets.token_urlsafe(32)
         api_key = f"mycelia_{random_part}"
@@ -96,7 +96,7 @@ class FriendLiteMyceliaSync:
             "hashedKey": hashed_key,
             "salt": base64.b64encode(salt).decode('utf-8'),
             "owner": user_id,
-            "name": f"Friend-Lite Auto ({user_email})",
+            "name": f"Chronicle Auto ({user_email})",
             "policies": [{"resource": "**", "action": "*", "effect": "allow"}],
             "openPrefix": open_prefix,
             "createdAt": datetime.utcnow(),
@@ -111,8 +111,8 @@ class FriendLiteMyceliaSync:
         result = db["api_keys"].insert_one(api_key_doc)
         client_id = str(result.inserted_id)
 
-        # Update Friend-Lite user document
-        fl_db = self.client[self.friendlite_db]
+        # Update Chronicle user document
+        fl_db = self.client[self.chronicle_db]
         fl_db["users"].update_one(
             {"_id": ObjectId(user_id)},
             {
@@ -156,13 +156,13 @@ class FriendLiteMyceliaSync:
             return False
 
     def sync_all_users(self, dry_run: bool = False):
-        """Sync all Friend-Lite users to Mycelia OAuth."""
-        users = self.get_all_friendlite_users()
+        """Sync all Chronicle users to Mycelia OAuth."""
+        users = self.get_all_chronicle_users()
 
         print(f"{'='*80}")
         print(f"SYNC ALL USERS")
         print(f"{'='*80}")
-        print(f"Found {len(users)} Friend-Lite users\n")
+        print(f"Found {len(users)} Chronicle users\n")
 
         if dry_run:
             print("🔍 DRY RUN MODE - No changes will be made\n")
@@ -180,8 +180,8 @@ class FriendLiteMyceliaSync:
         print(f"{'='*80}\n")
 
     def check_orphaned_objects(self):
-        """Find Mycelia objects with userId not matching any Friend-Lite user."""
-        users = self.get_all_friendlite_users()
+        """Find Mycelia objects with userId not matching any Chronicle user."""
+        users = self.get_all_chronicle_users()
         user_ids = {str(user["_id"]) for user in users}
 
         objects = self.get_all_mycelia_objects()
@@ -189,7 +189,7 @@ class FriendLiteMyceliaSync:
         print(f"{'='*80}")
         print(f"ORPHANED OBJECTS CHECK")
         print(f"{'='*80}")
-        print(f"Friend-Lite users: {len(user_ids)}")
+        print(f"Chronicle users: {len(user_ids)}")
         print(f"Mycelia objects:   {len(objects)}\n")
 
         orphaned = []
@@ -229,20 +229,20 @@ class FriendLiteMyceliaSync:
         return orphaned
 
     def reassign_orphaned_objects(self, target_email: str, dry_run: bool = False):
-        """Reassign all orphaned objects to a specific Friend-Lite user."""
+        """Reassign all orphaned objects to a specific Chronicle user."""
         # Get target user
-        fl_db = self.client[self.friendlite_db]
+        fl_db = self.client[self.chronicle_db]
         target_user = fl_db["users"].find_one({"email": target_email})
 
         if not target_user:
-            print(f"✗ User with email '{target_email}' not found in Friend-Lite")
+            print(f"✗ User with email '{target_email}' not found in Chronicle")
             return
 
         target_user_id = str(target_user["_id"])
         print(f"Target user: {target_email} (ID: {target_user_id})\n")
 
         # Find orphaned objects
-        users = self.get_all_friendlite_users()
+        users = self.get_all_chronicle_users()
         user_ids = {str(user["_id"]) for user in users}
         objects = self.get_all_mycelia_objects()
 
@@ -291,7 +291,7 @@ class FriendLiteMyceliaSync:
 
     def display_sync_status(self):
         """Display current sync status."""
-        users = self.get_all_friendlite_users()
+        users = self.get_all_chronicle_users()
 
         print(f"{'='*80}")
         print(f"SYNC STATUS")
@@ -326,13 +326,13 @@ class FriendLiteMyceliaSync:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Sync Friend-Lite users with Mycelia OAuth credentials",
+        description="Sync Chronicle users with Mycelia OAuth credentials",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__
     )
 
     parser.add_argument("--dry-run", action="store_true", help="Preview changes without making them")
-    parser.add_argument("--sync-all", action="store_true", help="Sync all Friend-Lite users")
+    parser.add_argument("--sync-all", action="store_true", help="Sync all Chronicle users")
     parser.add_argument("--email", type=str, help="Sync specific user by email")
     parser.add_argument("--check-orphans", action="store_true", help="Check for orphaned Mycelia objects")
     parser.add_argument("--reassign-orphans", action="store_true", help="Reassign orphaned objects to target user")
@@ -346,14 +346,14 @@ def main():
 
     # Extract database name from MONGODB_URI if present
     if "/" in mongo_url and mongo_url.count("/") >= 3:
-        friendlite_db = mongo_url.split("/")[-1].split("?")[0] or "friend-lite"
+        chronicle_db = mongo_url.split("/")[-1].split("?")[0] or "chronicle"
     else:
-        friendlite_db = "friend-lite"
+        chronicle_db = "chronicle"
 
     mycelia_db = os.getenv("MYCELIA_DB", os.getenv("DATABASE_NAME", "mycelia"))
 
     # Create sync service
-    sync = FriendLiteMyceliaSync(mongo_url, mycelia_db, friendlite_db)
+    sync = ChronicleMyceliaSync(mongo_url, mycelia_db, chronicle_db)
 
     # Execute requested action
     if args.status:
@@ -361,7 +361,7 @@ def main():
     elif args.sync_all:
         sync.sync_all_users(dry_run=args.dry_run)
     elif args.email:
-        fl_db = sync.client[friendlite_db]
+        fl_db = sync.client[chronicle_db]
         user = fl_db["users"].find_one({"email": args.email})
         if user:
             sync.sync_user(user, dry_run=args.dry_run)

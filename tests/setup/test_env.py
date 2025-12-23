@@ -1,11 +1,25 @@
 # Test Environment Configuration
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 
-# Load .env.test from the tests directory (one level up from setup/)
-test_env_path = Path(__file__).resolve().parents[1] / ".env.test"
-load_dotenv(test_env_path)
+# Load .env file from backends/advanced directory if it exists
+# This allows tests to work when run from VSCode or command line
+def load_env_file():
+    """Load environment variables from .env file if it exists."""
+    # Look for .env in backends/advanced directory
+    env_file = Path(__file__).parent.parent.parent / "backends" / "advanced" / ".env"
+    if env_file.exists():
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    # Only set if not already in environment (CI takes precedence)
+                    if key not in os.environ:
+                        os.environ[key] = value
+
+# Load .env file (CI environment variables take precedence)
+load_env_file()
 
 # Load .env from backends/advanced directory to get COMPOSE_PROJECT_NAME
 backend_env_path = Path(__file__).resolve().parents[2] / "backends" / "advanced" / ".env"
@@ -18,15 +32,17 @@ API_BASE = 'http://localhost:8001/api'
 SPEAKER_RECOGNITION_URL = 'http://localhost:8085'  # Speaker recognition service
 
 WEB_URL = os.getenv('FRONTEND_URL', 'http://localhost:3001')  # Use FRONTEND_URL from test.env
+
+# Test-specific credentials (override any values from .env)
+# These are the credentials used in docker-compose-test.yml
+ADMIN_EMAIL = 'test-admin@example.com'
+ADMIN_PASSWORD = 'test-admin-password-123'
+
 # Admin user credentials (Robot Framework format)
 ADMIN_USER = {
-    "email": os.getenv('ADMIN_EMAIL', 'test-admin@example.com'),
-    "password": os.getenv('ADMIN_PASSWORD', 'test-admin-password-123')
+    "email": ADMIN_EMAIL,
+    "password": ADMIN_PASSWORD
 }
-
-# Individual variables for Robot Framework
-ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'test-admin@example.com')
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'test-admin-password-123')
 
 TEST_USER = {
     "email": "test@example.com",
@@ -65,8 +81,9 @@ TEST_CONFIG = {
 # Docker Container Names (dynamically based on COMPOSE_PROJECT_NAME)
 # Default to 'advanced' if not set (which is the directory name)
 COMPOSE_PROJECT_NAME = os.getenv('COMPOSE_PROJECT_NAME', 'advanced')
+BACKEND_CONTAINER = f"{COMPOSE_PROJECT_NAME}-chronicle-backend-test-1"
 WORKERS_CONTAINER = f"{COMPOSE_PROJECT_NAME}-workers-test-1"
-REDIS_CONTAINER = f"{COMPOSE_PROJECT_NAME}-redis-test-1"
-BACKEND_CONTAINER = f"{COMPOSE_PROJECT_NAME}-friend-backend-test-1"
 MONGO_CONTAINER = f"{COMPOSE_PROJECT_NAME}-mongo-test-1"
+REDIS_CONTAINER = f"{COMPOSE_PROJECT_NAME}-redis-test-1"
 QDRANT_CONTAINER = f"{COMPOSE_PROJECT_NAME}-qdrant-test-1"
+WEBUI_CONTAINER = f"{COMPOSE_PROJECT_NAME}-webui-test-1"

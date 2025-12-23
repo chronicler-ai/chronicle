@@ -1,5 +1,5 @@
 """
-System and utility routes for Friend-Lite API.
+System and utility routes for Chronicle API.
 
 Handles metrics, auth config, and other system utilities.
 """

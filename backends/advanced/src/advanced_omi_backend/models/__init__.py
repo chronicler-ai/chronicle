@@ -1,8 +1,8 @@
 """
-Models package for Friend-Lite backend.
+Models package for Chronicle backend.
 
 This package contains Pydantic models that define the structure and validation
-for all data entities in the Friend-Lite system.
+for all data entities in the Chronicle system.
 """
 
 # Models can be imported directly from their files

@@ -28,9 +28,9 @@ async def main():
     logger.info("🚀 Starting Parakeet audio stream worker")
 
     # Get configuration from environment
-    service_url = os.getenv("PARAKEET_ASR_URL") or os.getenv("OFFLINE_ASR_TCP_URI")
+    service_url = os.getenv("PARAKEET_ASR_URL")
     if not service_url:
-        logger.warning("PARAKEET_ASR_URL or OFFLINE_ASR_TCP_URI environment variable not set - Parakeet audio stream worker will not start")
+        logger.warning("PARAKEET_ASR_URL environment variable not set - Parakeet audio stream worker will not start")
         logger.warning("Audio transcription will use alternative providers if configured")
         return
 

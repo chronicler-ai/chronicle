@@ -1,6 +1,6 @@
 # ASR Services
 
-Offline Automatic Speech Recognition (ASR) services for Friend-Lite using the Wyoming protocol.
+Offline Automatic Speech Recognition (ASR) services for Chronicle using the Wyoming protocol.
 
 ## Overview
 
@@ -100,13 +100,14 @@ services:
 
 ## Integration
 
-### With Friend-Lite Backend
+### With Chronicle Backend
 The ASR services integrate as fallback transcription when Deepgram is unavailable:
 ```bash
 # Backend configuration
-OFFLINE_ASR_TCP_URI=tcp://localhost:8765  # Moonshine
-# or
-OFFLINE_ASR_TCP_URI=tcp://localhost:8766  # Parakeet
+PARAKEET_ASR_URL=http://localhost:8765
+
+# Or set the transcription provider explicitly
+TRANSCRIPTION_PROVIDER=parakeet
 ```
 
 ### Client Usage

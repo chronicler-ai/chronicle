@@ -1,5 +1,5 @@
 """
-Chat service implementation for Friend-Lite with memory integration.
+Chat service implementation for Chronicle with memory integration.
 
 This module provides:
 - Chat session management with MongoDB persistence

@@ -35,9 +35,9 @@ class ParakeetStreamConsumer:
             service_url: Parakeet service URL (defaults to PARAKEET_ASR_URL env var)
             buffer_chunks: Number of chunks to buffer before transcribing (default: 30 = ~7.5s)
         """
-        self.service_url = service_url or os.getenv("PARAKEET_ASR_URL") or os.getenv("OFFLINE_ASR_TCP_URI")
+        self.service_url = service_url or os.getenv("PARAKEET_ASR_URL")
         if not self.service_url:
-            raise ValueError("PARAKEET_ASR_URL or OFFLINE_ASR_TCP_URI is required")
+            raise ValueError("PARAKEET_ASR_URL is required")
 
         # Initialize Parakeet provider
         self.provider = ParakeetProvider(service_url=self.service_url)

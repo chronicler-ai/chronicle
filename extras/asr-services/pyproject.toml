@@ -105,3 +105,7 @@ parakeet = [
 [build-system]
 requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# No packages - this project only contains standalone scripts
+packages = []

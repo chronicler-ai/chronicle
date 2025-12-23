@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Friend-Lite Backend Kubernetes Startup Script
+# Chronicle Backend Kubernetes Startup Script
 # Starts both the FastAPI backend and RQ workers for K8s deployment
 
 set -e
 
-echo "🚀 Starting Friend-Lite Backend (Kubernetes)..."
+echo "🚀 Starting Chronicle Backend (Kubernetes)..."
 
 # Debug environment variables
 echo "🔍 Environment check:"

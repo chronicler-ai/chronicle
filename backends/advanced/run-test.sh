@@ -39,33 +39,74 @@ print_info "Advanced Backend Integration Test Runner"
 print_info "========================================"
 
 # Load environment variables (CI or local)
-if [ -f ".env" ] && [ -z "$DEEPGRAM_API_KEY" ]; then
+# Priority: CI environment > .env.test > .env
+if [ -n "$DEEPGRAM_API_KEY" ]; then
+    print_info "Using environment variables from CI/environment..."
+elif [ -f ".env.test" ]; then
+    print_info "Loading environment variables from .env.test..."
+    set -a
+    source .env.test
+    set +a
+elif [ -f ".env" ]; then
     print_info "Loading environment variables from .env..."
     set -a
     source .env
     set +a
-elif [ -n "$DEEPGRAM_API_KEY" ]; then
-    print_info "Using environment variables from CI..."
 else
-    print_error "Neither .env file nor CI environment variables found!"
-    print_info "For local development: cp .env.template .env and configure API keys"
-    print_info "For CI: ensure DEEPGRAM_API_KEY and OPENAI_API_KEY secrets are set"
+    print_error "Neither .env.test nor .env file found, and no environment variables set!"
+    print_info "For local development: cp .env.template .env and configure required API keys"
+    print_info "For CI: ensure required API keys are set based on configured providers"
     exit 1
 fi
 
-# Verify required environment variables
-if [ -z "$DEEPGRAM_API_KEY" ]; then
-    print_error "DEEPGRAM_API_KEY not set"
-    exit 1
-fi
+# Verify required environment variables based on configured providers
+TRANSCRIPTION_PROVIDER=${TRANSCRIPTION_PROVIDER:-deepgram}
+LLM_PROVIDER=${LLM_PROVIDER:-openai}
 
-if [ -z "$OPENAI_API_KEY" ]; then
-    print_error "OPENAI_API_KEY not set"
-    exit 1
-fi
+print_info "Configured providers:"
+print_info "  TRANSCRIPTION_PROVIDER: $TRANSCRIPTION_PROVIDER"
+print_info "  LLM_PROVIDER: $LLM_PROVIDER"
 
-print_info "DEEPGRAM_API_KEY length: ${#DEEPGRAM_API_KEY}"
-print_info "OPENAI_API_KEY length: ${#OPENAI_API_KEY}"
+# Check transcription provider API key
+case "$TRANSCRIPTION_PROVIDER" in
+    deepgram)
+        if [ -z "$DEEPGRAM_API_KEY" ]; then
+            print_error "DEEPGRAM_API_KEY not set (required for TRANSCRIPTION_PROVIDER=deepgram)"
+            exit 1
+        fi
+        print_info "DEEPGRAM_API_KEY length: ${#DEEPGRAM_API_KEY}"
+        ;;
+    mistral)
+        if [ -z "$MISTRAL_API_KEY" ]; then
+            print_error "MISTRAL_API_KEY not set (required for TRANSCRIPTION_PROVIDER=mistral)"
+            exit 1
+        fi
+        print_info "MISTRAL_API_KEY length: ${#MISTRAL_API_KEY}"
+        ;;
+    offline|parakeet)
+        print_info "Using offline/local transcription - no API key required"
+        ;;
+    *)
+        print_warning "Unknown TRANSCRIPTION_PROVIDER: $TRANSCRIPTION_PROVIDER"
+        ;;
+esac
+
+# Check LLM provider API key (for memory extraction)
+case "$LLM_PROVIDER" in
+    openai)
+        if [ -z "$OPENAI_API_KEY" ]; then
+            print_error "OPENAI_API_KEY not set (required for LLM_PROVIDER=openai)"
+            exit 1
+        fi
+        print_info "OPENAI_API_KEY length: ${#OPENAI_API_KEY}"
+        ;;
+    ollama)
+        print_info "Using Ollama for LLM - no API key required"
+        ;;
+    *)
+        print_warning "Unknown LLM_PROVIDER: $LLM_PROVIDER"
+        ;;
+esac
 
 # Ensure memory_config.yaml exists
 if [ ! -f "memory_config.yaml" ] && [ -f "memory_config.yaml.template" ]; then
@@ -119,9 +160,19 @@ export DOCKER_BUILDKIT=0
 
 # Run the integration test with extended timeout (mem0 needs time for comprehensive extraction)
 print_info "Starting integration test (timeout: 15 minutes)..."
-timeout 900 uv run pytest tests/test_integration.py::test_full_pipeline_integration -v -s --tb=short --log-cli-level=INFO
+if timeout 900 uv run pytest tests/test_integration.py::test_full_pipeline_integration -v -s --tb=short --log-cli-level=INFO; then
+    print_success "Integration tests completed successfully!"
+else
+    TEST_EXIT_CODE=$?
+    print_error "Integration tests FAILED with exit code: $TEST_EXIT_CODE"
 
-print_success "Integration tests completed successfully!"
+    # Clean up test containers before exiting
+    print_info "Cleaning up test containers after failure..."
+    docker compose -f docker-compose-test.yml down -v || true
+    docker system prune -f || true
+
+    exit $TEST_EXIT_CODE
+fi
 
 # Clean up test containers
 print_info "Cleaning up test containers..."

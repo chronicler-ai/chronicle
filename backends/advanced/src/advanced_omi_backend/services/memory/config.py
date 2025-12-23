@@ -34,7 +34,7 @@ class VectorStoreProvider(Enum):
 
 class MemoryProvider(Enum):
     """Supported memory service providers."""
-    FRIEND_LITE = "friend_lite"      # Default sophisticated implementation
+    CHRONICLE = "chronicle"            # Default sophisticated implementation
     OPENMEMORY_MCP = "openmemory_mcp"  # OpenMemory MCP backend
     MYCELIA = "mycelia"                # Mycelia memory backend
 
@@ -42,7 +42,7 @@ class MemoryProvider(Enum):
 @dataclass
 class MemoryConfig:
     """Configuration for memory service."""
-    memory_provider: MemoryProvider = MemoryProvider.FRIEND_LITE
+    memory_provider: MemoryProvider = MemoryProvider.CHRONICLE
     llm_provider: LLMProvider = LLMProvider.OPENAI
     vector_store_provider: VectorStoreProvider = VectorStoreProvider.QDRANT
     llm_config: Dict[str, Any] = None
@@ -111,7 +111,7 @@ def create_qdrant_config(
 
 def create_openmemory_config(
     server_url: str = "http://localhost:8765",
-    client_name: str = "friend_lite",
+    client_name: str = "chronicle",
     user_id: str = "default",
     timeout: int = 30
 ) -> Dict[str, Any]:
@@ -145,17 +145,23 @@ def build_memory_config_from_env() -> MemoryConfig:
     """Build memory configuration from environment variables and YAML config."""
     try:
         # Determine memory provider
-        memory_provider = os.getenv("MEMORY_PROVIDER", "friend_lite").lower()
+        memory_provider = os.getenv("MEMORY_PROVIDER", "chronicle").lower()
+
+        # Map legacy provider names to current names
+        if memory_provider in ("friend-lite", "friend_lite"):
+            memory_logger.info(f"🔧 Mapping legacy provider '{memory_provider}' to 'chronicle'")
+            memory_provider = "chronicle"
+
         if memory_provider not in [p.value for p in MemoryProvider]:
             raise ValueError(f"Unsupported memory provider: {memory_provider}")
-        
+
         memory_provider_enum = MemoryProvider(memory_provider)
         
         # For OpenMemory MCP, configuration is much simpler
         if memory_provider_enum == MemoryProvider.OPENMEMORY_MCP:
             openmemory_config = create_openmemory_config(
                 server_url=os.getenv("OPENMEMORY_MCP_URL", "http://localhost:8765"),
-                client_name=os.getenv("OPENMEMORY_CLIENT_NAME", "friend_lite"),
+                client_name=os.getenv("OPENMEMORY_CLIENT_NAME", "chronicle"),
                 user_id=os.getenv("OPENMEMORY_USER_ID", "default"),
                 timeout=int(os.getenv("OPENMEMORY_TIMEOUT", "30"))
             )
@@ -199,7 +205,7 @@ def build_memory_config_from_env() -> MemoryConfig:
                 timeout_seconds=int(os.getenv("MYCELIA_TIMEOUT", "30"))
             )
         
-        # For Friend-Lite provider, use existing complex configuration
+        # For Chronicle provider, use existing complex configuration
         # Import config loader
         from advanced_omi_backend.memory_config_loader import get_config_loader
         
@@ -282,7 +288,7 @@ def build_memory_config_from_env() -> MemoryConfig:
         extraction_enabled = config_loader.is_memory_extraction_enabled()
         extraction_prompt = config_loader.get_memory_prompt() if extraction_enabled else None
         
-        memory_logger.info(f"🔧 Memory config: Provider=Friend-Lite, LLM={llm_provider}, VectorStore={vector_store_provider}, Extraction={extraction_enabled}")
+        memory_logger.info(f"🔧 Memory config: Provider=Chronicle, LLM={llm_provider}, VectorStore={vector_store_provider}, Extraction={extraction_enabled}")
         
         return MemoryConfig(
             memory_provider=memory_provider_enum,

@@ -1,6 +1,6 @@
 # Robot Framework Testing User Guide
 
-A beginner-friendly guide to setting up VSCode for Robot Framework testing, running tests, and creating new tests for the Friend-Lite project.
+A beginner-friendly guide to setting up VSCode for Robot Framework testing, running tests, and creating new tests for the Chronicle project.
 
 ## Table of Contents
 - [VSCode Setup](#vscode-setup)

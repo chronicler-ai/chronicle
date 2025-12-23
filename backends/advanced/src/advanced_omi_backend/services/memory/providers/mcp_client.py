@@ -28,7 +28,7 @@ class MCPClient:
         client: HTTP client instance
     """
     
-    def __init__(self, server_url: str, client_name: str = "friend_lite", user_id: str = "default", user_email: str = "", timeout: int = 30):
+    def __init__(self, server_url: str, client_name: str = "chronicle", user_id: str = "default", user_email: str = "", timeout: int = 30):
         """Initialize client for OpenMemory.
 
         Args:
@@ -127,7 +127,17 @@ class MCPClient:
 
             response = await self.client.post(
                 f"{self.server_url}/api/v1/memories/",
-                json=payload
+                json={
+                    "user_id": self.user_id,
+                    "text": text,
+                    "app": self.client_name,  # Use app name (OpenMemory accepts name or UUID)
+                    "metadata": {
+                        "source": "chronicle",
+                        "client": self.client_name,
+                        "user_email": self.user_email
+                    },
+                    "infer": True
+                }
             )
 
             response_body = response.text[:500] if response.status_code != 200 else "..."
@@ -220,7 +230,7 @@ class MCPClient:
             else:
                 memories = []
             
-            # Format memories for Friend-Lite
+            # Format memories for Chronicle
             formatted_memories = []
             for memory in memories:
                 formatted_memories.append({
@@ -374,7 +384,7 @@ class MCPClient:
             response.raise_for_status()
             result = response.json()
 
-            # Format memory for Friend-Lite
+            # Format memory for Chronicle
             if isinstance(result, dict):
                 return {
                     "id": result.get("id", memory_id),

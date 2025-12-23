@@ -23,6 +23,7 @@ from advanced_omi_backend.users import User, UserCreate, get_user_db
 logger = logging.getLogger(__name__)
 
 load_dotenv()
+JWT_LIFETIME_SECONDS = int(os.getenv("JWT_LIFETIME_SECONDS", "86400"))
 
 # JWT configuration
 JWT_LIFETIME_SECONDS = 86400  # 24 hours
@@ -114,18 +115,18 @@ def generate_jwt_for_user(user_id: str, user_email: str) -> str:
         user_email: User's email address
 
     Returns:
-        JWT token string valid for 24 hours
+        JWT token string valid for JWT_LIFETIME_SECONDS (default: 24 hours)
 
     Example:
         >>> token = generate_jwt_for_user("507f1f77bcf86cd799439011", "user@example.com")
         >>> # Use token to call Mycelia API
     """
-    # Create JWT payload matching Friend-Lite's standard format
+    # Create JWT payload matching Chronicle's standard format
     payload = {
         "sub": user_id,  # Subject = user ID
         "email": user_email,
-        "iss": "friend-lite",  # Issuer
-        "aud": "friend-lite",  # Audience
+        "iss": "chronicle",  # Issuer
+        "aud": "chronicle",  # Audience
         "exp": datetime.utcnow() + timedelta(seconds=JWT_LIFETIME_SECONDS),
         "iat": datetime.utcnow(),  # Issued at
     }

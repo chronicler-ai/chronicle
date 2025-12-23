@@ -1,5 +1,5 @@
 """
-Database configuration and utilities for the Friend-Lite backend.
+Database configuration and utilities for the Chronicle backend.
 
 This module provides centralized database access to avoid duplication
 across main.py and router modules.

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Initialize Friend-Lite Advanced Backend with HTTPS proxy
+# Initialize Chronicle Advanced Backend with HTTPS proxy
 # Usage: ./init.sh <tailscale-ip>
 
 if [ $# -ne 1 ]; then
@@ -23,7 +23,7 @@ if ! echo "$TAILSCALE_IP" | grep -E '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{
     exit 1
 fi
 
-echo "🚀 Initializing Friend-Lite Advanced Backend with Tailscale IP: $TAILSCALE_IP"
+echo "🚀 Initializing Chronicle Advanced Backend with Tailscale IP: $TAILSCALE_IP"
 echo ""
 
 # Check if nginx.conf.template exists
@@ -98,7 +98,7 @@ echo "     📱 Navigate to Live Record page"
 echo "     🎤 Microphone access will work over HTTPS"
 echo ""
 echo "🔧 Services included:"
-echo "   - Friend-Lite Backend: Internal (proxied through nginx)"
+echo "   - Chronicle Backend: Internal (proxied through nginx)"
 echo "   - Web Dashboard: https://localhost/ or https://$TAILSCALE_IP/"
 echo "   - WebSocket Audio: wss://localhost/ws_pcm or wss://$TAILSCALE_IP/ws_pcm"
 echo ""

@@ -359,9 +359,9 @@ export default function System() {
                     >
                       {availableProviders.map((provider) => (
                         <option key={provider} value={provider}>
-                          {provider === 'friend_lite' && 'Friend-Lite (Sophisticated)'}
-                          {provider === 'openmemory_mcp' && 'OpenMemory MCP (Cross-client)'}
-                          {provider === 'mycelia' && 'Mycelia (Advanced)'}
+                          {provider === 'chronicle' && 'Chronicle mem'}
+                          {provider === 'openmemory_mcp' && 'OpenMemory (mem0)'}
+                          {provider === 'mycelia' && 'Mycelia mem'}
                         </option>
                       ))}
                     </select>

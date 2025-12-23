@@ -1,7 +1,7 @@
 # ========================================
-# Friend-Lite Management System
+# Chronicle Management System
 # ========================================
-# Central management interface for Friend-Lite project
+# Central management interface for Chronicle project
 # Handles configuration, deployment, and maintenance tasks
 
 # Load environment variables from .env file
@@ -25,7 +25,7 @@ K8S_SCRIPTS_DIR := $(SCRIPTS_DIR)/k8s
 .DEFAULT_GOAL := menu
 
 menu: ## Show interactive menu (default)
-	@echo "🎯 Friend-Lite Management System"
+	@echo "🎯 Chronicle Management System"
 	@echo "================================"
 	@echo
 	@echo "📋 Quick Actions:"
@@ -59,7 +59,7 @@ menu: ## Show interactive menu (default)
 	@echo
 	@echo "🔄 Mycelia Sync:"
 	@echo "  mycelia-sync-status      📊 Show Mycelia OAuth sync status"
-	@echo "  mycelia-sync-all         🔄 Sync all Friend-Lite users to Mycelia"
+	@echo "  mycelia-sync-all         🔄 Sync all Chronicle users to Mycelia"
 	@echo "  mycelia-sync-user        👤 Sync specific user (EMAIL=user@example.com)"
 	@echo "  mycelia-check-orphans    🔍 Find orphaned Mycelia objects"
 	@echo "  mycelia-reassign-orphans ♻️  Reassign orphans (EMAIL=admin@example.com)"
@@ -75,7 +75,7 @@ menu: ## Show interactive menu (default)
 	@echo "💡 Tip: Run 'make help' for detailed help on any target"
 
 help: ## Show detailed help for all targets
-	@echo "🎯 Friend-Lite Management System - Detailed Help"
+	@echo "🎯 Chronicle Management System - Detailed Help"
 	@echo "================================================"
 	@echo
 	@echo "🏗️  KUBERNETES SETUP:"
@@ -110,9 +110,9 @@ help: ## Show detailed help for all targets
 	@echo
 	@echo "🔄 MYCELIA SYNC:"
 	@echo "  mycelia-sync-status Show Mycelia OAuth sync status for all users"
-	@echo "  mycelia-sync-all   Sync all Friend-Lite users to Mycelia OAuth"
+	@echo "  mycelia-sync-all   Sync all Chronicle users to Mycelia OAuth"
 	@echo "  mycelia-sync-user  Sync specific user (EMAIL=user@example.com)"
-	@echo "  mycelia-check-orphans Find Mycelia objects without Friend-Lite owner"
+	@echo "  mycelia-check-orphans Find Mycelia objects without Chronicle owner"
 	@echo "  mycelia-reassign-orphans Reassign orphaned objects (EMAIL=admin@example.com)"
 	@echo
 	@echo "🧪 ROBOT FRAMEWORK TESTING:"
@@ -158,7 +158,7 @@ setup-dev: ## Setup development environment (git hooks, pre-commit)
 
 setup-k8s: ## Initial Kubernetes setup (registry + infrastructure)
 	@echo "🏗️  Starting Kubernetes initial setup..."
-	@echo "This will set up the complete infrastructure for Friend-Lite"
+	@echo "This will set up the complete infrastructure for Chronicle"
 	@echo
 	@echo "📋 Setup includes:"
 	@echo "  • Insecure registry configuration"
@@ -230,10 +230,10 @@ config-k8s: ## Generate Kubernetes configuration files (ConfigMap/Secret only - 
 	@kubectl apply -f k8s-manifests/configmap.yaml -n $(APPLICATION_NAMESPACE) 2>/dev/null || echo "⚠️  ConfigMap not applied (cluster not available?)"
 	@kubectl apply -f k8s-manifests/secrets.yaml -n $(APPLICATION_NAMESPACE) 2>/dev/null || echo "⚠️  Secret not applied (cluster not available?)"
 	@echo "📦 Copying ConfigMap and Secret to speech namespace..."
-	@kubectl get configmap friend-lite-config -n $(APPLICATION_NAMESPACE) -o yaml | \
+	@kubectl get configmap chronicle-config -n $(APPLICATION_NAMESPACE) -o yaml | \
 		sed -e '/namespace:/d' -e '/resourceVersion:/d' -e '/uid:/d' -e '/creationTimestamp:/d' | \
 		kubectl apply -n speech -f - 2>/dev/null || echo "⚠️  ConfigMap not copied to speech namespace"
-	@kubectl get secret friend-lite-secrets -n $(APPLICATION_NAMESPACE) -o yaml | \
+	@kubectl get secret chronicle-secrets -n $(APPLICATION_NAMESPACE) -o yaml | \
 		sed -e '/namespace:/d' -e '/resourceVersion:/d' -e '/uid:/d' -e '/creationTimestamp:/d' | \
 		kubectl apply -n speech -f - 2>/dev/null || echo "⚠️  Secret not copied to speech namespace"
 	@echo "✅ Kubernetes configuration files generated"
@@ -353,13 +353,13 @@ audio-manage: ## Interactive audio file management
 
 mycelia-sync-status: ## Show Mycelia OAuth sync status for all users
 	@echo "📊 Checking Mycelia OAuth sync status..."
-	@cd backends/advanced && uv run python scripts/sync_friendlite_mycelia.py --status
+	@cd backends/advanced && uv run python scripts/sync_chronicle_mycelia.py --status
 
-mycelia-sync-all: ## Sync all Friend-Lite users to Mycelia OAuth
-	@echo "🔄 Syncing all Friend-Lite users to Mycelia OAuth..."
+mycelia-sync-all: ## Sync all Chronicle users to Mycelia OAuth
+	@echo "🔄 Syncing all Chronicle users to Mycelia OAuth..."
 	@echo "⚠️  This will create OAuth credentials for users without them"
 	@read -p "Continue? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
-	@cd backends/advanced && uv run python scripts/sync_friendlite_mycelia.py --sync-all
+	@cd backends/advanced && uv run python scripts/sync_chronicle_mycelia.py --sync-all
 
 mycelia-sync-user: ## Sync specific user to Mycelia OAuth (usage: make mycelia-sync-user EMAIL=user@example.com)
 	@echo "👤 Syncing specific user to Mycelia OAuth..."
@@ -367,11 +367,11 @@ mycelia-sync-user: ## Sync specific user to Mycelia OAuth (usage: make mycelia-s
 		echo "❌ EMAIL parameter is required. Usage: make mycelia-sync-user EMAIL=user@example.com"; \
 		exit 1; \
 	fi
-	@cd backends/advanced && uv run python scripts/sync_friendlite_mycelia.py --email $(EMAIL)
+	@cd backends/advanced && uv run python scripts/sync_chronicle_mycelia.py --email $(EMAIL)
 
-mycelia-check-orphans: ## Find Mycelia objects without Friend-Lite owner
+mycelia-check-orphans: ## Find Mycelia objects without Chronicle owner
 	@echo "🔍 Checking for orphaned Mycelia objects..."
-	@cd backends/advanced && uv run python scripts/sync_friendlite_mycelia.py --check-orphans
+	@cd backends/advanced && uv run python scripts/sync_chronicle_mycelia.py --check-orphans
 
 mycelia-reassign-orphans: ## Reassign orphaned objects to user (usage: make mycelia-reassign-orphans EMAIL=admin@example.com)
 	@echo "♻️  Reassigning orphaned Mycelia objects..."
@@ -381,7 +381,7 @@ mycelia-reassign-orphans: ## Reassign orphaned objects to user (usage: make myce
 	fi
 	@echo "⚠️  This will reassign all orphaned objects to: $(EMAIL)"
 	@read -p "Continue? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
-	@cd backends/advanced && uv run python scripts/sync_friendlite_mycelia.py --reassign-orphans --target-email $(EMAIL)
+	@cd backends/advanced && uv run python scripts/sync_chronicle_mycelia.py --reassign-orphans --target-email $(EMAIL)
 
 # ========================================
 # TESTING TARGETS

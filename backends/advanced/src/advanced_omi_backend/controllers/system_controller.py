@@ -24,13 +24,13 @@ async def get_current_metrics():
     """Get current system metrics."""
     try:
         # Get memory provider configuration
-        memory_provider = os.getenv("MEMORY_PROVIDER", "friend_lite").lower()
-        
+        memory_provider = (await get_memory_provider())["current_provider"]
+
         # Get basic system metrics
         metrics = {
             "timestamp": int(time.time()),
             "memory_provider": memory_provider,
-            "memory_provider_supports_threshold": memory_provider == "friend_lite",
+            "memory_provider_supports_threshold": memory_provider == "chronicle",
         }
 
         return metrics
@@ -470,10 +470,13 @@ async def delete_all_user_memories(user: User):
 async def get_memory_provider():
     """Get current memory provider configuration."""
     try:
-        current_provider = os.getenv("MEMORY_PROVIDER", "friend_lite").lower()
+        current_provider = os.getenv("MEMORY_PROVIDER", "chronicle").lower()
+        # Map legacy provider names to current names
+        if current_provider in ("friend-lite", "friend_lite"):
+            current_provider = "chronicle"
 
         # Get available providers
-        available_providers = ["friend_lite", "openmemory_mcp", "mycelia"]
+        available_providers = ["chronicle", "openmemory_mcp", "mycelia"]
 
         return {
             "current_provider": current_provider,
@@ -493,7 +496,7 @@ async def set_memory_provider(provider: str):
     try:
         # Validate provider
         provider = provider.lower().strip()
-        valid_providers = ["friend_lite", "openmemory_mcp", "mycelia"]
+        valid_providers = ["chronicle", "openmemory_mcp", "mycelia"]
 
         if provider not in valid_providers:
             return JSONResponse(

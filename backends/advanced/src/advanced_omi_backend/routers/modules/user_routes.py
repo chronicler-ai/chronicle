@@ -1,5 +1,5 @@
 """
-User management routes for Friend-Lite API.
+User management routes for Chronicle API.
 
 Handles user CRUD operations and admin user management.
 """

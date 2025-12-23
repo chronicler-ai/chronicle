@@ -43,24 +43,6 @@ fi
 # Set restrictive permissions (owner read/write only)
 chmod 600 .env
 
-# Clone the custom fork of mem0 with OpenMemory fixes
-echo ""
-echo "📦 Setting up custom mem0 fork with OpenMemory..."
-if [ -d "cache/mem0" ]; then
-    echo "  Removing existing mem0 directory..."
-    rm -rf cache/mem0
-fi
-
-echo "  Cloning mem0 fork from AnkushMalaker/mem0..."
-mkdir -p cache
-git clone https://github.com/AnkushMalaker/mem0.git cache/mem0
-cd cache/mem0
-echo "  Checking out fix/get-endpoint branch..."
-git checkout fix/get-endpoint
-cd ../..
-
-echo "✅ Custom mem0 fork ready with OpenMemory improvements"
-
 # Get OpenAI API Key (prompt only if not provided via command line)
 if [ -z "$OPENAI_API_KEY" ]; then
     echo ""
@@ -91,9 +73,6 @@ echo ""
 echo "✅ OpenMemory MCP configured!"
 echo "📁 Configuration saved to .env"
 echo ""
-echo "🚀 To start: docker compose up --build -d"
+echo "🚀 To start: docker compose up -d"
 echo "🌐 MCP Server: http://localhost:8765"
-echo "📱 Web Interface: http://localhost:8765"
-echo "🔧 UI (optional): docker compose --profile ui up -d"
-echo ""
-echo "💡 Note: Using custom mem0 fork from AnkushMalaker/mem0:fix/get-endpoint"
+echo "📱 Web UI: http://localhost:3001"

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Generate self-signed SSL certificate for Friend-Lite Advanced Backend
+# Generate self-signed SSL certificate for Chronicle Advanced Backend
 # Supports localhost, IP addresses, and domain names
 
 SERVER_ADDRESS="$1"

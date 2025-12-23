@@ -1,6 +1,6 @@
-# Friend-Lite Mobile App
+# Chronicle Mobile App
 
-React Native mobile application for connecting OMI devices and streaming audio to Friend-Lite backends. Supports cross-platform deployment on iOS and Android with Bluetooth integration.
+React Native mobile application for connecting OMI devices and streaming audio to Chronicle backends. Supports cross-platform deployment on iOS and Android with Bluetooth integration.
 
 ## Features
 
@@ -64,7 +64,7 @@ npx expo prebuild --clean
 cd ios && pod install && cd ..
 
 # Open in Xcode
-open ios/friendlite.xcworkspace
+open ios/chronicle.xcworkspace
 ```
 
 Build and run from Xcode interface.
@@ -154,7 +154,7 @@ Backend URL: wss://[ngrok-subdomain].ngrok.io/ws_pcm
 ## Phone Audio Streaming (NEW)
 
 ### Overview
-Stream audio directly from your phone's microphone to Friend-Lite backend, bypassing Bluetooth devices. This feature provides a direct audio input method for users who want to use their phone as the audio source.
+Stream audio directly from your phone's microphone to Chronicle backend, bypassing Bluetooth devices. This feature provides a direct audio input method for users who want to use their phone as the audio source.
 
 ### Features
 - **Direct Microphone Access**: Use phone's built-in microphone
@@ -166,7 +166,7 @@ Stream audio directly from your phone's microphone to Friend-Lite backend, bypas
 ### Setup & Usage
 
 #### Enable Phone Audio Streaming
-1. **Open Friend-Lite app**
+1. **Open Chronicle app**
 2. **Configure Backend Connection** (see Backend Configuration section)
 3. **Grant Microphone Permissions** when prompted
 4. **Tap "Stream Phone Audio" button** in main interface
@@ -175,7 +175,7 @@ Stream audio directly from your phone's microphone to Friend-Lite backend, bypas
 #### Requirements
 - **iOS**: iOS 13+ with microphone permissions
 - **Android**: Android API 21+ with microphone permissions  
-- **Network**: Stable connection to Friend-Lite backend
+- **Network**: Stable connection to Chronicle backend
 - **Backend**: Advanced backend running with `/ws_pcm` endpoint
 
 #### Switching Audio Sources
@@ -197,8 +197,8 @@ Stream audio directly from your phone's microphone to Friend-Lite backend, bypas
 - **Restart Recording**: Stop and restart phone audio streaming
 
 #### Permission Issues
-- **iOS**: Settings > Privacy & Security > Microphone > Friend-Lite
-- **Android**: Settings > Apps > Friend-Lite > Permissions > Microphone
+- **iOS**: Settings > Privacy & Security > Microphone > Chronicle
+- **Android**: Settings > Apps > Chronicle > Permissions > Microphone
 
 #### No Audio Level Visualization
 - **Restart App**: Close and reopen the application
@@ -210,7 +210,7 @@ Stream audio directly from your phone's microphone to Friend-Lite backend, bypas
 ### Device Connection
 
 1. **Enable Bluetooth** on your mobile device
-2. **Open Friend-Lite app**
+2. **Open Chronicle app**
 3. **Pair OMI device**:
    - Go to Device Settings
    - Scan for nearby OMI devices

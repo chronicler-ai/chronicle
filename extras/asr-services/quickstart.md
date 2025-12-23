@@ -40,11 +40,11 @@ python client.py --host localhost --port 8765 --audio test.wav
 python client.py --host localhost --port 8765 --microphone
 ```
 
-### Integration with Friend-Lite
-Set the offline ASR URI in your Friend-Lite backend:
+### Integration with Chronicle
+Set the Parakeet ASR URL in your Chronicle backend:
 ```bash
 # In your .env file
-OFFLINE_ASR_TCP_URI=tcp://localhost:8765
+PARAKEET_ASR_URL=http://localhost:8765
 ```
 
 ## Verify Setup
@@ -55,7 +55,7 @@ OFFLINE_ASR_TCP_URI=tcp://localhost:8765
 
 ## Next Steps
 
-1. **Configure Backend**: Update Friend-Lite to use offline ASR as fallback
+1. **Configure Backend**: Update Chronicle to use offline ASR as fallback
 2. **Test Integration**: Verify transcription works when Deepgram is unavailable
 3. **Performance Tuning**: Monitor CPU/memory usage and adjust as needed
 4. **Production Deploy**: Scale services based on load requirements
