@@ -47,7 +47,8 @@ fi
 
 # Start services
 echo "🚀 Starting OpenMemory MCP services..."
-docker compose up -d $PROFILE
+echo "   (Building from Ushadow-io/mem0 fork...)"
+docker compose up --build -d $PROFILE
 
 # Wait for services to be ready
 echo "⏳ Waiting for services to be ready..."

@@ -36,8 +36,8 @@ SERVICES = {
     'openmemory-mcp': {
         'path': 'extras/openmemory-mcp',
         'compose_file': 'docker-compose.yml',
-        'description': 'OpenMemory MCP Server', 
-        'ports': ['8765']
+        'description': 'OpenMemory MCP Server',
+        'ports': ['8765', '7474', '7687', '3333']
     }
 }
 
@@ -45,12 +45,9 @@ def check_service_configured(service_name):
     """Check if service is configured (has .env file)"""
     service = SERVICES[service_name]
     service_path = Path(service['path'])
-    
-    # Backend uses advanced init, others use .env
-    if service_name == 'backend':
-        return (service_path / '.env').exists()
-    else:
-        return (service_path / '.env').exists()
+
+    # All services now use .env in their root directory
+    return (service_path / '.env').exists()
 
 def run_compose_command(service_name, command, build=False):
     """Run docker compose command for a service"""
