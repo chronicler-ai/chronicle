@@ -336,28 +336,40 @@ def main():
     if needs_https:
         console.print("\n🔒 [bold cyan]HTTPS Configuration[/bold cyan]")
         console.print("HTTPS enables microphone access in browsers and secure connections")
-        
+
         try:
             https_enabled = Confirm.ask("Enable HTTPS for selected services?", default=False)
         except EOFError:
             console.print("Using default: No")
             https_enabled = False
-        
+
         if https_enabled:
             console.print("\n[blue][INFO][/blue] For distributed deployments, use your Tailscale IP")
             console.print("[blue][INFO][/blue] For local-only access, use 'localhost'")
             console.print("Examples: localhost, 100.64.1.2, your-domain.com")
-            
+
+            # Check for existing SERVER_IP
+            backend_env_path = 'backends/advanced/.env'
+            existing_ip = read_env_value(backend_env_path, 'SERVER_IP')
+
+            if existing_ip and existing_ip not in ['localhost', 'your-server-ip-here']:
+                # Show existing IP with option to reuse
+                prompt_text = f"Server IP/Domain for SSL certificates ({existing_ip}) [press Enter to reuse, or enter new]"
+                default_value = existing_ip
+            else:
+                prompt_text = "Server IP/Domain for SSL certificates [localhost]"
+                default_value = "localhost"
+
             while True:
                 try:
-                    server_ip = console.input("Server IP/Domain for SSL certificates [localhost]: ").strip()
+                    server_ip = console.input(f"{prompt_text}: ").strip()
                     if not server_ip:
-                        server_ip = "localhost"
+                        server_ip = default_value
                     break
                 except EOFError:
-                    server_ip = "localhost"
+                    server_ip = default_value
                     break
-            
+
             console.print(f"[green]✅[/green] HTTPS configured for: {server_ip}")
     
     # Pure Delegation - Run Each Service Setup
@@ -375,6 +387,15 @@ def main():
         else:
             failed_services.append(service)
     
+    # Check for Obsidian/Neo4j configuration
+    obsidian_enabled = False
+    if 'advanced' in selected_services and 'advanced' not in failed_services:
+        backend_env_path = Path('backends/advanced/.env')
+        if backend_env_path.exists():
+            neo4j_host = read_env_value(str(backend_env_path), 'NEO4J_HOST')
+            if neo4j_host and not is_placeholder(neo4j_host, 'your-neo4j-host-here', 'your_neo4j_host_here'):
+                obsidian_enabled = True
+    
     # Final Summary
     console.print(f"\n🎊 [bold green]Setup Complete![/bold green]")
     console.print(f"✅ {success_count}/{len(selected_services)} services configured successfully")
@@ -382,8 +403,21 @@ def main():
     if failed_services:
         console.print(f"❌ Failed services: {', '.join(failed_services)}")
     
+    # Inform about Obsidian/Neo4j if configured
+    if obsidian_enabled:
+        console.print(f"\n📚 [bold cyan]Obsidian Integration Detected[/bold cyan]")
+        console.print("   Neo4j will be automatically started with the 'obsidian' profile")
+        console.print("   when you start the backend service.")
+    
     # Next Steps
     console.print("\n📖 [bold]Next Steps:[/bold]")
+
+    # Configuration info
+    console.print("")
+    console.print("📝 [bold cyan]Configuration Files Updated:[/bold cyan]")
+    console.print("   • [green].env files[/green] - API keys and service URLs")
+    console.print("   • [green]config.yml[/green] - Model definitions and memory provider settings")
+    console.print("")
 
     # Development Environment Setup
     console.print("1. Setup development environment (git hooks, testing):")

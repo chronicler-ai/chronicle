@@ -101,33 +101,30 @@ cd ../backends/advanced
 print_info "Starting test infrastructure..."
 
 # Ensure required config files exist
-if [ ! -f "memory_config.yaml" ] && [ -f "memory_config.yaml.template" ]; then
-    print_info "Creating memory_config.yaml from template..."
-    cp memory_config.yaml.template memory_config.yaml
-fi
+# memory_config.yaml no longer used; memory settings live in config.yml
 
 # Clean up any existing test containers and volumes for fresh start
 print_info "Cleaning up any existing test environment..."
-docker compose -f docker-compose-ci.yml down -v 2>/dev/null || true
+docker compose -f docker-compose-test.yml down -v 2>/dev/null || true
 
 # Force remove any stuck containers with test names
 print_info "Removing any stuck test containers..."
-docker rm -f advanced-mongo-test-1 advanced-redis-test-1 advanced-qdrant-test-1 advanced-friend-backend-test-1 advanced-workers-test-1 advanced-webui-test-1 2>/dev/null || true
+docker rm -f advanced-mongo-test-1 advanced-redis-test-1 advanced-qdrant-test-1 advanced-chronicle-backend-test-1 advanced-workers-test-1 advanced-webui-test-1 2>/dev/null || true
 
 # Start infrastructure services (MongoDB, Redis, Qdrant)
 print_info "Starting MongoDB, Redis, and Qdrant (fresh containers)..."
-docker compose -f docker-compose-ci.yml up -d --quiet-pull mongo-test redis-test qdrant-test
+docker compose -f docker-compose-test.yml up -d --quiet-pull mongo-test redis-test qdrant-test
 
 # Wait for MongoDB
 print_info "Waiting for MongoDB (up to 60s)..."
 for i in {1..30}; do
-    if docker compose -f docker-compose-ci.yml exec -T mongo-test mongosh --eval "db.adminCommand({ping: 1})" > /dev/null 2>&1; then
+    if docker compose -f docker-compose-test.yml exec -T mongo-test mongosh --eval "db.adminCommand({ping: 1})" > /dev/null 2>&1; then
         print_success "MongoDB is ready"
         break
     fi
     if [ $i -eq 30 ]; then
         print_error "MongoDB failed to start"
-        docker compose -f docker-compose-ci.yml logs mongo-test
+        docker compose -f docker-compose-test.yml logs mongo-test
         exit 1
     fi
     sleep 2
@@ -142,7 +139,7 @@ for i in {1..30}; do
     fi
     if [ $i -eq 30 ]; then
         print_error "Qdrant failed to start"
-        docker compose -f docker-compose-ci.yml logs qdrant-test
+        docker compose -f docker-compose-test.yml logs qdrant-test
         exit 1
     fi
     sleep 2
@@ -150,10 +147,10 @@ done
 
 # Build and start backend
 print_info "Building backend..."
-docker compose -f docker-compose-ci.yml build friend-backend-test
+docker compose -f docker-compose-test.yml build chronicle-backend-test
 
 print_info "Starting backend..."
-docker compose -f docker-compose-ci.yml up -d friend-backend-test
+docker compose -f docker-compose-test.yml up -d chronicle-backend-test
 
 # Wait for backend
 print_info "Waiting for backend (up to 120s)..."
@@ -164,7 +161,7 @@ for i in {1..40}; do
     fi
     if [ $i -eq 40 ]; then
         print_error "Backend failed to start"
-        docker compose -f docker-compose-ci.yml logs friend-backend-test
+        docker compose -f docker-compose-test.yml logs chronicle-backend-test
         exit 1
     fi
     sleep 3
@@ -172,18 +169,18 @@ done
 
 # Start workers
 print_info "Starting RQ workers..."
-docker compose -f docker-compose-ci.yml up -d workers-test
+docker compose -f docker-compose-test.yml up -d workers-test
 
 # Wait for workers container
 print_info "Waiting for workers container (up to 30s)..."
 for i in {1..15}; do
-    if docker compose -f docker-compose-ci.yml ps workers-test | grep -q "Up"; then
+    if docker compose -f docker-compose-test.yml ps workers-test | grep -q "Up"; then
         print_success "Workers container is running"
         break
     fi
     if [ $i -eq 15 ]; then
         print_error "Workers container failed to start"
-        docker compose -f docker-compose-ci.yml logs workers-test
+        docker compose -f docker-compose-test.yml logs workers-test
         exit 1
     fi
     sleep 2
@@ -192,7 +189,7 @@ done
 # Verify workers are registered
 print_info "Waiting for workers to register with Redis (up to 60s)..."
 for i in {1..30}; do
-    WORKER_COUNT=$(docker compose -f docker-compose-ci.yml exec -T workers-test uv run python -c 'from rq import Worker; from redis import Redis; import os; r = Redis.from_url(os.getenv("REDIS_URL", "redis://redis-test:6379/0")); print(len(Worker.all(connection=r)))' 2>/dev/null || echo "0")
+    WORKER_COUNT=$(docker compose -f docker-compose-test.yml exec -T workers-test uv run python -c 'from rq import Worker; from redis import Redis; import os; r = Redis.from_url(os.getenv("REDIS_URL", "redis://redis-test:6379/0")); print(len(Worker.all(connection=r)))' 2>/dev/null || echo "0")
 
     if [ "$WORKER_COUNT" -ge 6 ]; then
         print_success "Found $WORKER_COUNT workers registered"
@@ -201,7 +198,7 @@ for i in {1..30}; do
 
     if [ $i -eq 30 ]; then
         print_error "Workers failed to register after 60s"
-        docker compose -f docker-compose-ci.yml logs --tail=50 workers-test
+        docker compose -f docker-compose-test.yml logs --tail=50 workers-test
         exit 1
     fi
 
@@ -236,10 +233,10 @@ if [ $TEST_EXIT_CODE -ne 0 ]; then
     print_info "Showing service logs..."
     cd ../backends/advanced
     echo "=== Backend Logs (last 50 lines) ==="
-    docker compose -f docker-compose-ci.yml logs --tail=50 friend-backend-test
+    docker compose -f docker-compose-test.yml logs --tail=50 chronicle-backend-test
     echo ""
     echo "=== Worker Logs (last 50 lines) ==="
-    docker compose -f docker-compose-ci.yml logs --tail=50 workers-test
+    docker compose -f docker-compose-test.yml logs --tail=50 workers-test
     cd ../../tests
 fi
 
@@ -286,12 +283,12 @@ fi
 if [ "$CLEANUP_CONTAINERS" = "true" ]; then
     print_info "Cleaning up test containers..."
     cd ../backends/advanced
-    docker compose -f docker-compose-ci.yml down -v
+    docker compose -f docker-compose-test.yml down -v
     cd ../../tests
     print_success "Cleanup complete"
 else
     print_warning "Skipping container cleanup (CLEANUP_CONTAINERS=false)"
-    print_info "To cleanup manually: cd backends/advanced && docker compose -f docker-compose-ci.yml down -v"
+    print_info "To cleanup manually: cd backends/advanced && docker compose -f docker-compose-test.yml down -v"
 fi
 
 if [ $TEST_EXIT_CODE -eq 0 ]; then

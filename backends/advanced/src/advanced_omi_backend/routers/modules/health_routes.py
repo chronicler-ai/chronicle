@@ -20,6 +20,7 @@ from advanced_omi_backend.client_manager import get_client_manager
 from advanced_omi_backend.llm_client import async_health_check
 from advanced_omi_backend.services.memory import get_memory_service
 from advanced_omi_backend.services.transcription import get_transcription_provider
+from advanced_omi_backend.model_registry import get_models_registry
 
 # Create router
 router = APIRouter(tags=["health"])
@@ -38,9 +39,17 @@ memory_service = get_memory_service()
 # Transcription provider
 transcription_provider = get_transcription_provider()
 
-# Qdrant Configuration
-QDRANT_BASE_URL = os.getenv("QDRANT_BASE_URL", "qdrant")
-QDRANT_PORT = os.getenv("QDRANT_PORT", "6333")
+# Registry-driven configuration for display
+REGISTRY = get_models_registry()
+if REGISTRY:
+    _llm_def = REGISTRY.get_default("llm")
+    _embed_def = REGISTRY.get_default("embedding")
+    _vs_def = REGISTRY.get_default("vector_store")
+else:
+    _llm_def = _embed_def = _vs_def = None
+
+QDRANT_BASE_URL = (_vs_def.model_params.get("host") if _vs_def else "qdrant")
+QDRANT_PORT = str(_vs_def.model_params.get("port") if _vs_def else "6333")
 
 
 @router.get("/auth/health")
@@ -83,6 +92,25 @@ async def auth_health_check():
 @router.get("/health")
 async def health_check():
     """Comprehensive health check for all services."""
+    # Load model config once for display fields
+    _llm_def = None
+    _llm_provider = "openai"
+    _llm_model = None
+    _llm_base_url = None
+    _stt_name = None
+
+    try:
+        registry = get_models_registry()
+        if registry:
+            _defaults = registry.defaults
+            _llm_name = _defaults.get("llm")
+            _stt_name = _defaults.get("stt")
+            _llm_def = registry.models.get(_llm_name)
+            _llm_provider = _llm_def.model_provider if _llm_def else "openai"
+            _llm_model = _llm_def.model_name if _llm_def else None
+            _llm_base_url = _llm_def.model_url if _llm_def else None
+    except Exception as e:
+        logger.warning(f"Failed to load model config for health check: {e}")
     health_status = {
         "status": "healthy",
         "timestamp": int(time.time()),
@@ -100,7 +128,7 @@ async def health_check():
                 if transcription_provider
                 else "Not configured"
             ),
-            "transcription_provider": os.getenv("TRANSCRIPTION_PROVIDER", "auto-detect"),
+            "transcription_provider": _stt_name or "not set",
             "provider_type": (
                 transcription_provider.mode if transcription_provider else "none"
             ),
@@ -108,9 +136,9 @@ async def health_check():
             "active_clients": get_client_manager().get_client_count(),
             "new_conversation_timeout_minutes": float(os.getenv("NEW_CONVERSATION_TIMEOUT_MINUTES", "1.5")),
             "audio_cropping_enabled": os.getenv("AUDIO_CROPPING_ENABLED", "true").lower() == "true",
-            "llm_provider": os.getenv("LLM_PROVIDER"),
-            "llm_model": os.getenv("OPENAI_MODEL"),
-            "llm_base_url": os.getenv("OPENAI_BASE_URL"),
+            "llm_provider": (_llm_def.model_provider if _llm_def else None),
+            "llm_model": (_llm_def.model_name if _llm_def else None),
+            "llm_base_url": (_llm_def.model_url if _llm_def else None),
         },
     }
 
@@ -118,12 +146,9 @@ async def health_check():
     critical_services_healthy = True
 
     # Get configuration once at the start
-    memory_provider = os.getenv("MEMORY_PROVIDER", "chronicle").lower()
-
-    # Map legacy provider names to current names
-    if memory_provider in ("friend-lite", "friend_lite"):
-        logger.debug(f"Mapping legacy provider '{memory_provider}' to 'chronicle'")
-        memory_provider = "chronicle"
+    # Memory provider (registry-based)
+    mem_settings = REGISTRY.memory if REGISTRY else {}
+    memory_provider = (mem_settings.get("provider") or "chronicle").lower()
 
     speaker_service_url = os.getenv("SPEAKER_SERVICE_URL")
     openmemory_mcp_url = os.getenv("OPENMEMORY_MCP_URL")
@@ -215,14 +240,14 @@ async def health_check():
             "healthy": "✅" in llm_health.get("status", ""),
             "base_url": llm_health.get("base_url", ""),
             "model": llm_health.get("default_model", ""),
-            "provider": os.getenv("LLM_PROVIDER", "openai"),
+            "provider": (_llm_def.model_provider if _llm_def else "unknown"),
             "critical": False,
         }
     except asyncio.TimeoutError:
         health_status["services"]["audioai"] = {
             "status": "⚠️ Connection Timeout (8s) - Service may not be running",
             "healthy": False,
-            "provider": os.getenv("LLM_PROVIDER", "openai"),
+            "provider": (_llm_def.model_provider if _llm_def else "unknown"),
             "critical": False,
         }
         overall_healthy = False
@@ -230,7 +255,7 @@ async def health_check():
         health_status["services"]["audioai"] = {
             "status": f"⚠️ Connection Failed: {str(e)} - Service may not be running",
             "healthy": False,
-            "provider": os.getenv("LLM_PROVIDER", "openai"),
+            "provider": (_llm_def.model_provider if _llm_def else "unknown"),
             "critical": False,
         }
         overall_healthy = False

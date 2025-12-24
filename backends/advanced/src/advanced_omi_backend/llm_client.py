@@ -9,7 +9,12 @@ import asyncio
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Dict, Any, Optional
+
+from advanced_omi_backend.services.memory.config import load_config_yml as _load_root_config
+from advanced_omi_backend.services.memory.config import resolve_value as _resolve_value
+
+from advanced_omi_backend.model_registry import get_models_registry
 
 logger = logging.getLogger(__name__)
 
@@ -51,11 +56,12 @@ class OpenAILLMClient(LLMClient):
         temperature: float = 0.1,
     ):
         super().__init__(model, temperature)
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        self.base_url = base_url or os.getenv("OPENAI_BASE_URL")
-        self.model = model or os.getenv("OPENAI_MODEL")
+        # Do not read from environment here; values are provided by config.yml
+        self.api_key = api_key
+        self.base_url = base_url
+        self.model = model
         if not self.api_key or not self.base_url or not self.model:
-            raise ValueError("OPENAI_API_KEY, OPENAI_BASE_URL, and OPENAI_MODEL must be set")
+            raise ValueError(f"LLM configuration incomplete: api_key={'set' if self.api_key else 'MISSING'}, base_url={'set' if self.base_url else 'MISSING'}, model={'set' if self.model else 'MISSING'}")
 
         # Initialize OpenAI client with optional Langfuse tracing
         try:
@@ -141,21 +147,26 @@ class OpenAILLMClient(LLMClient):
 
 
 class LLMClientFactory:
-    """Factory for creating LLM clients based on environment configuration."""
+    """Factory for creating LLM clients based on configuration registry."""
 
     @staticmethod
     def create_client() -> LLMClient:
-        """Create an LLM client based on LLM_PROVIDER environment variable."""
-        provider = os.getenv("LLM_PROVIDER", "openai").lower()
-
-        if provider in ["openai", "ollama"]:
-            return OpenAILLMClient(
-                api_key=os.getenv("OPENAI_API_KEY"),
-                base_url=os.getenv("OPENAI_BASE_URL"),
-                model=os.getenv("OPENAI_MODEL"),
-            )
-        else:
-            raise ValueError(f"Unsupported LLM provider: {provider}")
+        """Create an LLM client based on model registry configuration (config.yml)."""
+        registry = get_models_registry()
+        
+        if registry:
+            llm_def = registry.get_default("llm")
+            if llm_def:
+                logger.info(f"Creating LLM client from registry: {llm_def.name} ({llm_def.model_provider})")
+                params = llm_def.model_params or {}
+                return OpenAILLMClient(
+                    api_key=llm_def.api_key,
+                    base_url=llm_def.model_url,
+                    model=llm_def.model_name,
+                    temperature=params.get("temperature", 0.1),
+                )
+        
+        raise ValueError("No default LLM defined in config.yml")
 
     @staticmethod
     def get_supported_providers() -> list:

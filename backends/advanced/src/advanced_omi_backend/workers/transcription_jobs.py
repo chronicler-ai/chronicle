@@ -285,7 +285,9 @@ async def transcribe_full_audio_job(
         # Use provided segments
         for seg in segments:
             # Use identified_as if available (from speaker recognition), otherwise use speaker label
-            speaker_name = seg.get("identified_as") or seg.get("speaker", "Unknown")
+            speaker_id = seg.get("identified_as") or seg.get("speaker", "Unknown")
+            # Convert speaker ID to string if it's an integer (Deepgram returns int speaker IDs)
+            speaker_name = f"Speaker {speaker_id}" if isinstance(speaker_id, int) else speaker_id
 
             speaker_segments.append(
                 Conversation.SpeakerSegment(
@@ -349,7 +351,7 @@ async def transcribe_full_audio_job(
         transcript=transcript_text,
         segments=speaker_segments,
         provider=Conversation.TranscriptProvider(provider_normalized),
-        model=getattr(provider, "model", "unknown"),
+        model=provider.name,
         processing_time_seconds=processing_time,
         metadata=metadata,
         set_as_active=True,

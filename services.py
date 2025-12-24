@@ -74,6 +74,16 @@ def run_compose_command(service_name, command, build=False):
         if caddyfile_path.exists() and caddyfile_path.is_file():
             # Enable HTTPS profile to start Caddy service
             cmd.extend(['--profile', 'https'])
+        
+        # Check if Obsidian/Neo4j is configured (NEO4J_HOST is set)
+        env_file = service_path / '.env'
+        if env_file.exists():
+            env_values = dotenv_values(env_file)
+            neo4j_host = env_values.get('NEO4J_HOST', '')
+            # Check if NEO4J_HOST is set and not a placeholder
+            if neo4j_host and neo4j_host not in ['', 'your-neo4j-host-here', 'your_neo4j_host_here']:
+                # Enable obsidian profile to start Neo4j service
+                cmd.extend(['--profile', 'obsidian'])
     
     # Handle speaker-recognition service specially
     if service_name == 'speaker-recognition' and command in ['up', 'down']:

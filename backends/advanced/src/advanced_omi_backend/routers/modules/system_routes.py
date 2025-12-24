@@ -8,14 +8,25 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, Request
+from pydantic import BaseModel
 
 from advanced_omi_backend.auth import current_active_user, current_superuser
-from advanced_omi_backend.controllers import system_controller, session_controller, queue_controller
+from advanced_omi_backend.controllers import (
+    queue_controller,
+    session_controller,
+    system_controller,
+)
 from advanced_omi_backend.models.user import User
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["system"])
+
+
+# Request models for memory config endpoints
+class MemoryConfigRequest(BaseModel):
+    """Request model for memory configuration validation and updates."""
+    config_yaml: str
 
 
 @router.get("/metrics")
@@ -72,35 +83,42 @@ async def get_speaker_service_status(current_user: User = Depends(current_superu
     return await system_controller.get_speaker_service_status()
 
 
-# Memory Configuration Management Endpoints
-
+# Memory Configuration Management Endpoints Removed - Project uses config.yml exclusively
 @router.get("/admin/memory/config/raw")
 async def get_memory_config_raw(current_user: User = Depends(current_superuser)):
-    """Get current memory configuration YAML as plain text. Admin only."""
+    """Get memory configuration YAML from config.yml. Admin only."""
     return await system_controller.get_memory_config_raw()
-
 
 @router.post("/admin/memory/config/raw")
 async def update_memory_config_raw(
-    config_yaml: str = Body(..., embed=True),
+    config_yaml: str = Body(..., media_type="text/plain"),
     current_user: User = Depends(current_superuser)
 ):
-    """Update memory configuration YAML and hot reload. Admin only."""
+    """Save memory YAML to config.yml and hot-reload. Admin only."""
     return await system_controller.update_memory_config_raw(config_yaml)
+
+
+@router.post("/admin/memory/config/validate/raw")
+async def validate_memory_config_raw(
+    config_yaml: str = Body(..., media_type="text/plain"),
+    current_user: User = Depends(current_superuser),
+):
+    """Validate posted memory YAML as plain text (used by Web UI). Admin only."""
+    return await system_controller.validate_memory_config(config_yaml)
 
 
 @router.post("/admin/memory/config/validate")
 async def validate_memory_config(
-    config_yaml: str = Body(..., embed=True),
+    request: MemoryConfigRequest,
     current_user: User = Depends(current_superuser)
 ):
-    """Validate memory configuration YAML syntax. Admin only."""
-    return await system_controller.validate_memory_config(config_yaml)
+    """Validate memory configuration YAML sent as JSON (used by tests). Admin only."""
+    return await system_controller.validate_memory_config(request.config_yaml)
 
 
 @router.post("/admin/memory/config/reload")
 async def reload_memory_config(current_user: User = Depends(current_superuser)):
-    """Reload memory configuration from file. Admin only."""
+    """Reload memory configuration from config.yml. Admin only."""
     return await system_controller.reload_memory_config()
 
 

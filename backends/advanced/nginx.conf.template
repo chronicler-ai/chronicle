@@ -43,8 +43,8 @@ http {
     }
     
     # Upstream services
-    upstream friend_backend {
-        server friend-backend:8000;
+    upstream chronicle_backend {
+        server chronicle-backend:8000;
     }
     
     upstream friend_webui {
@@ -70,7 +70,7 @@ http {
         
         # Backend API endpoints
         location /api/ {
-            proxy_pass http://friend_backend/api/;
+            proxy_pass http://chronicle_backend/api/;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -80,7 +80,7 @@ http {
         
         # Authentication endpoints
         location /auth/ {
-            proxy_pass http://friend_backend/auth/;
+            proxy_pass http://chronicle_backend/auth/;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -90,7 +90,7 @@ http {
         
         # Users endpoints
         location /users/ {
-            proxy_pass http://friend_backend/users/;
+            proxy_pass http://chronicle_backend/users/;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -100,7 +100,7 @@ http {
         
         # WebSocket endpoints for audio streaming
         location /ws_pcm {
-            proxy_pass http://friend_backend/ws_pcm;
+            proxy_pass http://chronicle_backend/ws_pcm;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection $connection_upgrade;
@@ -117,7 +117,7 @@ http {
         }
         
         location /ws_omi {
-            proxy_pass http://friend_backend/ws_omi;
+            proxy_pass http://chronicle_backend/ws_omi;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection $connection_upgrade;
@@ -135,7 +135,7 @@ http {
         
         # Legacy WebSocket endpoint
         location /ws {
-            proxy_pass http://friend_backend/ws;
+            proxy_pass http://chronicle_backend/ws;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection $connection_upgrade;
@@ -153,7 +153,7 @@ http {
         
         # Health check endpoints
         location /health {
-            proxy_pass http://friend_backend/health;
+            proxy_pass http://chronicle_backend/health;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -162,7 +162,7 @@ http {
         
         # Readiness check endpoint
         location /readiness {
-            proxy_pass http://friend_backend/readiness;
+            proxy_pass http://chronicle_backend/readiness;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -171,7 +171,7 @@ http {
         
         # Audio file serving
         location /audio/ {
-            proxy_pass http://friend_backend/audio/;
+            proxy_pass http://chronicle_backend/audio/;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

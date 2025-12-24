@@ -184,7 +184,7 @@ profiles:
     build:
 
       artifacts:
-        - image: friend-backend-test
+        - image: chronicle-backend-test
           context: backends/advanced
           docker:
             dockerfile: Dockerfile          
@@ -195,7 +195,7 @@ profiles:
 
     deploy:
       docker:
-        images: [friend-backend-test, webui-test, mongo-test, qdrant-test, redis-test]
+        images: [chronicle-backend-test, webui-test, mongo-test, qdrant-test, redis-test]
           
    
 

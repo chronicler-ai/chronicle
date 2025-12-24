@@ -260,7 +260,7 @@ curl -X POST "http://localhost:8000/auth/jwt/login" \
 #### 3. Admin User Creation
 ```bash
 # Check logs for admin creation
-docker compose logs friend-backend | grep -i admin
+docker compose logs chronicle-backend | grep -i admin
 
 # Verify environment variables
 echo $ADMIN_PASSWORD
@@ -272,7 +272,7 @@ echo $ADMIN_PASSWORD
 docker exec -it mongo-container mongosh chronicle
 
 # View authentication logs
-docker compose logs friend-backend | grep -i auth
+docker compose logs chronicle-backend | grep -i auth
 
 # Test API endpoints
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/users/me

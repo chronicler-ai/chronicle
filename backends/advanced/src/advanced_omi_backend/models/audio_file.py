@@ -29,6 +29,10 @@ class AudioFile(Document):
 
     # Core identifiers
     audio_uuid: Indexed(str, unique=True) = Field(description="Unique audio identifier")
+    source: Indexed(str) = Field(
+        default="upload",
+        description="Source of the audio (upload, gdrive, etc.)"
+    )
     audio_path: str = Field(description="Path to raw audio file")
     client_id: Indexed(str) = Field(description="Client device identifier")
     timestamp: Indexed(int) = Field(description="Unix timestamp in milliseconds")
@@ -51,11 +55,13 @@ class AudioFile(Document):
         description="Speech detection results"
     )
 
+
+
     class Settings:
         name = "audio_chunks"
         indexes = [
             "audio_uuid",
             "client_id",
             "user_id",
-            "timestamp"
+            "timestamp", 
         ]

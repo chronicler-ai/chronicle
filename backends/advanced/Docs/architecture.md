@@ -585,7 +585,7 @@ stateDiagram-v2
 ```mermaid
 graph LR
     subgraph "Docker Network"
-        Backend[friend-backend<br/>uv + FastAPI]
+        Backend[chronicle-backend<br/>uv + FastAPI]
         WebUI[webui<br/>React Dashboard]
         Proxy[nginx<br/>Load Balancer]
         Mongo[mongo:4.4.18<br/>Primary Database]
@@ -616,7 +616,7 @@ graph LR
 
 ### Container Specifications
 
-#### Backend Container (`friend-backend`)
+#### Backend Container (`chronicle-backend`)
 - **Base**: Python 3.12 slim with uv package manager
 - **Dependencies**: FastAPI, WebSocket libraries, audio processing tools
 - **Volumes**: Audio chunk storage, debug directories

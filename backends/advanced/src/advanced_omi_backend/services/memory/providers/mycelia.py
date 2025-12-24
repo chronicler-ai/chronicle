@@ -23,6 +23,7 @@ from ..prompts import (
     get_temporal_entity_extraction_prompt,
 )
 from .llm_providers import _get_openai_client
+from advanced_omi_backend.model_registry import get_models_registry
 
 memory_logger = logging.getLogger("memory_service")
 
@@ -241,30 +242,27 @@ class MyceliaMemoryService(MemoryServiceBase):
         Raises:
             RuntimeError: If LLM call fails
         """
-        if not self.llm_config:
-            memory_logger.warning("No LLM config available for fact extraction")
-            return []
-
         try:
-            # Get OpenAI client using Chronicle's utility
-            client = _get_openai_client(
-                api_key=self.llm_config.get("api_key"),
-                base_url=self.llm_config.get("base_url", "https://api.openai.com/v1"),
-                is_async=True,
-            )
-
-            # Call OpenAI for memory extraction
+            # Use registry-driven default LLM with OpenAI SDK
+            reg = get_models_registry()
+            if not reg:
+                memory_logger.warning("No registry available for LLM; cannot extract facts")
+                return []
+            llm_def = reg.get_default("llm")
+            if not llm_def:
+                memory_logger.warning("No default LLM in config.yml; cannot extract facts")
+                return []
+            client = _get_openai_client(api_key=llm_def.api_key or "", base_url=llm_def.model_url, is_async=True)
             response = await client.chat.completions.create(
-                model=self.llm_config.get("model", "gpt-4o-mini"),
+                model=llm_def.model_name,
                 messages=[
                     {"role": "system", "content": FACT_RETRIEVAL_PROMPT},
                     {"role": "user", "content": transcript},
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.1,
+                temperature=float(llm_def.model_params.get("temperature", 0.1)),
             )
-
-            content = response.choices[0].message.content
+            content = (response.choices[0].message.content or "").strip()
 
             if not content:
                 memory_logger.warning("LLM returned empty content")
@@ -299,21 +297,19 @@ class MyceliaMemoryService(MemoryServiceBase):
         Returns:
             TemporalEntity with extracted information, or None if extraction fails
         """
-        if not self.llm_config:
-            memory_logger.warning("No LLM config available for temporal extraction")
-            return None
-
         try:
-            # Get OpenAI client using Chronicle's utility
-            client = _get_openai_client(
-                api_key=self.llm_config.get("api_key"),
-                base_url=self.llm_config.get("base_url", "https://api.openai.com/v1"),
-                is_async=True,
-            )
-
-            # Call OpenAI with structured output request
+            # Use registry-driven default LLM with OpenAI SDK
+            reg = get_models_registry()
+            if not reg:
+                memory_logger.warning("No registry available for LLM; cannot extract temporal entity")
+                return None
+            llm_def = reg.get_default("llm")
+            if not llm_def:
+                memory_logger.warning("No default LLM in config.yml; cannot extract temporal entity")
+                return None
+            client = _get_openai_client(api_key=llm_def.api_key or "", base_url=llm_def.model_url, is_async=True)
             response = await client.chat.completions.create(
-                model=self.llm_config.get("model", "gpt-4o-mini"),
+                model=llm_def.model_name,
                 messages=[
                     {"role": "system", "content": get_temporal_entity_extraction_prompt()},
                     {
@@ -322,7 +318,7 @@ class MyceliaMemoryService(MemoryServiceBase):
                     },
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.1,
+                temperature=float(llm_def.model_params.get("temperature", 0.1)),
             )
 
             content = response.choices[0].message.content

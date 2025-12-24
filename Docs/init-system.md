@@ -230,7 +230,7 @@ curl http://localhost:8767/health
 docker compose logs [service-name]
 
 # Backend logs
-cd backends/advanced && docker compose logs friend-backend
+cd backends/advanced && docker compose logs chronicle-backend
 
 # Speaker Recognition logs
 cd extras/speaker-recognition && docker compose logs speaker-service

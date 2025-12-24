@@ -164,7 +164,7 @@ export const systemApi = {
       headers: { 'Content-Type': 'text/plain' }
     }),
   validateMemoryConfig: (configYaml: string) =>
-    api.post('/api/admin/memory/config/validate', configYaml, {
+    api.post('/api/admin/memory/config/validate/raw', configYaml, {
       headers: { 'Content-Type': 'text/plain' }
     }),
   reloadMemoryConfig: () => api.post('/api/admin/memory/config/reload'),
@@ -204,7 +204,7 @@ export const queueApi = {
 }
 
 export const uploadApi = {
-  uploadAudioFiles: (files: FormData, onProgress?: (progress: number) => void) => 
+  uploadAudioFiles: (files: FormData, onProgress?: (progress: number) => void) =>
     api.post('/api/audio/upload', files, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 300000, // 5 minutes
@@ -213,9 +213,39 @@ export const uploadApi = {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
           onProgress(progress)
         }
-      }
+      },
+    }),
+
+  uploadFromGDriveFolder: (payload: { gdrive_folder_id: string; device_name?: string; auto_generate_client?: boolean }) =>
+    api.post('/api/audio/upload_audio_from_gdrive', null, {
+      params: {
+        gdrive_folder_id: payload.gdrive_folder_id,
+        device_name: payload.device_name,
+        auto_generate_client: payload.auto_generate_client,
+      },
+      timeout: 300000,
     }),
 }
+
+export const obsidianApi = {
+  uploadZip: (file: File, onProgress?: (progress: number) => void) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post('/api/obsidian/upload_zip', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (e) => {
+        if (onProgress && e.total) {
+          onProgress(Math.round((e.loaded * 100) / e.total))
+        }
+      },
+      timeout: 300000,
+    })
+  },
+  start: (jobId: string) => api.post('/api/obsidian/start', { job_id: jobId }),
+  status: (jobId: string) => api.get('/api/obsidian/status', { params: { job_id: jobId } }),
+  cancel: (jobId: string) => api.post('/api/obsidian/cancel', { job_id: jobId }),
+}
+
 
 export const chatApi = {
   // Session management
@@ -238,10 +268,13 @@ export const chatApi = {
   getHealth: () => api.get('/api/chat/health'),
   
   // Streaming chat (returns EventSource for Server-Sent Events)
-  sendMessage: (message: string, sessionId?: string) => {
+  sendMessage: (message: string, sessionId?: string, includeObsidianMemory?: boolean) => {
     const requestBody: any = { message }
     if (sessionId) {
       requestBody.session_id = sessionId
+    }
+    if (includeObsidianMemory) {
+      requestBody.include_obsidian_memory = includeObsidianMemory
     }
     
     return fetch(`${BACKEND_URL}/api/chat/send`, {

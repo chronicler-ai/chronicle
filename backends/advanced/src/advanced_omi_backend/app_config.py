@@ -15,6 +15,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from advanced_omi_backend.constants import OMI_CHANNELS, OMI_SAMPLE_RATE, OMI_SAMPLE_WIDTH
 from advanced_omi_backend.services.transcription import get_transcription_provider
+from advanced_omi_backend.model_registry import get_models_registry
 
 # Load environment variables
 load_dotenv()
@@ -51,13 +52,8 @@ class AppConfig:
         self.min_speech_segment_duration = float(os.getenv("MIN_SPEECH_SEGMENT_DURATION", "1.0"))
         self.cropping_context_padding = float(os.getenv("CROPPING_CONTEXT_PADDING", "0.1"))
 
-        # Transcription Configuration
-        self.transcription_provider_name = os.getenv("TRANSCRIPTION_PROVIDER")
-        self.deepgram_api_key = os.getenv("DEEPGRAM_API_KEY")
-        self.mistral_api_key = os.getenv("MISTRAL_API_KEY")
-
-        # Get configured transcription provider
-        self.transcription_provider = get_transcription_provider(self.transcription_provider_name)
+        # Transcription Configuration (registry-based)
+        self.transcription_provider = get_transcription_provider(None)
         if self.transcription_provider:
             logger.info(
                 f"✅ Using {self.transcription_provider.name} transcription provider ({self.transcription_provider.mode})"
@@ -68,11 +64,10 @@ class AppConfig:
         # External Services Configuration
         self.qdrant_base_url = os.getenv("QDRANT_BASE_URL", "qdrant")
         self.qdrant_port = os.getenv("QDRANT_PORT", "6333")
-        self.memory_provider = os.getenv("MEMORY_PROVIDER", "chronicle").lower()
-        # Map legacy provider names to current names
-        if self.memory_provider in ("friend-lite", "friend_lite"):
-            logger.debug(f"Mapping legacy provider '{self.memory_provider}' to 'chronicle'")
-            self.memory_provider = "chronicle"
+        # Memory provider from registry
+        _reg = get_models_registry()
+        _mem = _reg.memory if _reg else {}
+        self.memory_provider = (_mem.get("provider") or "chronicle").lower()
 
         # Redis Configuration
         self.redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -90,6 +85,9 @@ class AppConfig:
 
         # Memory service configuration
         self.memory_service_supports_threshold = self.memory_provider == "chronicle"
+
+        self.gdrive_credentials_path = "data/gdrive_service_account.json"
+        self.gdrive_scopes = ["https://www.googleapis.com/auth/drive.readonly"]
 
 
 # Global configuration instance

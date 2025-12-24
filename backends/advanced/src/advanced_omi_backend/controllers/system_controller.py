@@ -8,13 +8,15 @@ import shutil
 import time
 from datetime import UTC, datetime
 
+import yaml
+from fastapi import HTTPException
+
 from advanced_omi_backend.config import (
     load_diarization_settings_from_file,
     save_diarization_settings_to_file,
 )
+from advanced_omi_backend.model_registry import _find_config_path, load_models_config
 from advanced_omi_backend.models.user import User
-from advanced_omi_backend.task_manager import get_task_manager
-from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 audio_logger = logging.getLogger("audio_processing")
@@ -36,10 +38,8 @@ async def get_current_metrics():
         return metrics
 
     except Exception as e:
-        audio_logger.error(f"Error fetching metrics: {e}")
-        return JSONResponse(
-            status_code=500, content={"error": f"Failed to fetch metrics: {str(e)}"}
-        )
+        audio_logger.exception("Error fetching metrics")
+        raise e
 
 
 async def get_auth_config():
@@ -71,10 +71,8 @@ async def get_diarization_settings():
             "status": "success"
         }
     except Exception as e:
-        logger.error(f"Error getting diarization settings: {e}")
-        return JSONResponse(
-            status_code=500, content={"error": f"Failed to get settings: {str(e)}"}
-        )
+        logger.exception("Error getting diarization settings")
+        raise e
 
 
 async def save_diarization_settings(settings: dict):
@@ -82,32 +80,24 @@ async def save_diarization_settings(settings: dict):
     try:
         # Validate settings
         valid_keys = {
-            "diarization_source", "similarity_threshold", "min_duration", "collar", 
+            "diarization_source", "similarity_threshold", "min_duration", "collar",
             "min_duration_off", "min_speakers", "max_speakers"
         }
-        
+
         for key, value in settings.items():
             if key not in valid_keys:
-                return JSONResponse(
-                    status_code=400, content={"error": f"Invalid setting key: {key}"}
-                )
-            
+                raise HTTPException(status_code=400, detail=f"Invalid setting key: {key}")
+
             # Type validation
             if key in ["min_speakers", "max_speakers"]:
                 if not isinstance(value, int) or value < 1 or value > 20:
-                    return JSONResponse(
-                        status_code=400, content={"error": f"Invalid value for {key}: must be integer 1-20"}
-                    )
+                    raise HTTPException(status_code=400, detail=f"Invalid value for {key}: must be integer 1-20")
             elif key == "diarization_source":
                 if not isinstance(value, str) or value not in ["pyannote", "deepgram"]:
-                    return JSONResponse(
-                        status_code=400, content={"error": f"Invalid value for {key}: must be 'pyannote' or 'deepgram'"}
-                    )
+                    raise HTTPException(status_code=400, detail=f"Invalid value for {key}: must be 'pyannote' or 'deepgram'")
             else:
                 if not isinstance(value, (int, float)) or value < 0:
-                    return JSONResponse(
-                        status_code=400, content={"error": f"Invalid value for {key}: must be positive number"}
-                    )
+                    raise HTTPException(status_code=400, detail=f"Invalid value for {key}: must be positive number")
         
         # Get current settings and merge with new values
         current_settings = load_diarization_settings_from_file()
@@ -132,10 +122,8 @@ async def save_diarization_settings(settings: dict):
             }
         
     except Exception as e:
-        logger.error(f"Error saving diarization settings: {e}")
-        return JSONResponse(
-            status_code=500, content={"error": f"Failed to save settings: {str(e)}"}
-        )
+        logger.exception("Error saving diarization settings")
+        raise e
 
 
 async def get_speaker_configuration(user: User):
@@ -147,10 +135,8 @@ async def get_speaker_configuration(user: User):
             "status": "success"
         }
     except Exception as e:
-        logger.error(f"Error getting speaker configuration for user {user.user_id}: {e}")
-        return JSONResponse(
-            status_code=500, content={"error": f"Failed to get speaker configuration: {str(e)}"}
-        )
+        logger.exception(f"Error getting speaker configuration for user {user.user_id}")
+        raise e
 
 
 async def update_speaker_configuration(user: User, primary_speakers: list[dict]):
@@ -159,16 +145,12 @@ async def update_speaker_configuration(user: User, primary_speakers: list[dict])
         # Validate speaker data format
         for speaker in primary_speakers:
             if not isinstance(speaker, dict):
-                return JSONResponse(
-                    status_code=400, content={"error": "Each speaker must be a dictionary"}
-                )
+                raise ValueError("Each speaker must be a dictionary")
             
             required_fields = ["speaker_id", "name", "user_id"]
             for field in required_fields:
                 if field not in speaker:
-                    return JSONResponse(
-                        status_code=400, content={"error": f"Missing required field: {field}"}
-                    )
+                    raise ValueError(f"Missing required field: {field}")
         
         # Enforce server-side user_id and add timestamp to each speaker
         for speaker in primary_speakers:
@@ -189,10 +171,8 @@ async def update_speaker_configuration(user: User, primary_speakers: list[dict])
         }
         
     except Exception as e:
-        logger.error(f"Error updating speaker configuration for user {user.user_id}: {e}")
-        return JSONResponse(
-            status_code=500, content={"error": f"Failed to update speaker configuration: {str(e)}"}
-        )
+        logger.exception(f"Error updating speaker configuration for user {user.user_id}")
+        raise e
 
 
 async def get_enrolled_speakers(user: User):
@@ -224,13 +204,8 @@ async def get_enrolled_speakers(user: User):
         }
         
     except Exception as e:
-        logger.error(f"Error getting enrolled speakers for user {user.user_id}: {e}")
-        return {
-            "speakers": [],
-            "service_available": False,
-            "message": f"Failed to retrieve speakers: {str(e)}",
-            "status": "error"
-        }
+        logger.exception(f"Error getting enrolled speakers for user {user.user_id}")
+        raise e
 
 
 async def get_speaker_service_status():
@@ -272,171 +247,103 @@ async def get_speaker_service_status():
             }
         
     except Exception as e:
-        logger.error(f"Error checking speaker service status: {e}")
-        return {
-            "service_available": False,
-            "healthy": False,
-            "message": f"Health check failed: {str(e)}",
-            "status": "error"
-        }
+        logger.exception("Error checking speaker service status")
+        raise e
+
 
 
 # Memory Configuration Management Functions
 
 async def get_memory_config_raw():
-    """Get current memory configuration YAML as plain text."""
+    """Get current memory configuration (memory section of config.yml) as YAML."""
     try:
-        from advanced_omi_backend.memory_config_loader import get_config_loader
-        
-        config_loader = get_config_loader()
-        config_path = config_loader.config_path
-        
-        if not os.path.exists(config_path):
-            return JSONResponse(
-                status_code=404, content={"error": f"Memory config file not found: {config_path}"}
-            )
-        
-        with open(config_path, 'r') as file:
-            config_yaml = file.read()
-        
+        cfg_path = _find_config_path()
+        if not os.path.exists(cfg_path):
+            raise FileNotFoundError(f"Config file not found: {cfg_path}")
+
+        with open(cfg_path, 'r') as f:
+            data = yaml.safe_load(f) or {}
+        memory_section = data.get("memory", {})
+        config_yaml = yaml.safe_dump(memory_section, sort_keys=False)
+
         return {
             "config_yaml": config_yaml,
-            "config_path": config_path,
-            "status": "success"
+            "config_path": str(cfg_path),
+            "section": "memory",
+            "status": "success",
         }
-        
     except Exception as e:
-        logger.error(f"Error reading memory config: {e}")
-        return JSONResponse(
-            status_code=500, content={"error": f"Failed to read memory config: {str(e)}"}
-        )
+        logger.exception("Error reading memory config")
+        raise e
 
 
 async def update_memory_config_raw(config_yaml: str):
-    """Update memory configuration YAML and hot reload."""
+    """Update memory configuration in config.yml and hot reload registry."""
     try:
-        import yaml
-        from advanced_omi_backend.memory_config_loader import get_config_loader
-
-        # First validate YAML syntax
+        # Validate YAML
         try:
-            yaml.safe_load(config_yaml)
+            new_mem = yaml.safe_load(config_yaml) or {}
         except yaml.YAMLError as e:
-            return JSONResponse(
-                status_code=400, content={"error": f"Invalid YAML syntax: {str(e)}"}
-            )
-        
-        config_loader = get_config_loader()
-        config_path = config_loader.config_path
-        
-        # Create backup
-        backup_path = f"{config_path}.bak"
-        if os.path.exists(config_path):
-            shutil.copy2(config_path, backup_path)
-            logger.info(f"Created backup at {backup_path}")
-        
-        # Write new configuration
-        with open(config_path, 'w') as file:
-            file.write(config_yaml)
-        
-        # Hot reload configuration
-        reload_success = config_loader.reload_config()
-        
-        if reload_success:
-            logger.info("Memory configuration updated and reloaded successfully")
-            return {
-                "message": "Memory configuration updated and reloaded successfully",
-                "config_path": config_path,
-                "backup_created": os.path.exists(backup_path),
-                "status": "success"
-            }
-        else:
-            return JSONResponse(
-                status_code=500, content={"error": "Configuration saved but reload failed"}
-            )
-        
+            raise ValueError(f"Invalid YAML syntax: {str(e)}")
+
+        cfg_path = _find_config_path()
+        if not os.path.exists(cfg_path):
+            raise FileNotFoundError(f"Config file not found: {cfg_path}")
+
+        # Backup
+        backup_path = f"{cfg_path}.bak"
+        shutil.copy2(cfg_path, backup_path)
+
+        # Update memory section and write file
+        with open(cfg_path, 'r') as f:
+            data = yaml.safe_load(f) or {}
+        data["memory"] = new_mem
+        with open(cfg_path, 'w') as f:
+            yaml.safe_dump(data, f, sort_keys=False)
+
+        # Reload registry
+        load_models_config(force_reload=True)
+
+        return {
+            "message": "Memory configuration updated and reloaded successfully",
+            "config_path": str(cfg_path),
+            "backup_created": os.path.exists(backup_path),
+            "status": "success",
+        }
     except Exception as e:
-        logger.error(f"Error updating memory config: {e}")
-        return JSONResponse(
-            status_code=500, content={"error": f"Failed to update memory config: {str(e)}"}
-        )
+        logger.exception("Error updating memory config")
+        raise e
 
 
 async def validate_memory_config(config_yaml: str):
-    """Validate memory configuration YAML syntax."""
+    """Validate memory configuration YAML syntax (memory section)."""
     try:
-        import yaml
-        from advanced_omi_backend.memory_config_loader import MemoryConfigLoader
-
-        # Parse YAML
         try:
-            parsed_config = yaml.safe_load(config_yaml)
-            if not parsed_config:
-                return JSONResponse(
-                    status_code=400, content={"error": "Configuration file is empty"}
-                )
+            parsed = yaml.safe_load(config_yaml)
         except yaml.YAMLError as e:
-            return JSONResponse(
-                status_code=400, content={"error": f"Invalid YAML syntax: {str(e)}"}
-            )
-        
-        # Create a temporary config loader to validate structure
-        try:
-            # Create a temporary file for validation
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp_file:
-                tmp_file.write(config_yaml)
-                tmp_path = tmp_file.name
-            
-            # Try to load with MemoryConfigLoader to validate structure
-            temp_loader = MemoryConfigLoader(tmp_path)
-            temp_loader.validate_config()
-            
-            # Clean up temp file
-            os.unlink(tmp_path)
-            
-            return {
-                "message": "Configuration is valid",
-                "status": "success"
-            }
-            
-        except ValueError as e:
-            return JSONResponse(
-                status_code=400, content={"error": f"Configuration validation failed: {str(e)}"}
-            )
-        
+            raise HTTPException(status_code=400, detail=f"Invalid YAML syntax: {str(e)}")
+        if not isinstance(parsed, dict):
+            raise HTTPException(status_code=400, detail="Configuration must be a YAML object")
+        # Minimal checks
+        # provider optional; timeout_seconds optional; extraction enabled/prompt optional
+        return {"message": "Configuration is valid", "status": "success"}
+    except HTTPException:
+        # Re-raise HTTPExceptions without wrapping
+        raise
     except Exception as e:
-        logger.error(f"Error validating memory config: {e}")
-        return JSONResponse(
-            status_code=500, content={"error": f"Failed to validate memory config: {str(e)}"}
-        )
+        logger.exception("Error validating memory config")
+        raise HTTPException(status_code=500, detail=f"Error validating memory config: {str(e)}")
 
 
 async def reload_memory_config():
-    """Reload memory configuration from file."""
+    """Reload config.yml (registry)."""
     try:
-        from advanced_omi_backend.memory_config_loader import get_config_loader
-        
-        config_loader = get_config_loader()
-        reload_success = config_loader.reload_config()
-        
-        if reload_success:
-            logger.info("Memory configuration reloaded successfully")
-            return {
-                "message": "Memory configuration reloaded successfully",
-                "config_path": config_loader.config_path,
-                "status": "success"
-            }
-        else:
-            return JSONResponse(
-                status_code=500, content={"error": "Failed to reload memory configuration"}
-            )
-        
+        cfg_path = _find_config_path()
+        load_models_config(force_reload=True)
+        return {"message": "Configuration reloaded", "config_path": str(cfg_path), "status": "success"}
     except Exception as e:
-        logger.error(f"Error reloading memory config: {e}")
-        return JSONResponse(
-            status_code=500, content={"error": f"Failed to reload memory config: {str(e)}"}
-        )
+        logger.exception("Error reloading config")
+        raise e
 
 
 async def delete_all_user_memories(user: User):
@@ -459,10 +366,8 @@ async def delete_all_user_memories(user: User):
         }
 
     except Exception as e:
-        logger.error(f"Error deleting all memories for user {user.user_id}: {e}")
-        return JSONResponse(
-            status_code=500, content={"error": f"Failed to delete memories: {str(e)}"}
-        )
+        logger.exception(f"Error deleting all memories for user {user.user_id}")
+        raise e
 
 
 # Memory Provider Configuration Functions
@@ -485,10 +390,8 @@ async def get_memory_provider():
         }
 
     except Exception as e:
-        logger.error(f"Error getting memory provider: {e}")
-        return JSONResponse(
-            status_code=500, content={"error": f"Failed to get memory provider: {str(e)}"}
-        )
+        logger.exception("Error getting memory provider")
+        raise e
 
 
 async def set_memory_provider(provider: str):
@@ -499,19 +402,13 @@ async def set_memory_provider(provider: str):
         valid_providers = ["chronicle", "openmemory_mcp", "mycelia"]
 
         if provider not in valid_providers:
-            return JSONResponse(
-                status_code=400,
-                content={"error": f"Invalid provider '{provider}'. Valid providers: {', '.join(valid_providers)}"}
-            )
+            raise ValueError(f"Invalid provider '{provider}'. Valid providers: {', '.join(valid_providers)}")
 
         # Path to .env file (assuming we're running from backends/advanced/)
         env_path = os.path.join(os.getcwd(), ".env")
 
         if not os.path.exists(env_path):
-            return JSONResponse(
-                status_code=404,
-                content={"error": f".env file not found at {env_path}"}
-            )
+            raise FileNotFoundError(f".env file not found at {env_path}")
 
         # Read current .env file
         with open(env_path, 'r') as file:
@@ -556,9 +453,5 @@ async def set_memory_provider(provider: str):
         }
 
     except Exception as e:
-        logger.error(f"Error setting memory provider: {e}")
-        return JSONResponse(
-            status_code=500, content={"error": f"Failed to set memory provider: {str(e)}"}
-        )
-
-
+        logger.exception("Error setting memory provider")
+        raise e

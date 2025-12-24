@@ -4,7 +4,7 @@ Self-hostable AI system that captures audio/video data from OMI devices and othe
 
 ## Quick Start → [Get Started](quickstart.md)
 
-Clone, run setup wizard, start services, access at http://localhost:5173
+Run setup wizard, start services, access at http://localhost:5173
 
 ## Screenshots
 
