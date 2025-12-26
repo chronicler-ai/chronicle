@@ -150,7 +150,8 @@ def cleanup_unselected_services(selected_services):
                 env_file.rename(backup_file)
                 console.print(f"🧹 [dim]Backed up {service_name} configuration to {backup_file.name} (service not selected)[/dim]")
 
-def run_service_setup(service_name, selected_services, https_enabled=False, server_ip=None):
+def run_service_setup(service_name, selected_services, https_enabled=False, server_ip=None,
+                     obsidian_enabled=False, neo4j_password=None):
     """Execute individual service setup script"""
     if service_name == 'advanced':
         service = SERVICES['backend'][service_name]
@@ -165,7 +166,11 @@ def run_service_setup(service_name, selected_services, https_enabled=False, serv
         # Add HTTPS configuration
         if https_enabled and server_ip:
             cmd.extend(['--enable-https', '--server-ip', server_ip])
-            
+
+        # Add Obsidian configuration
+        if obsidian_enabled and neo4j_password:
+            cmd.extend(['--enable-obsidian', '--neo4j-password', neo4j_password])
+
     else:
         service = SERVICES['extras'][service_name]
         cmd = service['cmd'].copy()
@@ -308,9 +313,27 @@ def setup_git_hooks():
     except Exception as e:
         console.print(f"⚠️  [yellow]Could not setup git hooks: {e} (optional)[/yellow]")
 
+def setup_config_file():
+    """Setup config.yml from template if it doesn't exist"""
+    config_file = Path("config.yml")
+    config_template = Path("config.yml.template")
+
+    if not config_file.exists():
+        if config_template.exists():
+            import shutil
+            shutil.copy(config_template, config_file)
+            console.print("✅ [green]Created config.yml from template[/green]")
+        else:
+            console.print("⚠️  [yellow]config.yml.template not found, skipping config setup[/yellow]")
+    else:
+        console.print("ℹ️  [blue]config.yml already exists, keeping existing configuration[/blue]")
+
 def main():
     """Main orchestration logic"""
     console.print("🎉 [bold green]Welcome to Chronicle![/bold green]\n")
+
+    # Setup config file from template
+    setup_config_file()
 
     # Setup git hooks first
     setup_git_hooks()
@@ -371,7 +394,43 @@ def main():
                     break
 
             console.print(f"[green]✅[/green] HTTPS configured for: {server_ip}")
-    
+
+    # Obsidian/Neo4j Integration
+    obsidian_enabled = False
+    neo4j_password = None
+
+    # Check if advanced backend is selected
+    if 'advanced' in selected_services:
+        console.print("\n🗂️ [bold cyan]Obsidian/Neo4j Integration[/bold cyan]")
+        console.print("Enable graph-based knowledge management for Obsidian vault notes")
+        console.print()
+
+        try:
+            obsidian_enabled = Confirm.ask("Enable Obsidian/Neo4j integration?", default=False)
+        except EOFError:
+            console.print("Using default: No")
+            obsidian_enabled = False
+
+        if obsidian_enabled:
+            console.print("[blue][INFO][/blue] Neo4j will be configured for graph-based memory storage")
+            console.print()
+
+            # Prompt for Neo4j password
+            while True:
+                try:
+                    neo4j_password = console.input("Neo4j password (min 8 chars) [default: neo4jpassword]: ").strip()
+                    if not neo4j_password:
+                        neo4j_password = "neo4jpassword"
+                    if len(neo4j_password) >= 8:
+                        break
+                    console.print("[yellow][WARNING][/yellow] Password must be at least 8 characters")
+                except EOFError:
+                    neo4j_password = "neo4jpassword"
+                    console.print(f"Using default password")
+                    break
+
+            console.print("[green]✅[/green] Obsidian/Neo4j integration will be configured")
+
     # Pure Delegation - Run Each Service Setup
     console.print(f"\n📋 [bold]Setting up {len(selected_services)} services...[/bold]")
     
@@ -382,17 +441,36 @@ def main():
     failed_services = []
     
     for service in selected_services:
-        if run_service_setup(service, selected_services, https_enabled, server_ip):
+        if run_service_setup(service, selected_services, https_enabled, server_ip,
+                            obsidian_enabled, neo4j_password):
             success_count += 1
         else:
             failed_services.append(service)
-    
+
+    # Check for Obsidian/Neo4j configuration
+    obsidian_enabled = False
+    if 'advanced' in selected_services and 'advanced' not in failed_services:
+        backend_env_path = Path('backends/advanced/.env')
+        if backend_env_path.exists():
+            neo4j_host = read_env_value(str(backend_env_path), 'NEO4J_HOST')
+            obsidian_enabled_flag = read_env_value(str(backend_env_path), 'OBSIDIAN_ENABLED')
+            if neo4j_host and not is_placeholder(neo4j_host, 'your-neo4j-host-here', 'your_neo4j_host_here'):
+                obsidian_enabled = True
+            elif obsidian_enabled_flag == 'true':
+                obsidian_enabled = True
+
     # Final Summary
     console.print(f"\n🎊 [bold green]Setup Complete![/bold green]")
     console.print(f"✅ {success_count}/{len(selected_services)} services configured successfully")
-    
+
     if failed_services:
         console.print(f"❌ Failed services: {', '.join(failed_services)}")
+
+    # Inform about Obsidian/Neo4j if configured
+    if obsidian_enabled:
+        console.print(f"\n📚 [bold cyan]Obsidian Integration Detected[/bold cyan]")
+        console.print("   Neo4j will be started with the 'obsidian' profile")
+        console.print("   when you start the backend service.")
     
     # Next Steps
     console.print("\n📖 [bold]Next Steps:[/bold]")

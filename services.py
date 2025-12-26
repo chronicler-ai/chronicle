@@ -8,11 +8,25 @@ import argparse
 import subprocess
 from pathlib import Path
 
+import yaml
 from rich.console import Console
 from rich.table import Table
 from dotenv import dotenv_values
 
 console = Console()
+
+def load_config_yml():
+    """Load config.yml from repository root"""
+    config_path = Path(__file__).parent / 'config.yml'
+    if not config_path.exists():
+        return None
+
+    try:
+        with open(config_path, 'r') as f:
+            return yaml.safe_load(f)
+    except Exception as e:
+        console.print(f"[yellow]⚠️  Warning: Could not load config.yml: {e}[/yellow]")
+        return None
 
 SERVICES = {
     'backend': {
@@ -74,7 +88,30 @@ def run_compose_command(service_name, command, build=False):
         if caddyfile_path.exists() and caddyfile_path.is_file():
             # Enable HTTPS profile to start Caddy service
             cmd.extend(['--profile', 'https'])
-    
+
+        # Check if Obsidian/Neo4j is enabled
+        obsidian_enabled = False
+
+        # Method 1: Check config.yml (preferred)
+        config_data = load_config_yml()
+        if config_data:
+            memory_config = config_data.get('memory', {})
+            obsidian_config = memory_config.get('obsidian', {})
+            if obsidian_config.get('enabled', False):
+                obsidian_enabled = True
+
+        # Method 2: Fallback to .env for backward compatibility
+        if not obsidian_enabled:
+            env_file = service_path / '.env'
+            if env_file.exists():
+                env_values = dotenv_values(env_file)
+                if env_values.get('OBSIDIAN_ENABLED', 'false').lower() == 'true':
+                    obsidian_enabled = True
+
+        if obsidian_enabled:
+            cmd.extend(['--profile', 'obsidian'])
+            console.print("[blue]ℹ️  Starting with Obsidian/Neo4j support[/blue]")
+
     # Handle speaker-recognition service specially
     if service_name == 'speaker-recognition' and command in ['up', 'down']:
         # Read configuration to determine profile

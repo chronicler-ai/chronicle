@@ -128,7 +128,7 @@ models:
         language: multi
         smart_format: 'true'
         punctuate: 'true'
-        diarize: false
+        diarize: 'true'
         encoding: linear16
         sample_rate: 16000
         channels: '1'
@@ -191,7 +191,7 @@ memory:
     enabled: true
     prompt: 'Extract important information from this conversation and return a JSON
       object with an array named "facts". Include personal preferences, plans, names,
-      dates, locations, numbers, and key details hehehe. Keep items concise and useful.
+      dates, locations, numbers, and key details. Keep items concise and useful.
 
       '
   openmemory_mcp:
@@ -201,4 +201,8 @@ memory:
     timeout: 30
   mycelia:
     api_url: http://localhost:5173
+    timeout: 30
+  obsidian:
+    enabled: false
+    neo4j_host: neo4j-mem0
     timeout: 30

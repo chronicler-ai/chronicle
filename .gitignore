@@ -4,6 +4,8 @@
 !**/.env.template
 **/memory_config.yaml
 !**/memory_config.yaml.template
+config.yml
+!config.yml.template
 example/*
 **/node_modules/*
 **/ollama-data/*
