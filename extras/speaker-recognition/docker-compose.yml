@@ -26,7 +26,10 @@ services:
       - SIMILARITY_THRESHOLD=${SIMILARITY_THRESHOLD:-0.15}
       - SPEAKER_SERVICE_HOST=${SPEAKER_SERVICE_HOST:-0.0.0.0}
       - SPEAKER_SERVICE_PORT=${SPEAKER_SERVICE_PORT:-8085}
+      # Transcription provider configuration
+      - TRANSCRIPTION_PROVIDER=${TRANSCRIPTION_PROVIDER:-deepgram}
       - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
+      - PARAKEET_ASR_URL=${PARAKEET_ASR_URL:-http://parakeet-asr:8767}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8085/health"]

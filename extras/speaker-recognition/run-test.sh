@@ -55,6 +55,9 @@ fi
 
 print_info "Speaker Recognition Integration Test Runner"
 print_info "=========================================="
+
+# Load environment variables (CI or local)
+if [ -f ".env" ]; then
 print_info ".env file exists: $([ -f .env ] && echo 'yes' || echo 'no')"
 
 # Load environment variables (CI or local)
@@ -109,8 +112,10 @@ if [ -z "$DEEPGRAM_API_KEY" ]; then
     exit 1
 fi
 
-print_info "HF_TOKEN length: ${#HF_TOKEN}"
-print_info "DEEPGRAM_API_KEY length: ${#DEEPGRAM_API_KEY}"
+# Now we can safely check the variables
+print_info "Environment configuration:"
+print_info "  HF_TOKEN length: ${#HF_TOKEN}"
+print_info "  DEEPGRAM_API_KEY length: ${#DEEPGRAM_API_KEY}"
 
 # Export variables early so docker compose can use them
 export HF_TOKEN

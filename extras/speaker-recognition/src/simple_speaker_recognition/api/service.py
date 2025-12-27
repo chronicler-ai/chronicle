@@ -17,6 +17,10 @@ from simple_speaker_recognition.api.core.utils import get_data_directory
 from simple_speaker_recognition.core.audio_backend import AudioBackend
 from simple_speaker_recognition.core.unified_speaker_db import UnifiedSpeakerDB
 from simple_speaker_recognition.database import init_db
+from simple_speaker_recognition.services.transcription import (
+    TranscriptionOrchestrator,
+    get_transcription_orchestrator,
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -32,6 +36,7 @@ class Settings(BaseSettings):
     deepgram_api_key: Optional[str] = Field(default=None, description="Deepgram API key for wrapper service")
     deepgram_base_url: str = Field(default="https://api.deepgram.com", description="Deepgram API base URL")
     hf_token: Optional[str] = Field(default=None, description="Hugging Face token for Pyannote models")
+    diarization_mode: str = Field(default="auto", description="Diarization mode: auto, native, pyannote, or none")
 
     class Config:
         case_sensitive = True
@@ -58,6 +63,7 @@ auth.hf_token = hf_token
 # Global variables for storing initialized resources
 audio_backend: AudioBackend
 speaker_db: UnifiedSpeakerDB
+transcription_orchestrator: Optional[TranscriptionOrchestrator] = None
 # Device selection with environment override
 log.info(f"CUDA available: {torch.cuda.is_available()}")
 if torch.cuda.is_available():
@@ -79,15 +85,15 @@ else:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """FastAPI lifespan event handler for startup and shutdown."""
-    global audio_backend, speaker_db
-    
+    global audio_backend, speaker_db, transcription_orchestrator
+
     # Startup: Initialize database and load models
     log.info("=== Speaker Recognition Service Starting ===")
-    log.info("Version: 2025-08-05-refactored")
-    log.info("This version uses modular router architecture")
+    log.info("Version: 2025-08-05-refactored-v2")
+    log.info("This version uses orchestrator pattern with separated transcription/diarization")
     log.info("Initializing database...")
     init_db()
-    
+
     log.info("Loading models...")
     assert hf_token is not None
     audio_backend = AudioBackend(hf_token, device)
@@ -97,6 +103,22 @@ async def lifespan(app: FastAPI):
         similarity_thr=auth.similarity_threshold,
     )
     log.info("Models ready ✔ – device=%s", device)
+
+    # Initialize transcription orchestrator
+    try:
+        transcription_orchestrator = get_transcription_orchestrator(
+            diarization_mode=auth.diarization_mode, hf_token=hf_token
+        )
+        log.info(f"Transcription orchestrator initialized: diarization_mode={auth.diarization_mode}")
+
+        # Validate orchestrator is accessible
+        if await transcription_orchestrator.health_check():
+            log.info("Transcription orchestrator health check: ✔")
+        else:
+            log.warning("Transcription orchestrator health check failed")
+    except Exception as e:
+        log.error(f"Failed to initialize transcription orchestrator: {e}")
+        log.warning("Service will continue with limited functionality")
     
     # Ensure enrollment audio directory exists
     auth.enrollment_audio_dir.mkdir(parents=True, exist_ok=True)

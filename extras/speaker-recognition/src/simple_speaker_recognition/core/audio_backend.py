@@ -20,7 +20,7 @@ class AudioBackend:
     def __init__(self, hf_token: str, device: torch.device):
         self.device = device
         self.diar = Pipeline.from_pretrained(
-            "pyannote/speaker-diarization-3.1", token=hf_token
+            "pyannote/speaker-diarization-community-1", token=hf_token
         ).to(device)
         
         # Configure pipeline with proper segmentation parameters to reduce over-segmentation
@@ -79,17 +79,10 @@ class AudioBackend:
                 kwargs['max_speakers'] = max_speakers
 
             output = self.diar(str(path), **kwargs)
-            logger.info(f"Diarization output: {output}")
 
-            # In pyannote.audio 4.0+, the pipeline returns a DiarizeOutput object
-            # We need to access .speaker_diarization to get the Annotation object
-            if hasattr(output, 'speaker_diarization'):
-                diarization = output.speaker_diarization
-                logger.info(f"Using speaker_diarization from output (pyannote 4.0+)")
-            else:
-                # Fallback for older versions (3.x) that return Annotation directly
-                diarization = output
-                logger.info(f"Using output directly as Annotation (pyannote 3.x)")
+            # In pyannote.audio 4.x, the pipeline returns a DiarizeOutput object
+            # Extract the Annotation object from it
+            diarization = output.speaker_diarization
 
             # Apply PyAnnote's built-in gap filling using support() method with configurable collar
             # This fills gaps shorter than collar seconds between segments from same speaker

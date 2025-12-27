@@ -15,8 +15,8 @@ cp .env.template .env
 # Edit .env and add your Hugging Face token
 ```
 Get your HF token from https://huggingface.co/settings/tokens
-Accept the terms and conditions for 
-https://huggingface.co/pyannote/speaker-diarization-3.1
+Accept the terms and conditions for
+https://huggingface.co/pyannote/speaker-diarization-community-1
 https://huggingface.co/pyannote/segmentation-3.0
 
 
@@ -829,7 +829,7 @@ The advanced backend communicates with this service through the `client.py` modu
 
 ## Laptop Client
 
-A command-line client (`laptop_client.py`) that can record from your microphone and interact with the speaker recognition service.
+A command-line client (`scripts/laptop_client.py`) that can record from your microphone and interact with the speaker recognition service.
 
 ### Setup for Laptop Client
 
@@ -854,22 +854,22 @@ pip install pyaudio
 docker compose --profile cpu up -d
 
 # Enroll a new speaker (records 10 seconds)
-python laptop_client.py enroll --speaker-id "john" --speaker-name "John Doe" --duration 10
+python scripts/laptop_client.py enroll --speaker-id "john" --speaker-name "John Doe" --duration 10
 
 # Identify a speaker (records 5 seconds)
-python laptop_client.py identify --duration 5
+python scripts/laptop_client.py identify --duration 5
 
 # Verify against a specific speaker (records 3 seconds)
-python laptop_client.py verify --speaker-id "john" --duration 3
+python scripts/laptop_client.py verify --speaker-id "john" --duration 3
 
 # List all enrolled speakers
-python laptop_client.py list
+python scripts/laptop_client.py list
 
 # Remove a speaker
-python laptop_client.py remove --speaker-id "john"
+python scripts/laptop_client.py remove --speaker-id "john"
 
 # Use different service URL
-python laptop_client.py --service-url "http://192.168.1.100:8001" identify
+python scripts/laptop_client.py --service-url "http://192.168.1.100:8001" identify
 ```
 
 ### Laptop Client Features
